@@ -26,12 +26,13 @@
   --bad: #e11d48;
   --bad-bg: #fff1f2;
 
-  /* Tipografi Skala Compact (System Font Stack Windows) */
+  /* Tipografi Skala Compact (System Font Stack Windows: 15/14/13/11-12 px) */
   --font-family: "Segoe UI", Tahoma, Arial, sans-serif;
   --font-title: 15px;
   --font-body: 14px;
   --font-small: 13px;
   --font-meta: 12px;
+  --font-meta-sm: 11px;
 
   /* Sifat Bentuk Kaku + Compact */
   --radius-sm: 4px;
@@ -41,7 +42,6 @@
 
   /* Dimensi Kerangka */
   --header-height: 48px;
-  --max-width: 1040px;
 }
 
 /* ==========================================================================
@@ -144,9 +144,7 @@ body {
    ========================================================================== */
 
 .main-content {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 16px;
+  padding: 12px 16px;
 }
 
 .tab-panel {
@@ -161,7 +159,7 @@ body {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: 12px;
   color: var(--muted);
   font-size: var(--font-body);
 }
@@ -170,7 +168,7 @@ body {
   font-size: var(--font-title);
   font-weight: 700;
   color: var(--ink);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 /* ==========================================================================
