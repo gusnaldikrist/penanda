@@ -288,9 +288,26 @@ body {
    Zona Pencarian & Zona Hasil (Tiket 04 - PRD 5.1 & Wireframe 2)
    ========================================================================== */
 
-.search-bar-wrap {
+.search-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.search-bar-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-tambah {
+  height: 40px;
+  padding: 0 16px;
+  font-size: var(--font-small);
+  font-weight: 600;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
@@ -634,6 +651,202 @@ body {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+/* Modal Form CRUD Item (Lebar 640px, Terpusat, Tiket 06) */
+.modal-box {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  width: 90%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.btn-close:hover {
+  color: var(--ink);
+  background-color: var(--band);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-label .req {
+  color: var(--bad);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  color: var(--body);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--action);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--action);
+}
+
+.form-hint {
+  font-size: var(--font-meta);
+  color: var(--muted);
+}
+
+.form-error {
+  font-size: var(--font-meta);
+  color: var(--bad);
+  font-weight: 500;
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.link-row .link-label-input {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.link-row .link-url-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-del-link {
+  flex-shrink: 0;
+  color: var(--bad);
+  border-color: var(--line);
+}
+
+.btn-del-link:hover {
+  border-color: var(--bad);
+  background-color: var(--bad-bg);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.modal-footer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.btn-text-danger {
+  background: transparent;
+  border: none;
+  color: var(--bad);
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.btn-text-danger:hover {
+  text-decoration: underline;
+}
+
+.btn-danger {
+  background-color: var(--bad);
+  color: var(--on-ink);
+  border: 1px solid var(--bad);
+}
+
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.delete-confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.delete-warning {
+  font-size: var(--font-small);
+  color: var(--body);
+  line-height: 1.4;
+  padding: 8px 12px;
+  background-color: var(--bad-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--bad);
 }
 
 /* ==========================================================================

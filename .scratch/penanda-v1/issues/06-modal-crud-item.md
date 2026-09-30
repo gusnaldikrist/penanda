@@ -1,6 +1,6 @@
 # 06 - Modal tambah, ubah, dan hapus item
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02, 04
 Type: task
 
@@ -20,8 +20,8 @@ Item bisa ditambah, diubah, dan dihapus tanpa berpindah halaman, dengan tombol T
 
 ## Verifikasi
 
-- Tambah item baru dari klik Tambah sampai Simpan: di bawah 30 detik.
-- Dua item dengan judul sama: yang kedua mendapat `id` berakhiran angka, bukan menimpa yang pertama.
-- Coba simpan tag `TA ` atau tag berspasi: ditolak dengan pesan jelas.
-- Hapus Sheet Admin TA: entri todo dan log tetap tampil dengan penanda tanpa tautan.
-- Konfirmasi hapus diisi judul yang salah: tombol hapus tidak berjalan; setelah judul benar, item benar-benar hilang.
+- [x] Tambah item baru dari klik Tambah sampai Simpan: di bawah 30 detik.
+- [x] Dua item dengan judul sama: yang kedua mendapat `id` berakhiran angka, bukan menimpa yang pertama.
+- [x] Coba simpan tag `TA ` atau tag berspasi: ditolak dengan pesan jelas.
+- [x] Hapus Sheet Admin TA: entri todo dan log tetap tampil dengan penanda tanpa tautan.
+- [x] Konfirmasi hapus diisi judul yang salah: tombol hapus tidak berjalan; setelah judul benar, item benar-benar hilang.

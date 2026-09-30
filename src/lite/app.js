@@ -190,6 +190,407 @@
     tryClipboardApi();
   }
 
+  function getTodayDateString() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function generateItemId(title, existingItems, currentItemId = null) {
+    if (!title) return 'item';
+    let slug = String(title)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (!slug) slug = 'item';
+
+    if (currentItemId && slug === currentItemId) {
+      return currentItemId;
+    }
+
+    const existingIds = new Set(
+      (Array.isArray(existingItems) ? existingItems : [])
+        .map(item => item.id)
+        .filter(id => id && id !== currentItemId)
+    );
+
+    if (!existingIds.has(slug)) {
+      return slug;
+    }
+
+    let counter = 2;
+    while (existingIds.has(`${slug}-${counter}`)) {
+      counter++;
+    }
+    return `${slug}-${counter}`;
+  }
+
+  function validateTags(tagsInput) {
+    if (typeof tagsInput !== 'string' || tagsInput.trim() === '') {
+      return { valid: false, tags: [], error: 'Tag minimal 1 dan tidak boleh kosong' };
+    }
+
+    const rawTokens = tagsInput.split(',');
+    const parsedTags = [];
+
+    for (const token of rawTokens) {
+      const trimmed = token.trim();
+      if (!trimmed) continue;
+
+      if (/[A-Z]/.test(token)) {
+        return { valid: false, tags: [], error: `Tag tidak boleh memuat huruf besar ("${trimmed}"). Gunakan huruf kecil tanpa spasi.` };
+      }
+
+      if (token.endsWith(' ') || /\s/.test(trimmed)) {
+        return { valid: false, tags: [], error: `Tag tidak boleh memuat spasi ("${trimmed}"). Gunakan huruf kecil tanpa spasi.` };
+      }
+
+      if (!/^[a-z0-9-]+$/.test(trimmed)) {
+        return { valid: false, tags: [], error: `Tag hanya boleh memuat huruf kecil, angka, dan tanda hubung ("${trimmed}").` };
+      }
+
+      if (!parsedTags.includes(trimmed)) {
+        parsedTags.push(trimmed);
+      }
+    }
+
+    if (parsedTags.length === 0) {
+      return { valid: false, tags: [], error: 'Tag minimal 1 dan tidak boleh kosong' };
+    }
+
+    return { valid: true, tags: parsedTags, error: '' };
+  }
+
+  function closeActiveModal() {
+    const existing = document.querySelector('.modal-overlay');
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+  }
+
+  function showDeleteConfirmation(item) {
+    const modalBox = document.getElementById('modal-item-box');
+    if (!modalBox) return;
+
+    modalBox.innerHTML = `
+      <div class="modal-header">
+        <div class="modal-title">Hapus Item</div>
+        <button type="button" class="btn-close" id="btn-close-delete-modal" aria-label="Tutup">&times;</button>
+      </div>
+      <div class="modal-body delete-confirm-box">
+        <div class="delete-warning">
+          Menghapus <strong>${escapeHtml(item.title || '')}</strong> akan melepas tautan di todo dan log sekaligus. Aksi ini tidak dapat dibatalkan.
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="input-confirm-delete">Ketik judul item persis untuk konfirmasi:</label>
+          <input type="text" id="input-confirm-delete" class="form-input" placeholder="${escapeHtml(item.title || '')}" autocomplete="off">
+          <div class="form-hint">Huruf besar-kecil diabaikan</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-actions">
+          <button type="button" class="btn btn-secondary btn-cancel-delete">Batal</button>
+          <button type="button" id="btn-confirm-delete" class="btn btn-danger" disabled>Hapus Permanen</button>
+        </div>
+      </div>
+    `;
+
+    const inputConfirm = document.getElementById('input-confirm-delete');
+    const confirmBtn = document.getElementById('btn-confirm-delete');
+    const cancelBtn = modalBox.querySelector('.btn-cancel-delete');
+    const closeBtn = document.getElementById('btn-close-delete-modal');
+
+    if (inputConfirm && confirmBtn) {
+      inputConfirm.addEventListener('input', (e) => {
+        const typed = e.target.value.trim().toLowerCase();
+        const target = String(item.title || '').trim().toLowerCase();
+        confirmBtn.disabled = (typed !== target);
+      });
+      inputConfirm.focus();
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        openItemModal(item);
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
+        const target = String(item.title || '').trim().toLowerCase();
+        if (typed !== target) return;
+
+        if (state.data && Array.isArray(state.data.items)) {
+          state.data.items = state.data.items.filter(it => it.id !== item.id);
+        }
+
+        if (state.data && Array.isArray(state.data.todo)) {
+          state.data.todo.forEach(t => {
+            if (t.item_id === item.id) {
+              t.item_id = null;
+            }
+          });
+        }
+
+        if (state.data && Array.isArray(state.data.logs)) {
+          state.data.logs.forEach(l => {
+            if (l.item_id === item.id) {
+              l.item_id = null;
+            }
+          });
+        }
+
+        if (state.focusedItemId === item.id) {
+          state.focusedItemId = null;
+        }
+
+        saveData(state.data);
+        closeActiveModal();
+        renderIndeksView();
+      });
+    }
+  }
+
+  function openItemModal(itemToEdit = null) {
+    closeActiveModal();
+
+    const isEdit = Boolean(itemToEdit && itemToEdit.id);
+    const initialTitle = isEdit ? (itemToEdit.title || '') : '';
+    const initialTags = isEdit && Array.isArray(itemToEdit.tags) ? itemToEdit.tags.join(', ') : '';
+    const initialCatatan = isEdit ? (itemToEdit.catatan || '') : '';
+    let links = isEdit && Array.isArray(itemToEdit.links) && itemToEdit.links.length > 0
+      ? itemToEdit.links.map(l => ({ label: l.label || '', url: l.url || '' }))
+      : [{ label: '', url: '' }];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-item-box">
+        <div class="modal-header">
+          <div class="modal-title">${isEdit ? 'Ubah Item' : 'Tambah Item'}</div>
+          <button type="button" class="btn-close" id="btn-close-item-modal" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="item-title">Judul <span class="req">*</span></label>
+            <input type="text" id="item-title" class="form-input" maxlength="120" placeholder="Judul item (1-120 karakter)" value="${escapeHtml(initialTitle)}">
+            <div id="item-title-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="item-tags">Tag <span class="req">*</span></label>
+            <input type="text" id="item-tags" class="form-input" placeholder="ta, sheet, admin (dipisah koma)" value="${escapeHtml(initialTags)}">
+            <div class="form-hint">Huruf kecil tanpa spasi, dipisah koma</div>
+            <div id="item-tags-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Link <span class="req">*</span></label>
+            <div id="modal-link-rows" class="links-container"></div>
+            <div>
+              <button type="button" id="btn-add-link" class="btn btn-secondary btn-sm" style="margin-top: 4px;">+ Link lain</button>
+            </div>
+            <div id="item-links-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="item-catatan">Catatan</label>
+            <textarea id="item-catatan" class="form-textarea" maxlength="200" placeholder="Catatan alur kerja / pemicu (opsional, maks 200 karakter)">${escapeHtml(initialCatatan)}</textarea>
+            <div class="form-hint">Maksimal 200 karakter</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          ${isEdit ? '<button type="button" id="btn-item-delete" class="btn-text-danger">Hapus item</button>' : '<div></div>'}
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-modal">Batal</button>
+            <button type="button" id="btn-item-save" class="btn btn-primary" disabled>Simpan</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const titleInput = document.getElementById('item-title');
+    const tagsInput = document.getElementById('item-tags');
+    const catatanInput = document.getElementById('item-catatan');
+    const saveBtn = document.getElementById('btn-item-save');
+    const linkRowsContainer = document.getElementById('modal-link-rows');
+    const addLinkBtn = document.getElementById('btn-add-link');
+    const closeBtn = document.getElementById('btn-close-item-modal');
+    const cancelBtn = overlay.querySelector('.btn-cancel-modal');
+    const deleteBtn = document.getElementById('btn-item-delete');
+
+    function renderLinkRows() {
+      if (!linkRowsContainer) return;
+      linkRowsContainer.innerHTML = links.map((link, idx) => `
+        <div class="link-row" data-index="${idx}">
+          <input type="text" id="link-label-${idx}" class="form-input link-label-input" placeholder="Label (mis. Buka Sheet)" maxlength="40" value="${escapeHtml(link.label || '')}">
+          <input type="text" id="link-url-${idx}" class="form-input link-url-input" placeholder="URL atau path lokal" value="${escapeHtml(link.url || '')}">
+          ${links.length > 1 ? `<button type="button" class="btn btn-secondary btn-sm btn-del-link" data-index="${idx}" title="Hapus link">&times;</button>` : ''}
+        </div>
+      `).join('');
+
+      links.forEach((link, idx) => {
+        const labelInput = document.getElementById(`link-label-${idx}`);
+        const urlInput = document.getElementById(`link-url-${idx}`);
+        if (labelInput) {
+          labelInput.addEventListener('input', (e) => {
+            link.label = e.target.value;
+            validateForm();
+          });
+        }
+        if (urlInput) {
+          urlInput.addEventListener('input', (e) => {
+            link.url = e.target.value;
+            validateForm();
+          });
+        }
+      });
+
+      const delBtns = linkRowsContainer.querySelectorAll('.btn-del-link');
+      delBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-index'), 10);
+          if (!isNaN(idx) && links.length > 1) {
+            links.splice(idx, 1);
+            renderLinkRows();
+            validateForm();
+          }
+        });
+      });
+    }
+
+    function validateForm() {
+      const titleVal = titleInput ? titleInput.value.trim() : '';
+      const tagsVal = tagsInput ? tagsInput.value : '';
+      const tagRes = validateTags(tagsVal);
+
+      let linksValid = links.length > 0;
+      links.forEach((link, idx) => {
+        const labelInput = document.getElementById(`link-label-${idx}`);
+        const urlInput = document.getElementById(`link-url-${idx}`);
+        const lVal = labelInput ? labelInput.value.trim() : (link.label || '').trim();
+        const uVal = urlInput ? urlInput.value.trim() : (link.url || '').trim();
+        if (!lVal || !uVal || lVal.length > 40) {
+          linksValid = false;
+        }
+      });
+
+      const isFormValid = (titleVal.length >= 1 && titleVal.length <= 120) && tagRes.valid && linksValid;
+
+      if (saveBtn) {
+        saveBtn.disabled = !isFormValid;
+      }
+
+      const tagsErrEl = document.getElementById('item-tags-error');
+      if (tagsErrEl) {
+        if (!tagRes.valid && tagsVal.trim() !== '') {
+          tagsErrEl.textContent = tagRes.error;
+          tagsErrEl.style.display = 'block';
+        } else {
+          tagsErrEl.textContent = '';
+          tagsErrEl.style.display = 'none';
+        }
+      }
+
+      return isFormValid;
+    }
+
+    renderLinkRows();
+    validateForm();
+
+    if (titleInput) {
+      titleInput.addEventListener('input', validateForm);
+      titleInput.focus();
+    }
+    if (tagsInput) {
+      tagsInput.addEventListener('input', validateForm);
+    }
+    if (addLinkBtn) {
+      addLinkBtn.addEventListener('click', () => {
+        links.push({ label: '', url: '' });
+        renderLinkRows();
+        validateForm();
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (!validateForm()) return;
+
+        const title = titleInput.value.trim();
+        const tagRes = validateTags(tagsInput.value);
+        const cleanCatatan = catatanInput ? catatanInput.value.trim() : '';
+        const cleanLinks = [];
+        links.forEach((link, idx) => {
+          const labelInput = document.getElementById(`link-label-${idx}`);
+          const urlInput = document.getElementById(`link-url-${idx}`);
+          const lVal = labelInput ? labelInput.value.trim() : (link.label || '').trim();
+          const uVal = urlInput ? urlInput.value.trim() : (link.url || '').trim();
+          if (lVal && uVal) {
+            cleanLinks.push({ label: lVal, url: uVal });
+          }
+        });
+        const today = getTodayDateString();
+
+        const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+
+        if (isEdit) {
+          const itemIdx = items.findIndex(it => it.id === itemToEdit.id);
+          if (itemIdx >= 0) {
+            items[itemIdx].title = title;
+            items[itemIdx].tags = tagRes.tags;
+            items[itemIdx].links = cleanLinks;
+            items[itemIdx].catatan = cleanCatatan;
+            items[itemIdx].updated_at = today;
+          }
+        } else {
+          const newId = generateItemId(title, items);
+          items.unshift({
+            id: newId,
+            title,
+            tags: tagRes.tags,
+            links: cleanLinks,
+            catatan: cleanCatatan,
+            updated_at: today
+          });
+        }
+
+        state.data.items = items;
+        saveData(state.data);
+        closeActiveModal();
+        renderIndeksView();
+      });
+    }
+
+    if (deleteBtn && isEdit) {
+      deleteBtn.addEventListener('click', () => {
+        showDeleteConfirmation(itemToEdit);
+      });
+    }
+  }
+
   function getPrimaryLinkInfo(item) {
     const primaryLink = (item && Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
     const url = primaryLink ? (primaryLink.url || '') : '';
@@ -390,8 +791,8 @@
       const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
 
       const actionsHtml = local
-        ? `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`
-        : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false">Copy</button>`;
+        ? `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
+        : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false">Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`;
 
       const isFocused = state.focusedItemId === item.id;
 
@@ -431,14 +832,21 @@
           <p class="path-notice">Path lokal hanya bisa dibuka di jalur Pro</p>
         </div>
       `;
+      const btnEmptyAdd = document.getElementById('btn-empty-add');
+      if (btnEmptyAdd) {
+        btnEmptyAdd.addEventListener('click', () => openItemModal());
+      }
       return;
     }
 
     const existingInput = document.getElementById('search-input');
     if (!existingInput) {
       container.innerHTML = `
-        <div class="search-bar-wrap">
-          <input type="text" id="search-input" class="search-input" placeholder="Cari judul, tag, atau isi dokumen..." autocomplete="off">
+        <div class="search-bar-row">
+          <div class="search-bar-wrap">
+            <input type="text" id="search-input" class="search-input" placeholder="Cari judul, tag, atau isi dokumen..." autocomplete="off">
+          </div>
+          <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">+ Tambah</button>
         </div>
         <div id="zone-harian" class="zone-harian"></div>
         <div id="zone-kartu" class="zone-kartu"></div>
@@ -446,6 +854,11 @@
         <div id="result-list" class="result-list"></div>
         <div id="zone-terkait" class="zone-terkait" style="display: none;"></div>
       `;
+
+      const btnTambah = document.getElementById('btn-tambah-item');
+      if (btnTambah) {
+        btnTambah.addEventListener('click', () => openItemModal());
+      }
 
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
@@ -508,6 +921,11 @@
 
           const ubahBtn = e.target.closest('.btn-ubah');
           if (ubahBtn) {
+            const id = typeof ubahBtn.getAttribute === 'function' ? ubahBtn.getAttribute('data-id') : null;
+            const targetItem = items.find(it => it.id === id);
+            if (targetItem) {
+              openItemModal(targetItem);
+            }
             return;
           }
 
@@ -647,14 +1065,24 @@
 
     if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && state.focusedItemId) {
-          state.focusedItemId = null;
-          const searchInput = document.getElementById('search-input');
-          updateIndeksResults(searchInput ? searchInput.value : '');
+        if (e.key === 'Escape') {
+          const modal = document.querySelector('.modal-overlay');
+          if (modal) {
+            closeActiveModal();
+            return;
+          }
+          if (state.focusedItemId) {
+            state.focusedItemId = null;
+            const searchInput = document.getElementById('search-input');
+            updateIndeksResults(searchInput ? searchInput.value : '');
+          }
         }
       });
 
       document.addEventListener('click', (e) => {
+        const modal = document.querySelector('.modal-overlay');
+        if (modal) return;
+
         if (state.focusedItemId) {
           if (!e.target.closest || (!e.target.closest('.result-item') && !e.target.closest('#zone-terkait'))) {
             state.focusedItemId = null;
@@ -669,12 +1097,40 @@
     switchTab(state.activeTab);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   }
 
-  window.saveData = saveData;
-  window.loadData = loadData;
+  if (typeof window !== 'undefined') {
+    window.saveData = saveData;
+    window.loadData = loadData;
+    window.generateItemId = generateItemId;
+    window.validateTags = validateTags;
+    window.openItemModal = openItemModal;
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    globalThis.saveData = saveData;
+    globalThis.loadData = loadData;
+    globalThis.generateItemId = generateItemId;
+    globalThis.validateTags = validateTags;
+    globalThis.openItemModal = openItemModal;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      state,
+      loadData,
+      saveData,
+      switchTab,
+      isLocalPath,
+      generateItemId,
+      validateTags,
+      openItemModal
+    };
+  }
 })();
