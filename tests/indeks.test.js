@@ -154,13 +154,17 @@ function createTestEnvironment(initialData = null, options = {}) {
         tag,
         style,
         listeners,
+        parentNode: null,
         set innerHTML(v) { innerHTML = String(v); },
         get innerHTML() { return innerHTML; },
         set textContent(v) { textContent = String(v); },
         get textContent() { return textContent; },
         set className(v) { className = String(v); },
         get className() { return className; },
-        set value(v) { val = String(v); },
+        set value(v) {
+          val = String(v);
+          lastExecCommandText = val;
+        },
         get value() { return val; },
         select: () => { selected = true; },
         get isSelected() { return selected; },
@@ -169,9 +173,22 @@ function createTestEnvironment(initialData = null, options = {}) {
           if (!listeners[event]) listeners[event] = [];
           listeners[event].push(handler);
         },
+        trigger: (event, payload = {}) => {
+          if (listeners[event]) {
+            listeners[event].forEach(fn => fn({ target: newEl, preventDefault: () => {}, ...payload }));
+          }
+        },
         querySelector: (sel) => {
           if (sel === '.modal-input') return { focus: () => {}, select: () => { selected = true; } };
-          if (sel === '.btn-close-modal') return { addEventListener: () => {} };
+          if (sel === '.btn-close-modal') {
+            return {
+              addEventListener: (evt, cb) => {
+                if (evt === 'click') {
+                  newEl.closeModal = cb;
+                }
+              }
+            };
+          }
           return null;
         }
       };
@@ -195,6 +212,15 @@ function createTestEnvironment(initialData = null, options = {}) {
       }
     }
   };
+
+  let lastExecCommand = null;
+  let lastExecCommandText = '';
+  domDocument.execCommand = (typeof options.execCommand === 'function')
+    ? options.execCommand
+    : (cmd) => {
+        lastExecCommand = cmd;
+        return true;
+      };
 
   const sandbox = {
     document: domDocument,
@@ -228,7 +254,9 @@ function createTestEnvironment(initialData = null, options = {}) {
     panelIndeks,
     statusBar,
     toasts: toastsHistory,
-    modals
+    modals,
+    getLastExecCommand: () => lastExecCommand,
+    getLastExecCommandText: () => lastExecCommandText
   };
 }
 
@@ -296,33 +324,52 @@ test('Tiket 04: Pencarian tanpa hasil menampilkan pesan ramah pengguna', () => {
   );
 });
 
-test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', () => {
-  const customData = {
-    version: 1,
-    items: [
-      {
-        id: 'web-item',
-        title: 'Dokumen Web',
-        tags: ['web'],
-        links: [{ label: 'Web', url: 'https://example.com/doc' }],
-        catatan: 'Catatan web',
-        updated_at: '2026-09-30'
-      },
-      {
-        id: 'local-item',
-        title: 'Dokumen Lokal Windows',
-        tags: ['lokal'],
-        links: [{ label: 'Lokal', url: 'D:\\Skripsi\\draft.docx' }],
-        catatan: 'Catatan lokal',
-        updated_at: '2026-09-30'
-      }
-    ],
-    todo: [],
-    logs: [],
-    pinned_tags: []
-  };
+const twoItemsFixture = {
+  version: 1,
+  items: [
+    {
+      id: 'web-item',
+      title: 'Dokumen Web',
+      tags: ['web'],
+      links: [{ label: 'Web', url: 'https://example.com/doc' }],
+      catatan: 'Catatan web',
+      updated_at: '2026-09-30'
+    },
+    {
+      id: 'local-item',
+      title: 'Dokumen Lokal Windows',
+      tags: ['lokal'],
+      links: [{ label: 'Lokal', url: 'D:\\Skripsi\\draft.docx' }],
+      catatan: 'Catatan lokal',
+      updated_at: '2026-09-30'
+    }
+  ],
+  todo: [],
+  logs: [],
+  pinned_tags: []
+};
 
-  const env = createTestEnvironment(customData);
+function triggerCopyClick(resultList, dataUrl, isLocal) {
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy') {
+          return {
+            getAttribute: (attr) => {
+              if (attr === 'data-url') return dataUrl;
+              if (attr === 'data-local') return isLocal ? 'true' : 'false';
+              return null;
+            }
+          };
+        }
+        return null;
+      }
+    }
+  });
+}
+
+test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', () => {
+  const env = createTestEnvironment(twoItemsFixture);
   const resultList = env.getOrCreateElement('result-list');
 
   // Dokumen Web harus punya tombol Buka (dengan target _blank) dan Copy
@@ -334,7 +381,35 @@ test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', () => 
   assert.match(resultList.innerHTML, /data-local="true"/, 'Item lokal ditandai data-local="true"');
 });
 
-test('Tiket 04: Jaring pengaman Copy: Cara 1 (navigator.clipboard) sukses', async () => {
+test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa toast pada URL web', () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  const resultList = env.getOrCreateElement('result-list');
+
+  // Simulasikan klik tombol Copy pada URL web
+  triggerCopyClick(resultList, 'https://lib.fkominfo.uniga.ac.id/login', false);
+
+  assert.equal(env.getLastExecCommand(), 'copy', 'Cara 1 harus memanggil execCommand copy');
+  assert.equal(env.getLastExecCommandText(), 'https://lib.fkominfo.uniga.ac.id/login', 'Teks textarea cocok');
+  assert.equal(env.toasts.length, 0, 'URL web tidak memunculkan toast notifikasi (bebas scope-creep)');
+});
+
+test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', () => {
+  const env = createTestEnvironment(twoItemsFixture);
+  const resultList = env.getOrCreateElement('result-list');
+
+  triggerCopyClick(resultList, 'D:\\Skripsi\\draft.docx', true);
+
+  assert.equal(env.getLastExecCommand(), 'copy', 'Cara 1 harus memanggil execCommand copy');
+  assert.equal(env.toasts.length, 1, 'Toast harus muncul untuk path lokal');
+  assert.match(
+    env.toasts[0].textContent,
+    /Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin/,
+    'Pesan konsekuensi path lokal harus tepat'
+  );
+});
+
+test('Tiket 04: Jaring pengaman Copy: Cara 2 (navigator.clipboard) aktif saat Cara 1 gagal', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
 
   let clipboardWritten = '';
@@ -346,95 +421,22 @@ test('Tiket 04: Jaring pengaman Copy: Cara 1 (navigator.clipboard) sukses', asyn
     }
   };
 
-  const env = createTestEnvironment(exampleData, { navigator: mockNavigator });
+  const env = createTestEnvironment(exampleData, {
+    execCommand: () => false, // execCommand gagal
+    navigator: mockNavigator
+  });
   const resultList = env.getOrCreateElement('result-list');
 
-  // Simulasikan klik tombol Copy
-  resultList.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-copy') {
-          return {
-            getAttribute: (attr) => {
-              if (attr === 'data-url') return 'https://lib.fkominfo.uniga.ac.id/login';
-              if (attr === 'data-local') return 'false';
-              return null;
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
+  triggerCopyClick(resultList, 'https://lib.fkominfo.uniga.ac.id/login', false);
 
   // Tunggu microtask promise resolve
   await new Promise(resolve => setTimeout(resolve, 10));
 
-  assert.equal(clipboardWritten, 'https://lib.fkominfo.uniga.ac.id/login', 'URL harus disalin ke clipboard');
-  assert.equal(env.toasts.length, 1, 'Toast notifikasi harus muncul');
-  assert.match(env.toasts[0].textContent, /Teks sudah disalin/, 'Pesan sukses salin untuk URL web');
+  assert.equal(clipboardWritten, 'https://lib.fkominfo.uniga.ac.id/login', 'Cara 2 navigator.clipboard harus aktif');
+  assert.equal(env.modals.length, 0, 'Modal manual tidak boleh muncul jika Cara 2 sukses');
 });
 
-test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', async () => {
-  const customData = {
-    version: 1,
-    items: [
-      {
-        id: 'local-item',
-        title: 'Dokumen Lokal Windows',
-        tags: ['lokal'],
-        links: [{ label: 'Lokal', url: 'D:\\Skripsi\\draft.docx' }],
-        catatan: 'Catatan lokal',
-        updated_at: '2026-09-30'
-      }
-    ],
-    todo: [],
-    logs: [],
-    pinned_tags: []
-  };
-
-  let clipboardWritten = '';
-  const mockNavigator = {
-    clipboard: {
-      writeText: async (text) => {
-        clipboardWritten = text;
-      }
-    }
-  };
-
-  const env = createTestEnvironment(customData, { navigator: mockNavigator });
-  const resultList = env.getOrCreateElement('result-list');
-
-  resultList.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-copy') {
-          return {
-            getAttribute: (attr) => {
-              if (attr === 'data-url') return 'D:\\Skripsi\\draft.docx';
-              if (attr === 'data-local') return 'true';
-              return null;
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
-
-  // Tunggu microtask promise resolve
-  await new Promise(resolve => setTimeout(resolve, 10));
-
-  assert.equal(clipboardWritten, 'D:\\Skripsi\\draft.docx', 'Path lokal harus disalin');
-  assert.equal(env.toasts.length, 1, 'Toast harus muncul');
-  assert.match(
-    env.toasts[0].textContent,
-    /Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin/,
-    'Pesan konsekuensi path lokal harus tepat'
-  );
-});
-
-test('Tiket 04: Jaring pengaman Copy: Cara 3 (modal manual fallback) muncul saat clipboard & execCommand gagal', async () => {
+test('Tiket 04: Jaring pengaman Copy: Cara 3 (modal manual fallback) muncul saat execCommand & clipboard gagal', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
 
   // Clipboard API reject
@@ -444,36 +446,33 @@ test('Tiket 04: Jaring pengaman Copy: Cara 3 (modal manual fallback) muncul saat
     }
   };
 
-  const env = createTestEnvironment(exampleData, { navigator: mockNavigator });
-  // execCommand gagal
-  env.sandbox.document.execCommand = () => false;
+  const env = createTestEnvironment(exampleData, {
+    execCommand: () => false, // execCommand gagal
+    navigator: mockNavigator
+  });
 
   const resultList = env.getOrCreateElement('result-list');
 
-  resultList.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-copy') {
-          return {
-            getAttribute: (attr) => {
-              if (attr === 'data-url') return 'http://localhost:8089/bulian';
-              if (attr === 'data-local') return 'false';
-              return null;
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
+  triggerCopyClick(resultList, 'http://localhost:8089/bulian', false);
 
   // Tunggu microtask promise reject
   await new Promise(resolve => setTimeout(resolve, 10));
 
   assert.equal(env.modals.length, 1, 'Modal salin manual harus terbuka');
+  const modal = env.modals[0];
   assert.match(
-    env.modals[0].innerHTML,
+    modal.innerHTML,
     /Gagal menyalin - pilih dan salin manual dari kotak di bawah/,
     'Pesan gagal salin manual harus sesuai spesifikasi'
   );
+
+  // Verifikasi wireframe §5: Latar modal tidak bisa diklik untuk menutup
+  modal.trigger('click', { target: modal });
+  assert.equal(env.modals.length, 1, 'Modal tidak boleh tertutup saat backdrop overlay diklik');
+
+  // Tutup lewat tombol modal Tutup
+  if (typeof modal.closeModal === 'function') {
+    modal.closeModal();
+    assert.equal(env.modals.length, 0, 'Modal tertutup saat tombol Tutup ditekan');
+  }
 });

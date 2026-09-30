@@ -31,6 +31,7 @@
 
   const state = {
     activeTab: 'indeks',
+    activeTag: null,
     data: createEmptyData(),
     savedAt: null,
     storageBlocked: false
@@ -72,9 +73,15 @@
   }
 
   function buildRekapText(results) {
-    const countLapis1 = results.filter(r => r.lapis === 1).length;
-    const countLapis2 = results.filter(r => r.lapis === 2).length;
-    const countLapis3 = results.filter(r => r.lapis === 3).length;
+    let countLapis1 = 0;
+    let countLapis2 = 0;
+    let countLapis3 = 0;
+
+    for (const r of results) {
+      if (r.lapis === 1) countLapis1++;
+      else if (r.lapis === 2) countLapis2++;
+      else if (r.lapis === 3) countLapis3++;
+    }
 
     const parts = [];
     if (countLapis1 > 0) parts.push(`${countLapis1} langsung`);
@@ -133,12 +140,6 @@
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       });
     }
-
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay && overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-    });
   }
 
   function copyToClipboard(text, isLocal) {
@@ -147,54 +148,45 @@
     function onCopySuccess() {
       if (isLocal) {
         showToast('Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin');
-      } else {
-        showToast('Teks sudah disalin');
       }
     }
 
-    function tryExecCommandFallback() {
-      let succeeded = false;
-      try {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.left = '-9999px';
-        textarea.style.top = '0';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        succeeded = document.execCommand('copy');
-        document.body.removeChild(textarea);
-      } catch (err) {
-        succeeded = false;
-      }
-
-      if (succeeded) {
-        onCopySuccess();
+    function tryClipboardApi() {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text)
+          .then(onCopySuccess)
+          .catch(() => {
+            showManualCopyModal(text);
+          });
       } else {
         showManualCopyModal(text);
       }
     }
 
-    if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-      navigator.clipboard.writeText(text)
-        .then(onCopySuccess)
-        .catch(tryExecCommandFallback);
-    } else {
-      tryExecCommandFallback();
+    // Cara 1: Coba cara sinkron execCommand (mempertahankan user activation di file://)
+    let syncSuccess = false;
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      syncSuccess = document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch (err) {
+      syncSuccess = false;
     }
-  }
 
-  function getSearchFunction() {
-    if (typeof searchItems === 'function') {
-      return searchItems;
+    if (syncSuccess) {
+      onCopySuccess();
+      return;
     }
-    if (typeof window !== 'undefined' && typeof window.searchItems === 'function') {
-      return window.searchItems;
-    }
-    return function (itemList) {
-      return Array.isArray(itemList) ? itemList : [];
-    };
+
+    // Cara 2: Navigator clipboard API bila cara sinkron ditolak / gagal
+    tryClipboardApi();
   }
 
   function updateIndeksResults(query) {
@@ -203,10 +195,20 @@
     if (!resultListEl) return;
 
     const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
-    const searchFn = getSearchFunction();
-    const cleanQuery = (typeof query === 'string') ? query.trim() : '';
+    const searchFn = (typeof searchItems === 'function')
+      ? searchItems
+      : (typeof window !== 'undefined' ? window.searchItems : null);
 
-    const results = searchFn(items, query);
+    if (typeof searchFn !== 'function') return;
+
+    let results = searchFn(items, query);
+
+    // Bila ada filter kartu tag aktif (Tiket 05), saring hasil berdasarkan tag tersebut
+    if (state.activeTag) {
+      results = results.filter(item => Array.isArray(item.tags) && item.tags.includes(state.activeTag));
+    }
+
+    const cleanQuery = (typeof query === 'string') ? query.trim() : '';
 
     let displayItems = [];
     if (cleanQuery === '') {
