@@ -492,12 +492,107 @@ test('Tiket 06 - Alur Hapus item: konfirmasi judul teks salah ditolak, judul ben
   assert.equal(relatedLog.item_id, null, 'item_id pada log l1 harus menjadi null');
 });
 
-test('Tiket 06 - Validasi CSS: modal lebar 640px, baris search dan tambah, tombol teks destruktif', () => {
+test('Tiket 06 - Validasi CSS: modal lebar 640px, baris search dan tambah, tombol teks destruktif tanpa kotak', () => {
   const css = fs.readFileSync(styleCssPath, 'utf8');
 
   // Modal lebar 640px
   assert.match(css, /max-width:\s*640px/, 'Modal harus mendukung lebar 640px');
 
-  // Tombol destruktif
-  assert.match(css, /--bad/, 'Tombol destruktif harus memakai token --bad');
+  // Tombol destruktif teks merah tanpa kotak
+  assert.match(css, /\.btn-text-danger/, 'Tombol destruktif harus memakai kelas .btn-text-danger');
+  assert.doesNotMatch(css, /\.btn-danger\s*\{/, 'Tidak boleh ada class .btn-danger kotak solid');
+});
+
+test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah membuka modal (bebas stale closure)', () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+
+  // Tambah item baru
+  const btnTambah = env.getOrCreateElement('btn-tambah-item');
+  btnTambah.trigger('click');
+
+  const titleInput = env.getOrCreateElement('item-title');
+  const tagsInput = env.getOrCreateElement('item-tags');
+  const linkLabelInput = env.getOrCreateElement('link-label-0');
+  const linkUrlInput = env.getOrCreateElement('link-url-0');
+  const saveBtn = env.getOrCreateElement('btn-item-save');
+
+  titleInput.value = 'Item Dinamis Baru';
+  titleInput.trigger('input');
+  tagsInput.value = 'dinamis, uji';
+  tagsInput.trigger('input');
+  linkLabelInput.value = 'Link Uji';
+  linkLabelInput.trigger('input');
+  linkUrlInput.value = 'https://uniga.ac.id/dinamis';
+  linkUrlInput.trigger('input');
+
+  saveBtn.trigger('click');
+  assert.equal(env.activeModals.length, 0, 'Modal tambah tertutup');
+
+  // Sekarang coba klik Ubah pada item yang baru ditambahkan
+  const resultList = env.getOrCreateElement('result-list');
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-ubah') {
+          return {
+            className: 'btn-ubah',
+            getAttribute: (attr) => attr === 'data-id' ? 'item-dinamis-baru' : null
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.equal(env.activeModals.length, 1, 'Modal Ubah harus berhasil dibuka untuk item yang baru ditambahkan');
+  const editTitleInput = env.getOrCreateElement('item-title');
+  assert.equal(editTitleInput.value, 'Item Dinamis Baru', 'Modal Ubah harus memuat judul item baru yang baru ditambahkan');
+});
+
+test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gagal (wireframe §5 & prd §5.10)', () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+
+  // Buat setItem melempar error (simulasikan QuotaExceededError / SecurityError)
+  env.sandbox.localStorage.setItem = () => {
+    throw new Error('Storage quota exceeded');
+  };
+
+  const btnTambah = env.getOrCreateElement('btn-tambah-item');
+  btnTambah.trigger('click');
+
+  const titleInput = env.getOrCreateElement('item-title');
+  const tagsInput = env.getOrCreateElement('item-tags');
+  const linkLabelInput = env.getOrCreateElement('link-label-0');
+  const linkUrlInput = env.getOrCreateElement('link-url-0');
+  const saveBtn = env.getOrCreateElement('btn-item-save');
+
+  titleInput.value = 'Item Gagal Simpan';
+  titleInput.trigger('input');
+  tagsInput.value = 'gagal, uji';
+  tagsInput.trigger('input');
+  linkLabelInput.value = 'Link';
+  linkLabelInput.trigger('input');
+  linkUrlInput.value = 'https://uniga.ac.id';
+  linkUrlInput.trigger('input');
+
+  saveBtn.trigger('click');
+
+  // Modal harus TETAP TERBUKA agar isian form tidak hilang
+  assert.equal(env.activeModals.length, 1, 'Modal harus tetap terbuka saat penyimpanan gagal');
+  assert.equal(titleInput.value, 'Item Gagal Simpan', 'Isian form tidak boleh hilang');
+});
+
+test('Tiket 06 - Verifikasi Fix Review: Tombol Escape saat modal terbuka tidak menutup modal (wireframe §8)', () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+
+  const btnTambah = env.getOrCreateElement('btn-tambah-item');
+  btnTambah.trigger('click');
+  assert.equal(env.activeModals.length, 1, 'Modal terbuka');
+
+  // Tekan Escape di document
+  env.triggerDoc('keydown', { key: 'Escape' });
+  assert.equal(env.activeModals.length, 1, 'Modal harus tetap terbuka saat Escape ditekan sesuai wireframe §8');
 });

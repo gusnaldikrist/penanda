@@ -198,7 +198,7 @@
     return `${year}-${month}-${day}`;
   }
 
-  function generateItemId(title, existingItems, currentItemId = null) {
+  function generateItemId(title, existingItems) {
     if (!title) return 'item';
     let slug = String(title)
       .trim()
@@ -209,14 +209,10 @@
       .replace(/^-|-$/g, '');
     if (!slug) slug = 'item';
 
-    if (currentItemId && slug === currentItemId) {
-      return currentItemId;
-    }
-
     const existingIds = new Set(
       (Array.isArray(existingItems) ? existingItems : [])
         .map(item => item.id)
-        .filter(id => id && id !== currentItemId)
+        .filter(id => Boolean(id))
     );
 
     if (!existingIds.has(slug)) {
@@ -295,7 +291,7 @@
       <div class="modal-footer">
         <div class="modal-footer-actions">
           <button type="button" class="btn btn-secondary btn-cancel-delete">Batal</button>
-          <button type="button" id="btn-confirm-delete" class="btn btn-danger" disabled>Hapus Permanen</button>
+          <button type="button" id="btn-confirm-delete" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
         </div>
       </div>
     `;
@@ -335,17 +331,17 @@
         }
 
         if (state.data && Array.isArray(state.data.todo)) {
-          state.data.todo.forEach(t => {
-            if (t.item_id === item.id) {
-              t.item_id = null;
+          state.data.todo.forEach(todo => {
+            if (todo.item_id === item.id) {
+              todo.item_id = null;
             }
           });
         }
 
         if (state.data && Array.isArray(state.data.logs)) {
-          state.data.logs.forEach(l => {
-            if (l.item_id === item.id) {
-              l.item_id = null;
+          state.data.logs.forEach(logEntry => {
+            if (logEntry.item_id === item.id) {
+              logEntry.item_id = null;
             }
           });
         }
@@ -354,7 +350,11 @@
           state.focusedItemId = null;
         }
 
-        saveData(state.data);
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
         closeActiveModal();
         renderIndeksView();
       });
@@ -434,6 +434,19 @@
     const cancelBtn = overlay.querySelector('.btn-cancel-modal');
     const deleteBtn = document.getElementById('btn-item-delete');
 
+    function getFormLinks() {
+      if (!linkRowsContainer) return [];
+      const parsedLinks = [];
+      links.forEach((link, idx) => {
+        const labelInput = document.getElementById(`link-label-${idx}`);
+        const urlInput = document.getElementById(`link-url-${idx}`);
+        const labelValue = labelInput ? labelInput.value.trim() : (link.label || '').trim();
+        const urlValue = urlInput ? urlInput.value.trim() : (link.url || '').trim();
+        parsedLinks.push({ label: labelValue, url: urlValue });
+      });
+      return parsedLinks;
+    }
+
     function renderLinkRows() {
       if (!linkRowsContainer) return;
       linkRowsContainer.innerHTML = links.map((link, idx) => `
@@ -475,35 +488,60 @@
     }
 
     function validateForm() {
-      const titleVal = titleInput ? titleInput.value.trim() : '';
-      const tagsVal = tagsInput ? tagsInput.value : '';
-      const tagRes = validateTags(tagsVal);
+      const titleValue = titleInput ? titleInput.value.trim() : '';
+      const tagsValue = tagsInput ? tagsInput.value : '';
+      const tagValidationResult = validateTags(tagsValue);
+      const formLinks = getFormLinks();
 
-      let linksValid = links.length > 0;
-      links.forEach((link, idx) => {
-        const labelInput = document.getElementById(`link-label-${idx}`);
-        const urlInput = document.getElementById(`link-url-${idx}`);
-        const lVal = labelInput ? labelInput.value.trim() : (link.label || '').trim();
-        const uVal = urlInput ? urlInput.value.trim() : (link.url || '').trim();
-        if (!lVal || !uVal || lVal.length > 40) {
+      let linksValid = formLinks.length > 0;
+      let hasAnyLinkInput = false;
+
+      for (const formLink of formLinks) {
+        if (formLink.label || formLink.url) {
+          hasAnyLinkInput = true;
+        }
+        if (!formLink.label || !formLink.url || formLink.label.length > 40) {
           linksValid = false;
         }
-      });
+      }
 
-      const isFormValid = (titleVal.length >= 1 && titleVal.length <= 120) && tagRes.valid && linksValid;
+      const isTitleValid = titleValue.length >= 1 && titleValue.length <= 120;
+      const isFormValid = isTitleValid && tagValidationResult.valid && linksValid;
 
       if (saveBtn) {
         saveBtn.disabled = !isFormValid;
       }
 
+      const titleErrEl = document.getElementById('item-title-error');
+      if (titleErrEl) {
+        if (titleInput && titleInput.value.length > 120) {
+          titleErrEl.textContent = 'Judul maksimal 120 karakter';
+          titleErrEl.style.display = 'block';
+        } else {
+          titleErrEl.textContent = '';
+          titleErrEl.style.display = 'none';
+        }
+      }
+
       const tagsErrEl = document.getElementById('item-tags-error');
       if (tagsErrEl) {
-        if (!tagRes.valid && tagsVal.trim() !== '') {
-          tagsErrEl.textContent = tagRes.error;
+        if (!tagValidationResult.valid && tagsValue.trim() !== '') {
+          tagsErrEl.textContent = tagValidationResult.error;
           tagsErrEl.style.display = 'block';
         } else {
           tagsErrEl.textContent = '';
           tagsErrEl.style.display = 'none';
+        }
+      }
+
+      const linksErrEl = document.getElementById('item-links-error');
+      if (linksErrEl) {
+        if (hasAnyLinkInput && !linksValid) {
+          linksErrEl.textContent = 'Setiap link wajib memiliki label (maks 40 karakter) dan URL/path';
+          linksErrEl.style.display = 'block';
+        } else {
+          linksErrEl.textContent = '';
+          linksErrEl.style.display = 'none';
         }
       }
 
@@ -540,37 +578,28 @@
         if (!validateForm()) return;
 
         const title = titleInput.value.trim();
-        const tagRes = validateTags(tagsInput.value);
+        const tagValidationResult = validateTags(tagsInput.value);
         const cleanCatatan = catatanInput ? catatanInput.value.trim() : '';
-        const cleanLinks = [];
-        links.forEach((link, idx) => {
-          const labelInput = document.getElementById(`link-label-${idx}`);
-          const urlInput = document.getElementById(`link-url-${idx}`);
-          const lVal = labelInput ? labelInput.value.trim() : (link.label || '').trim();
-          const uVal = urlInput ? urlInput.value.trim() : (link.url || '').trim();
-          if (lVal && uVal) {
-            cleanLinks.push({ label: lVal, url: uVal });
-          }
-        });
+        const cleanLinks = getFormLinks().filter(itemLink => itemLink.label && itemLink.url);
         const today = getTodayDateString();
 
         const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
 
         if (isEdit) {
-          const itemIdx = items.findIndex(it => it.id === itemToEdit.id);
-          if (itemIdx >= 0) {
-            items[itemIdx].title = title;
-            items[itemIdx].tags = tagRes.tags;
-            items[itemIdx].links = cleanLinks;
-            items[itemIdx].catatan = cleanCatatan;
-            items[itemIdx].updated_at = today;
+          const itemIndex = items.findIndex(candidate => candidate.id === itemToEdit.id);
+          if (itemIndex >= 0) {
+            items[itemIndex].title = title;
+            items[itemIndex].tags = tagValidationResult.tags;
+            items[itemIndex].links = cleanLinks;
+            items[itemIndex].catatan = cleanCatatan;
+            items[itemIndex].updated_at = today;
           }
         } else {
           const newId = generateItemId(title, items);
           items.unshift({
             id: newId,
             title,
-            tags: tagRes.tags,
+            tags: tagValidationResult.tags,
             links: cleanLinks,
             catatan: cleanCatatan,
             updated_at: today
@@ -578,7 +607,11 @@
         }
 
         state.data.items = items;
-        saveData(state.data);
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
         closeActiveModal();
         renderIndeksView();
       });
@@ -922,7 +955,8 @@
           const ubahBtn = e.target.closest('.btn-ubah');
           if (ubahBtn) {
             const id = typeof ubahBtn.getAttribute === 'function' ? ubahBtn.getAttribute('data-id') : null;
-            const targetItem = items.find(it => it.id === id);
+            const currentItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+            const targetItem = currentItems.find(candidate => candidate.id === id);
             if (targetItem) {
               openItemModal(targetItem);
             }
@@ -1067,10 +1101,8 @@
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           const modal = document.querySelector('.modal-overlay');
-          if (modal) {
-            closeActiveModal();
-            return;
-          }
+          if (modal) return;
+
           if (state.focusedItemId) {
             state.focusedItemId = null;
             const searchInput = document.getElementById('search-input');

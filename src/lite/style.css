@@ -812,25 +812,17 @@ body {
   font-weight: 500;
   cursor: pointer;
   padding: 4px 0;
+  transition: opacity var(--transition-fast);
 }
 
-.btn-text-danger:hover {
+.btn-text-danger:hover:not(:disabled) {
   text-decoration: underline;
 }
 
-.btn-danger {
-  background-color: var(--bad);
-  color: var(--on-ink);
-  border: 1px solid var(--bad);
-}
-
-.btn-danger:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.btn-danger:disabled {
-  opacity: 0.5;
+.btn-text-danger:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+  text-decoration: none;
 }
 
 .delete-confirm-box {
