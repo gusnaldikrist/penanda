@@ -139,6 +139,11 @@ body {
   white-space: nowrap;
 }
 
+.status-bar.error {
+  color: var(--bad);
+  font-weight: 500;
+}
+
 /* ==========================================================================
    Konten Panel Utama
    ========================================================================== */
@@ -153,6 +158,88 @@ body {
 
 .tab-panel.active {
   display: block;
+}
+
+/* ==========================================================================
+   Tombol (Pola Komponen 4 di design-tokens.md)
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
+}
+
+.btn-primary:hover {
+  background-color: var(--body);
+}
+
+.btn-secondary {
+  background-color: var(--card);
+  color: var(--body);
+  border-color: var(--line);
+}
+
+.btn-secondary:hover {
+  background-color: var(--band);
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Keadaan Kosong (Empty State - PRD 5.8 & Wireframe 6)
+   ========================================================================== */
+
+.empty-state {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.empty-state-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.empty-state-desc {
+  font-size: var(--font-body);
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.path-notice {
+  font-size: var(--font-meta);
+  color: var(--muted);
+  margin-top: 12px;
 }
 
 .placeholder-card {
