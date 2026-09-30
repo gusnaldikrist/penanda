@@ -133,7 +133,7 @@ test('app.js: saveData() dan loadData() siklus baca tulis localStorage indeks_v1
 
   // Periksa pembaruan status dan UI
   assert.match(statusText, /Lite - 4 item - tersimpan \d{2}:\d{2}/, 'Status bar harus diperbarui dengan jam simpan');
-  assert.match(panelInnerHtml, /4 item tersimpan/, 'Panel indeks harus menampilkan jumlah item tersimpan');
+  assert.match(panelInnerHtml, /search-input/, 'Panel indeks harus menampilkan kotak pencarian setelah data tersimpan');
 
   // Muat ulang (loadData)
   const loaded = sandbox.window.loadData();

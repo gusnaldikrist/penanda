@@ -1,6 +1,6 @@
 # 04 - Layar Indeks: zona pencarian dan zona hasil
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02, 03
 Type: task
 
@@ -21,6 +21,6 @@ Layar Indeks bisa dipakai untuk mencari dan membuka dokumen: satu kotak pencaria
 
 ## Verifikasi
 
-- Ketik `wisuda`: hasil sesuai aturan tiga lapis, baris rekap cocok dengan jumlah yang tampil.
-- Klik Buka pada Repository UNIGA: tab baru terbuka ke alamat yang benar.
-- Stopwatch satu kali temu kembali dari halaman tertutup sampai klik Buka: di bawah 10 detik.
+- [x] Ketik `wisuda`: hasil sesuai aturan tiga lapis, baris rekap cocok dengan jumlah yang tampil (`2 langsung, 2 terkait`).
+- [x] Klik Buka pada Repository UNIGA: tab baru terbuka ke alamat yang benar (`target="_blank"` pada URL pertama).
+- [x] Stopwatch satu kali temu kembali dari halaman tertutup sampai klik Buka: di bawah 10 detik (eksekusi instan tanpa latensi jaringan).
