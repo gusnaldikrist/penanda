@@ -1,23 +1,27 @@
-# Environment & Secrets
-.env
-.env.local
-*.env
+# Binary Go
+*.exe
+*.exe~
+penanda
+penanda.exe
 
-# Dependencies
-node_modules/
-__pycache__/
-*.py[cod]
-.venv/
-env/
-
-# Build outputs & caches
-dist/
-build/
-.cache/
+# Runtime Data (Data lokal & backup harian pengguna)
+# Mencegah data riil link/dokumen pengguna ter-commit ke repo
+data.json
+data-*.json
+*.tmp
 *.log
 
-# IDE & OS
-.DS_Store
+# Pastikan data contoh tetap di-track oleh git
+!src/shared/data.example.json
+
+# Build & Distribusi Paket
+dist/
+build/
+
+# OS & Editor
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 .vscode/
 .idea/
+.DS_Store
