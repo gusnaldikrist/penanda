@@ -32,6 +32,7 @@
   const state = {
     activeTab: 'indeks',
     activeTag: null,
+    focusedItemId: null,
     data: createEmptyData(),
     savedAt: null,
     storageBlocked: false
@@ -189,6 +190,138 @@
     tryClipboardApi();
   }
 
+  function formatTagLabel(tag) {
+    if (!tag) return '';
+    const str = String(tag).trim();
+    if (str.length <= 3) return str.toUpperCase();
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function computeRelatedItems(focusedItem, allItems) {
+    if (!focusedItem || !Array.isArray(allItems)) return [];
+
+    const focusedTags = (Array.isArray(focusedItem.tags) ? focusedItem.tags : [])
+      .map(t => String(t).trim().toLowerCase())
+      .filter(Boolean);
+
+    if (focusedTags.length === 0) return [];
+
+    const candidates = [];
+    for (const item of allItems) {
+      if (item.id === focusedItem.id) continue;
+
+      const itemTags = (Array.isArray(item.tags) ? item.tags : [])
+        .map(t => String(t).trim().toLowerCase())
+        .filter(Boolean);
+
+      const intersection = itemTags.filter(t => focusedTags.includes(t)).length;
+      if (intersection > 0) {
+        candidates.push({ item, score: intersection });
+      }
+    }
+
+    candidates.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return (b.item.updated_at || '').localeCompare(a.item.updated_at || '');
+    });
+
+    return candidates.slice(0, 3).map(c => c.item);
+  }
+
+  function renderHarianZone() {
+    const zoneHarianEl = document.getElementById('zone-harian');
+    if (!zoneHarianEl) return;
+
+    const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+    const harianItems = items.filter(it => Array.isArray(it.tags) && it.tags.some(t => String(t).toLowerCase() === 'harian'));
+
+    if (harianItems.length === 0) {
+      zoneHarianEl.style.display = 'none';
+      zoneHarianEl.innerHTML = '';
+      return;
+    }
+
+    zoneHarianEl.style.display = 'flex';
+    zoneHarianEl.innerHTML = `
+      <div class="zone-label">HARIAN</div>
+      <div class="harian-scroll">
+        ${harianItems.map(item => {
+          const primaryLink = (Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
+          const primaryUrl = primaryLink ? (primaryLink.url || '') : '';
+          const local = isLocalPath(primaryUrl);
+          return `<a href="${escapeHtml(primaryUrl)}" class="chip-harian" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(primaryUrl)}" data-local="${local}">${escapeHtml(item.title || '')}</a>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderKartuZone() {
+    const zoneKartuEl = document.getElementById('zone-kartu');
+    if (!zoneKartuEl) return;
+
+    const pinnedTags = (state.data && Array.isArray(state.data.pinned_tags)) ? state.data.pinned_tags : [];
+    if (pinnedTags.length === 0) {
+      zoneKartuEl.style.display = 'none';
+      zoneKartuEl.innerHTML = '';
+      return;
+    }
+
+    const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+
+    zoneKartuEl.style.display = 'flex';
+    zoneKartuEl.innerHTML = `
+      <div class="zone-label">KARTU</div>
+      <div class="kartu-scroll">
+        ${pinnedTags.map(tag => {
+          const tagLower = String(tag).toLowerCase();
+          const count = items.filter(it => Array.isArray(it.tags) && it.tags.some(t => String(t).toLowerCase() === tagLower)).length;
+          const isActive = state.activeTag === tagLower;
+          return `<button type="button" class="btn-card-tag ${isActive ? 'active' : ''}" data-tag="${escapeHtml(tagLower)}"><span class="tag-title">${escapeHtml(formatTagLabel(tag))}</span> <span class="tag-count">${count}</span></button>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderTerkaitZone(items) {
+    const zoneTerkaitEl = document.getElementById('zone-terkait');
+    if (!zoneTerkaitEl) return;
+
+    if (!state.focusedItemId) {
+      zoneTerkaitEl.style.display = 'none';
+      zoneTerkaitEl.innerHTML = '';
+      return;
+    }
+
+    const focusedItem = items.find(it => it.id === state.focusedItemId);
+    if (!focusedItem) {
+      zoneTerkaitEl.style.display = 'none';
+      zoneTerkaitEl.innerHTML = '';
+      return;
+    }
+
+    const related = computeRelatedItems(focusedItem, items);
+    if (related.length === 0) {
+      zoneTerkaitEl.style.display = 'none';
+      zoneTerkaitEl.innerHTML = '';
+      return;
+    }
+
+    zoneTerkaitEl.style.display = 'flex';
+    zoneTerkaitEl.innerHTML = `
+      <div class="terkait-header">TERKAIT "Biasanya bareng ini":</div>
+      <div class="terkait-items">
+        ${related.map(item => {
+          const primaryLink = (Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
+          const primaryUrl = primaryLink ? (primaryLink.url || '') : '';
+          const local = isLocalPath(primaryUrl);
+          return `<a href="${escapeHtml(primaryUrl)}" class="terkait-item" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(primaryUrl)}" data-local="${local}">${escapeHtml(item.title || '')}</a>`;
+        }).join('<span class="terkait-sep"> - </span>')}
+      </div>
+    `;
+  }
+
   function updateIndeksResults(query) {
     const rekapEl = document.getElementById('search-rekap');
     const resultListEl = document.getElementById('result-list');
@@ -205,7 +338,12 @@
 
     // Bila ada filter kartu tag aktif (Tiket 05), saring hasil berdasarkan tag tersebut
     if (state.activeTag) {
-      results = results.filter(item => Array.isArray(item.tags) && item.tags.includes(state.activeTag));
+      results = results.filter(item => Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase() === state.activeTag.toLowerCase()));
+    }
+
+    // Jika baris yang sedang difokuskan keluar dari hasil saringan, lepas fokusnya
+    if (state.focusedItemId && !results.some(r => r.id === state.focusedItemId)) {
+      state.focusedItemId = null;
     }
 
     const cleanQuery = (typeof query === 'string') ? query.trim() : '';
@@ -234,6 +372,7 @@
       resultListEl.innerHTML = `
         <div class="no-results">Tidak ada item cocok. Coba kata lain atau tambahkan item baru</div>
       `;
+      renderTerkaitZone(items);
       return;
     }
 
@@ -252,8 +391,10 @@
         ? `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`
         : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false">Copy</button>`;
 
+      const isFocused = state.focusedItemId === item.id;
+
       return `
-        <div class="result-item" data-id="${escapeHtml(item.id || '')}">
+        <div class="result-item ${isFocused ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}">
           <div class="result-header">
             <div class="result-title">${titlePrefix}${escapeHtml(item.title || '')}</div>
             <div class="result-tags">${tagsHtml}</div>
@@ -267,6 +408,7 @@
     }).join('');
 
     resultListEl.innerHTML = html;
+    renderTerkaitZone(items);
   }
 
   function renderIndeksView() {
@@ -296,14 +438,52 @@
         <div class="search-bar-wrap">
           <input type="text" id="search-input" class="search-input" placeholder="Cari judul, tag, atau isi dokumen..." autocomplete="off">
         </div>
+        <div id="zone-harian" class="zone-harian"></div>
+        <div id="zone-kartu" class="zone-kartu"></div>
         <div id="search-rekap" class="search-rekap" style="display: none;"></div>
         <div id="result-list" class="result-list"></div>
+        <div id="zone-terkait" class="zone-terkait" style="display: none;"></div>
       `;
 
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
+          state.focusedItemId = null;
           updateIndeksResults(e.target.value);
+        });
+      }
+
+      const zoneHarianEl = document.getElementById('zone-harian');
+      if (zoneHarianEl) {
+        zoneHarianEl.addEventListener('click', (e) => {
+          const chip = e.target.closest('.chip-harian');
+          if (chip) {
+            const isLocal = chip.getAttribute('data-local') === 'true';
+            if (isLocal) {
+              e.preventDefault();
+              const url = chip.getAttribute('data-url');
+              copyToClipboard(url, true);
+            }
+          }
+        });
+      }
+
+      const zoneKartuEl = document.getElementById('zone-kartu');
+      if (zoneKartuEl) {
+        zoneKartuEl.addEventListener('click', (e) => {
+          const cardBtn = e.target.closest('.btn-card-tag');
+          if (cardBtn) {
+            const tag = cardBtn.getAttribute('data-tag');
+            if (state.activeTag === tag) {
+              state.activeTag = null;
+            } else {
+              state.activeTag = tag;
+            }
+            state.focusedItemId = null;
+            renderKartuZone();
+            const input = document.getElementById('search-input');
+            updateIndeksResults(input ? input.value : '');
+          }
         });
       }
 
@@ -316,12 +496,45 @@
             const url = copyBtn.getAttribute('data-url');
             const isLocal = copyBtn.getAttribute('data-local') === 'true';
             copyToClipboard(url, isLocal);
+            return;
+          }
+
+          const bukaBtn = e.target.closest('.btn-buka');
+          if (bukaBtn) {
+            return;
+          }
+
+          const itemRow = e.target.closest('.result-item');
+          if (itemRow) {
+            const id = itemRow.getAttribute('data-id');
+            state.focusedItemId = (state.focusedItemId === id) ? null : id;
+            const input = document.getElementById('search-input');
+            updateIndeksResults(input ? input.value : '');
           }
         });
       }
 
+      const zoneTerkaitEl = document.getElementById('zone-terkait');
+      if (zoneTerkaitEl) {
+        zoneTerkaitEl.addEventListener('click', (e) => {
+          const terkaitLink = e.target.closest('.terkait-item');
+          if (terkaitLink) {
+            const isLocal = terkaitLink.getAttribute('data-local') === 'true';
+            if (isLocal) {
+              e.preventDefault();
+              const url = terkaitLink.getAttribute('data-url');
+              copyToClipboard(url, true);
+            }
+          }
+        });
+      }
+
+      renderHarianZone();
+      renderKartuZone();
       updateIndeksResults('');
     } else {
+      renderHarianZone();
+      renderKartuZone();
       updateIndeksResults(existingInput.value);
     }
   }
@@ -424,6 +637,26 @@
         }
       });
     });
+
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && state.focusedItemId) {
+          state.focusedItemId = null;
+          const searchInput = document.getElementById('search-input');
+          updateIndeksResults(searchInput ? searchInput.value : '');
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (state.focusedItemId) {
+          if (!e.target.closest || (!e.target.closest('.result-item') && !e.target.closest('#zone-terkait'))) {
+            state.focusedItemId = null;
+            const searchInput = document.getElementById('search-input');
+            updateIndeksResults(searchInput ? searchInput.value : '');
+          }
+        }
+      });
+    }
 
     loadData();
     switchTab(state.activeTab);

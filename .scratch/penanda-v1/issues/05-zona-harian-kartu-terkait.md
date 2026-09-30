@@ -1,6 +1,6 @@
 # 05 - Zona harian, kartu, dan terkait
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 04
 Type: task
 
@@ -18,9 +18,9 @@ Layar Indeks lengkap kelima zonanya: baris Harian, baris Kartu, dan baris Terkai
 
 ## Verifikasi
 
-- Data contoh: baris Harian berisi 2 chip (SLiMS Bulian, Sheet Admin TA).
-- Data contoh: kartu TA 2, Wisuda 2, Magang 1; klik TA memunculkan 2 hasil.
-- Fokus pada Sheet Admin TA: zona Terkait memunculkan Repository UNIGA dan Sheet Job Training, maksimal 3 item, tanpa dirinya sendiri.
-- Klik badan baris (bukan tombolnya) memunculkan zona Terkait; tekan `Esc` menyembunyikannya lagi.
-- Ketik `ta` lalu klik kartu Magang: daftar menyempit ke irisan keduanya dan kartu yang aktif tampak berbeda.
-- Tinggi total kelima zona pada layar 768 px tidak memaksa seluruh halaman menggulir.
+- [x] Data contoh: baris Harian berisi 2 chip (SLiMS Bulian, Sheet Admin TA).
+- [x] Data contoh: kartu TA 2, Wisuda 2, Magang 1; klik TA memunculkan 2 hasil.
+- [x] Fokus pada Sheet Admin TA: zona Terkait memunculkan Repository UNIGA dan Sheet Job Training, maksimal 3 item, tanpa dirinya sendiri.
+- [x] Klik badan baris (bukan tombolnya) memunculkan zona Terkait; tekan `Esc` menyembunyikannya lagi.
+- [x] Ketik `ta` lalu klik kartu Magang: daftar menyempit ke irisan keduanya dan kartu yang aktif tampak berbeda.
+- [x] Tinggi total kelima zona pada layar 768 px tidak memaksa seluruh halaman menggulir.

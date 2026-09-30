@@ -149,7 +149,12 @@ body {
    ========================================================================== */
 
 .main-content {
+  flex: 1 1 auto;
+  overflow: hidden;
   padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .tab-panel {
@@ -158,6 +163,15 @@ body {
 
 .tab-panel.active {
   display: block;
+}
+
+#panel-indeks.active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  gap: 8px;
 }
 
 /* ==========================================================================
@@ -264,7 +278,8 @@ body {
 
 .search-bar-wrap {
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .search-input {
@@ -284,26 +299,128 @@ body {
   color: var(--muted);
 }
 
+/* ==========================================================================
+   Zona 2 (Harian) & Zona 3 (Kartu Pinned Tags) - Tiket 05
+   ========================================================================== */
+
+.zone-harian,
+.zone-kartu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.zone-label {
+  font-size: var(--font-meta);
+  font-weight: 700;
+  color: var(--faint);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 52px;
+}
+
+.harian-scroll,
+.kartu-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.chip-harian {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  background-color: var(--band);
+  color: var(--ink);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chip-harian:hover {
+  background-color: var(--band-2);
+  border-color: var(--line-strong);
+}
+
+.btn-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background-color: var(--card);
+  color: var(--body);
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-card-tag:hover {
+  background-color: var(--band-2);
+  border-color: var(--line-strong);
+}
+
+.btn-card-tag.active {
+  background-color: var(--action-soft);
+  color: var(--action);
+  border-color: var(--action);
+  font-weight: 600;
+}
+
+.tag-count {
+  font-size: var(--font-meta);
+  color: var(--faint);
+}
+
+.btn-card-tag.active .tag-count {
+  color: var(--action);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Zona 4: Baris Rekap & Zona Hasil (Scrollable Vertikal)
+   ========================================================================== */
+
 .search-rekap {
   font-size: var(--font-meta);
   font-weight: 500;
   color: var(--muted);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   padding: 0 2px;
+  flex-shrink: 0;
 }
 
 .result-list {
   background-color: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .result-item {
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   background-color: var(--card);
-  transition: background-color var(--transition-fast);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-left var(--transition-fast);
 }
 
 .result-item:last-child {
@@ -312,6 +429,59 @@ body {
 
 .result-item:hover {
   background-color: var(--band-2);
+}
+
+.result-item.focused {
+  background-color: var(--action-soft);
+  border-left: 2px solid var(--action);
+}
+
+/* ==========================================================================
+   Zona 5: Terkait ("Biasanya bareng ini")
+   ========================================================================== */
+
+.zone-terkait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.terkait-header {
+  font-size: var(--font-meta);
+  font-weight: 700;
+  color: var(--body);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.terkait-items {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.terkait-item {
+  font-size: var(--font-small);
+  color: var(--action);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.terkait-item:hover {
+  text-decoration: underline;
+}
+
+.terkait-sep {
+  color: var(--faint);
+  font-size: var(--font-meta);
 }
 
 .result-header {
