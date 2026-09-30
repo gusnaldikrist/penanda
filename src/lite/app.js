@@ -16,6 +16,19 @@
     };
   }
 
+  function normalizeData(raw) {
+    if (!raw || typeof raw !== 'object') {
+      return createEmptyData();
+    }
+    return {
+      version: raw.version || 1,
+      items: Array.isArray(raw.items) ? raw.items : [],
+      todo: Array.isArray(raw.todo) ? raw.todo : [],
+      logs: Array.isArray(raw.logs) ? raw.logs : [],
+      pinned_tags: Array.isArray(raw.pinned_tags) ? raw.pinned_tags : []
+    };
+  }
+
   const state = {
     activeTab: 'indeks',
     data: createEmptyData(),
@@ -71,28 +84,27 @@
   }
 
   function loadData() {
+    let raw = null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        state.data = createEmptyData();
-      } else {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          state.data = {
-            version: parsed.version || 1,
-            items: Array.isArray(parsed.items) ? parsed.items : [],
-            todo: Array.isArray(parsed.todo) ? parsed.todo : [],
-            logs: Array.isArray(parsed.logs) ? parsed.logs : [],
-            pinned_tags: Array.isArray(parsed.pinned_tags) ? parsed.pinned_tags : []
-          };
-        } else {
-          state.data = createEmptyData();
-        }
-      }
+      raw = localStorage.getItem(STORAGE_KEY);
       state.storageBlocked = false;
     } catch (err) {
       state.storageBlocked = true;
       if (!state.data) {
+        state.data = createEmptyData();
+      }
+      updateStatusBar();
+      renderIndeksView();
+      return state.data;
+    }
+
+    if (!raw) {
+      state.data = createEmptyData();
+    } else {
+      try {
+        const parsed = JSON.parse(raw);
+        state.data = normalizeData(parsed);
+      } catch (parseErr) {
         state.data = createEmptyData();
       }
     }
@@ -105,29 +117,27 @@
   function saveData(newData) {
     if (!newData || typeof newData !== 'object') return false;
 
-    state.data = {
-      version: newData.version || 1,
-      items: Array.isArray(newData.items) ? newData.items : [],
-      todo: Array.isArray(newData.todo) ? newData.todo : [],
-      logs: Array.isArray(newData.logs) ? newData.logs : [],
-      pinned_tags: Array.isArray(newData.pinned_tags) ? newData.pinned_tags : []
-    };
+    const normalized = normalizeData(newData);
+    state.data = normalized;
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       state.storageBlocked = false;
 
       const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      state.savedAt = `${hh}:${mm}`;
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      state.savedAt = `${hours}:${minutes}`;
+
+      updateStatusBar();
+      renderIndeksView();
+      return true;
     } catch (err) {
       state.storageBlocked = true;
+      updateStatusBar();
+      // Jangan re-render DOM agar isian atau form yang sedang aktif tidak hilang
+      return false;
     }
-
-    updateStatusBar();
-    renderIndeksView();
-    return !state.storageBlocked;
   }
 
   function switchTab(tabName) {
@@ -159,7 +169,9 @@
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const targetTab = btn.getAttribute('data-tab');
-        if (targetTab) switchTab(targetTab);
+        if (targetTab) {
+          switchTab(targetTab);
+        }
       });
     });
 
@@ -175,5 +187,4 @@
 
   window.saveData = saveData;
   window.loadData = loadData;
-  window.PenandaState = state;
 })();
