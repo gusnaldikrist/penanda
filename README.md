@@ -1,16 +1,20 @@
-﻿# IndeksKerja
+# Penanda
 
 Proyek dikembangkan menggunakan Antigravity dengan integrasi context multi-agent ke Obsidian.
 
 ## Struktur
-- `src/` — Source code aplikasi
+- `src/lite/` — Frontend jalur Lite (dipakai kedua jalur)
+- `src/pro/` — Backend jalur Pro (Go, stdlib saja)
+- `src/shared/` — `data.example.json`
 - `tests/` — File testing / unit test
 - `.agents/` — Konfigurasi aturan dan workflow agent
+- `docs/agents/` — Konfigurasi skill agent
+- `.scratch/penanda-v1/` — Spec dan 12 tiket eksekusi V1
 - `AGENTS.md` — Konvensi & instruksi proyek untuk AI agent
 
 ## Context & Log
 Dokumentasi PRD, Session Log, Decisions, dan Changelog tersimpan di Obsidian Vault:
-`C:\vault\01-Projects\IndeksKerja\`
+`C:\vault\01-Projects\Penanda\`
 
 - **Hub proyek**: `index.md` (BUKAN `spec.md`)
 - **Format logging kanonik**: `.agents/rules/vault-logging.md`

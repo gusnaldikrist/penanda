@@ -1,26 +1,26 @@
 ﻿# Vault Logging Rule
 
-Setiap kali menyelesaikan task atau sesi di proyek IndeksKerja, agent WAJIB mencatat hasilnya ke Obsidian vault di folder:
-`C:\vault\01-Projects\IndeksKerja\`
+Setiap kali menyelesaikan task atau sesi di proyek Penanda, agent WAJIB mencatat hasilnya ke Obsidian vault di folder:
+`C:\vault\01-Projects\Penanda\`
 
 > **Sumber kebenaran format**: file ini. Konvensi umum vault: `C:\vault\AGENTS.md`.
 
 ## File Target & Format:
 
-### 1. Session Log (`C:\vault\01-Projects\IndeksKerja\session-log.md`)
+### 1. Session Log (`C:\vault\01-Projects\Penanda\session-log.md`)
 Tambahkan entry terbaru di bagian atas file (setelah baris `---`), format:
 ```markdown
 ---
-title: Session Log — IndeksKerja
+title: Session Log — Penanda
 date: <YYYY-MM-DD>
 tags:
   - session-log
-  - project/IndeksKerja
+  - project/Penanda
 status: active
-project: IndeksKerja
+project: Penanda
 ---
 
-# Session Log — IndeksKerja
+# Session Log — Penanda
 
 > Kembali ke: [[index|📁 Ringkasan Proyek]]
 
@@ -35,20 +35,20 @@ project: IndeksKerja
 **Next:** [Langkah lanjutan yang disarankan / -]
 ```
 
-### 2. Changelog (`C:\vault\01-Projects\IndeksKerja\changelog.md`)
+### 2. Changelog (`C:\vault\01-Projects\Penanda\changelog.md`)
 Tambahkan 1 baris riwayat perubahan di bagian atas:
 ```markdown
 ---
-title: Changelog — IndeksKerja
+title: Changelog — Penanda
 date: <YYYY-MM-DD>
 tags:
   - changelog
-  - project/IndeksKerja
+  - project/Penanda
 status: active
-project: IndeksKerja
+project: Penanda
 ---
 
-# Changelog — IndeksKerja
+# Changelog — Penanda
 
 > Kembali ke: [[index|📁 Ringkasan Proyek]]
 
@@ -57,20 +57,20 @@ project: IndeksKerja
 - [YYYY-MM-DD] `[feat/fix/refactor/docs]` — [Deskripsi ringkas perubahan]
 ```
 
-### 3. Decisions Log (`C:\vault\01-Projects\IndeksKerja\decisions.md`)
+### 3. Decisions Log (`C:\vault\01-Projects\Penanda\decisions.md`)
 HANYA jika ada keputusan teknis/arsitektur penting:
 ```markdown
 ---
-title: Decisions Log — IndeksKerja
+title: Decisions Log — Penanda
 date: <YYYY-MM-DD>
 tags:
   - decision
-  - project/IndeksKerja
+  - project/Penanda
 status: active
-project: IndeksKerja
+project: Penanda
 ---
 
-# Decisions Log — IndeksKerja
+# Decisions Log — Penanda
 
 > Kembali ke: [[index|📁 Ringkasan Proyek]]
 
@@ -82,7 +82,7 @@ project: IndeksKerja
 **Alasan:** [Mengapa memilih opsi ini dibanding alternatif lain]
 ```
 
-### 4. Index / Hub (`C:\vault\01-Projects\IndeksKerja\index.md`)
+### 4. Index / Hub (`C:\vault\01-Projects\Penanda\index.md`)
 Ringkasan proyek menjadi hub (BUKAN `spec.md`). Semua dokumen proyek menunjuk balik ke sana dengan `> Kembali ke: [[index|📁 Ringkasan Proyek]]`. Dibuat otomatis oleh `C:\dev\new-project.ps1`.
 
 ## Aturan:

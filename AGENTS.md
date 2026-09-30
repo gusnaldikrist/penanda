@@ -1,4 +1,4 @@
-﻿# AGENTS.md — Konvensi Proyek IndeksKerja
+﻿# AGENTS.md — Konvensi Proyek Penanda
 
 > **Dibaca WAJIB oleh agent sebelum bekerja di proyek ini.**
 > Konvensi umum vault (frontmatter, wikilink, tag, PARA) mengikuti **`C:\vault\AGENTS.md`** — baca file itu juga.
@@ -7,19 +7,23 @@
 
 ## 0. Konteks
 
-Proyek `IndeksKerja` berkembang menggunakan **context layer multi-agent**: kode ada di `C:\dev\IndeksKerja`, logging/dokumentasi di `C:\vault\01-Projects\IndeksKerja\`. Keduanya berpasangan.
+Proyek `Penanda` berkembang menggunakan **context layer multi-agent**: kode ada di `C:\dev\IndeksKerja`, logging/dokumentasi di `C:\vault\01-Projects\Penanda\`. Keduanya berpasangan.
 
-Hub dokumen: `C:\vault\01-Projects\IndeksKerja\index.md` (BUKAN `spec.md`).
+Hub dokumen: `C:\vault\01-Projects\Penanda\index.md` (BUKAN `spec.md`).
 
 ---
 
 ## 1. Struktur
 
-- `src/` — Source code aplikasi
+- `src/lite/` — Frontend jalur Lite: `index.html`, `app.js`, `search.js`, `style.css` (dipakai kedua jalur)
+- `src/pro/` — Backend jalur Pro: `main.go`, `go.mod` (stdlib saja)
+- `src/shared/` — `data.example.json`
 - `tests/` — File testing / unit test
 - `.agents/` — Aturan & workflow agent proyek ini
 - `.agents/rules/` — `vault-logging.md`, `git-convention.md`, `code-style.md`
 - `.agents/workflows/` — alur kerja (mis. `new-feature.md`)
+- `docs/agents/` — Konfigurasi skill agent (issue tracker, label triage, domain docs)
+- `.scratch/<feature-slug>/` — Spec dan tiket lokal (lihat bagian 6)
 
 ---
 
@@ -31,6 +35,10 @@ Hub dokumen: `C:\vault\01-Projects\IndeksKerja\index.md` (BUKAN `spec.md`).
 4. **Git**: Conventional Commits, branch `feat/x`/`fix/x`, atomic commits, jangan force push ke `main` — lihat `.agents/rules/git-convention.md`.
 5. **Code style**: deskriptif, ikuti `.agents/rules/code-style.md`.
 6. **Tanpa persetujuan eksplisit pengguna, JANGAN** lakukan commit/push (ADR-005 SUAKA, berlaku umum).
+7. **Larangan V1**: tanpa framework CSS/JS, tanpa CDN, tanpa build step; frontend wajib jalan dari `file://` dan dimuat sebagai script biasa, bukan ES module. Rincian: `prd.md` bagian 3.
+8. **Aturan tag**: huruf kecil tanpa spasi; tag bermakna sama dipasang berdampingan pada item yang sama, bukan item baru; nilai kartu awal `ta`, `wisuda`, `magang`. Rincian: `prd-skema.md` bagian 5.
+9. **Isolasi modul**: pencarian hanya membaca `items`; todo dan log tidak menambah field wajib di form item dan tidak menambah zona di layar Indeks. Rincian: `prd.md` bagian 6.2.
+10. **Peta dokumen**: sebelum mengubah dokumen produk atau tiket — termasuk menambah tiket dan menutup celah spec — ikuti pemilik topik dan urutan perubahan di `.agents/doc-map.md`.
 
 ---
 
@@ -114,6 +122,25 @@ Lihat `.agents/workflows/new-feature.md` — ringkas: brainstorm/klarifikasi →
 |:---|:---|
 | Konvensi umum vault | `C:\vault\AGENTS.md` |
 | Home & status vault | `C:\vault\Welcome.md`, `C:\vault\dashboard.md` |
-| Hub proyek ini (vault) | `C:\vault\01-Projects\IndeksKerja\index.md` |
-| Session log proyek | `C:\vault\01-Projects\IndeksKerja\session-log.md` |
+| Hub proyek dan peta dokumen V1 (PRD, skema data, arsitektur, tech stack, wireframe, token desain) | `C:\vault\01-Projects\Penanda\index.md` |
+| Spec eksekusi dan 12 tiket V1 | `.scratch\penanda-v1\spec.md` dan `.scratch\penanda-v1\issues\` |
+| Keputusan dan ADR | `C:\vault\01-Projects\Penanda\decisions.md` |
+| Session log proyek | `C:\vault\01-Projects\Penanda\session-log.md` |
 | Format logging kanonik | `.agents/rules/vault-logging.md` |
+
+---
+
+## 6. Agent skills
+
+### Issue tracker
+
+Issue dan spec repo ini dilacak sebagai markdown di `.scratch/<feature-slug>/` (lokal, tanpa remote). Lihat `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Label triage memakai default kanonik: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`; ditulis sebagai baris `Status:` di file issue. Lihat `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Layout **single-context**: satu `CONTEXT.md` + `docs/adr/` di root repo. Lihat `docs/agents/domain.md`.
+
