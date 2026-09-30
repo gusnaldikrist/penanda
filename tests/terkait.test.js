@@ -395,7 +395,7 @@ test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan T
   );
 });
 
-test('Tiket 05 - Klik tombol aksi Buka/Copy tidak memicu fokus baris', () => {
+test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
 
@@ -427,7 +427,25 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy tidak memicu fokus baris', () => {
 
   // Zona terkait tetap tersembunyi karena yang diklik adalah tombol Copy
   assert.equal(zoneTerkait.style.display, 'none', 'Klik tombol Copy tidak boleh memicu zona Terkait');
-  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused');
+  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused setelah klik Copy');
+
+  // Simulasikan klik tombol Ubah
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-ubah') return { className: 'btn-ubah' };
+        if (sel === '.result-item') {
+          return {
+            getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null
+          };
+        }
+        return null;
+      }
+    }
+  });
+
+  assert.equal(zoneTerkait.style.display, 'none', 'Klik tombol Ubah tidak boleh memicu zona Terkait');
+  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused setelah klik Ubah');
 });
 
 test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona Terkait', () => {
@@ -437,11 +455,11 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
   const resultList = env.getOrCreateElement('result-list');
   const zoneTerkait = env.getOrCreateElement('zone-terkait');
 
-  // Fokuskan baris sheet-ta-admin
+  // 1. Fokuskan baris sheet-ta-admin
   resultList.trigger('click', {
     target: {
       closest: (sel) => {
-        if (sel === '.btn-copy' || sel === '.btn-buka') return null;
+        if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
         if (sel === '.result-item') {
           return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
         }
@@ -450,16 +468,104 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
     }
   });
 
-  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait aktif');
+  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait aktif setelah baris diklik');
 
-  // Tekan Esc
+  // Re-click pada baris yang sama tidak melepas fokus (fokus tetap aktif)
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
+        if (sel === '.result-item') {
+          return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
+        }
+        return null;
+      }
+    }
+  });
+  assert.notEqual(zoneTerkait.style.display, 'none', 'Re-click pada baris yang sama harus tetap fokus');
+
+  // 2. Tekan Esc: melepas fokus
   env.triggerDoc('keydown', { key: 'Escape' });
   assert.equal(zoneTerkait.style.display, 'none', 'Esc harus menyembunyikan zona terkait');
-  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas');
+  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh Esc');
+
+  // 3. Fokuskan lagi lalu uji klik luar (outside click)
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
+        if (sel === '.result-item') {
+          return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
+        }
+        return null;
+      }
+    }
+  });
+  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait aktif kembali');
+
+  // Trigger klik luar (target bukan .result-item dan bukan #zone-terkait)
+  env.triggerDoc('click', {
+    target: {
+      closest: () => null
+    }
+  });
+  assert.equal(zoneTerkait.style.display, 'none', 'Klik luar harus menyembunyikan zona terkait');
+  assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh klik luar');
+});
+
+test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa terpotong 10 item', () => {
+  // Buat 15 item dengan tag "projek"
+  const fifteenItems = [];
+  for (let i = 1; i <= 15; i++) {
+    fifteenItems.push({
+      id: `item-${i}`,
+      title: `Item Projek ${i}`,
+      tags: ['projek', 'kerja'],
+      links: [{ label: 'Link', url: `https://example.com/${i}` }],
+      catatan: `Catatan ${i}`,
+      updated_at: `2026-09-${String(i).padStart(2, '0')}`
+    });
+  }
+
+  const customData = {
+    version: 1,
+    items: fifteenItems,
+    todo: [],
+    logs: [],
+    pinned_tags: ['projek']
+  };
+
+  const env = createTestEnvironment(customData);
+  const zoneKartu = env.getOrCreateElement('zone-kartu');
+  const resultList = env.getOrCreateElement('result-list');
+
+  // Klik kartu tag 'projek' saat input pencarian kosong
+  zoneKartu.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-card-tag') {
+          return { getAttribute: (attr) => attr === 'data-tag' ? 'projek' : null };
+        }
+        return null;
+      }
+    }
+  });
+
+  // Hitung jumlah result-item di innerHTML
+  const countMatches = (resultList.innerHTML.match(/class="result-item/g) || []).length;
+  assert.equal(countMatches, 15, 'Filter kartu tag harus menampilkan seluruh 15 item tanpa terpotong 10 item');
 });
 
 test('Tiket 05 - Validasi CSS: batasan 768 px, scrolling independen zona hasil, chip token', () => {
   const css = fs.readFileSync(styleCssPath, 'utf8');
+
+  // html dan body harus mengunci tinggi ke 100% dan overflow hidden
+  assert.match(css, /html,\s*body\s*\{[^}]*height:\s*100%/, 'html dan body harus height: 100%');
+  assert.match(css, /html,\s*body\s*\{[^}]*overflow:\s*hidden/, 'html dan body harus overflow: hidden');
+
+  // body harus flex column
+  assert.match(css, /body\s*\{[^}]*display:\s*flex/, 'body harus display: flex');
+  assert.match(css, /body\s*\{[^}]*flex-direction:\s*column/, 'body harus flex-direction: column');
 
   // Zona hasil harus scrollable vertikal
   assert.match(css, /#result-list|\.result-list/, 'Harus ada selector untuk result-list');

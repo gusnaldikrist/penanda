@@ -190,10 +190,18 @@
     tryClipboardApi();
   }
 
+  function getPrimaryLinkInfo(item) {
+    const primaryLink = (item && Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
+    const url = primaryLink ? (primaryLink.url || '') : '';
+    const label = primaryLink ? (primaryLink.label || 'Buka Link') : 'Buka Link';
+    const isLocal = isLocalPath(url);
+    return { link: primaryLink, url, label, isLocal };
+  }
+
   function formatTagLabel(tag) {
     if (!tag) return '';
     const str = String(tag).trim();
-    if (str.length <= 3) return str.toUpperCase();
+    if (str.toLowerCase() === 'ta') return 'TA';
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
@@ -201,7 +209,7 @@
     if (!focusedItem || !Array.isArray(allItems)) return [];
 
     const focusedTags = (Array.isArray(focusedItem.tags) ? focusedItem.tags : [])
-      .map(t => String(t).trim().toLowerCase())
+      .map(tag => String(tag).trim().toLowerCase())
       .filter(Boolean);
 
     if (focusedTags.length === 0) return [];
@@ -211,10 +219,10 @@
       if (item.id === focusedItem.id) continue;
 
       const itemTags = (Array.isArray(item.tags) ? item.tags : [])
-        .map(t => String(t).trim().toLowerCase())
+        .map(tag => String(tag).trim().toLowerCase())
         .filter(Boolean);
 
-      const intersection = itemTags.filter(t => focusedTags.includes(t)).length;
+      const intersection = itemTags.filter(tag => focusedTags.includes(tag)).length;
       if (intersection > 0) {
         candidates.push({ item, score: intersection });
       }
@@ -227,7 +235,7 @@
       return (b.item.updated_at || '').localeCompare(a.item.updated_at || '');
     });
 
-    return candidates.slice(0, 3).map(c => c.item);
+    return candidates.slice(0, 3).map(candidate => candidate.item);
   }
 
   function renderHarianZone() {
@@ -235,7 +243,7 @@
     if (!zoneHarianEl) return;
 
     const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
-    const harianItems = items.filter(it => Array.isArray(it.tags) && it.tags.some(t => String(t).toLowerCase() === 'harian'));
+    const harianItems = items.filter(item => Array.isArray(item.tags) && item.tags.some(tag => String(tag).toLowerCase() === 'harian'));
 
     if (harianItems.length === 0) {
       zoneHarianEl.style.display = 'none';
@@ -248,10 +256,8 @@
       <div class="zone-label">HARIAN</div>
       <div class="harian-scroll">
         ${harianItems.map(item => {
-          const primaryLink = (Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
-          const primaryUrl = primaryLink ? (primaryLink.url || '') : '';
-          const local = isLocalPath(primaryUrl);
-          return `<a href="${escapeHtml(primaryUrl)}" class="chip-harian" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(primaryUrl)}" data-local="${local}">${escapeHtml(item.title || '')}</a>`;
+          const { url, isLocal } = getPrimaryLinkInfo(item);
+          return `<a href="${escapeHtml(url)}" class="chip-harian" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || '')}</a>`;
         }).join('')}
       </div>
     `;
@@ -276,7 +282,7 @@
       <div class="kartu-scroll">
         ${pinnedTags.map(tag => {
           const tagLower = String(tag).toLowerCase();
-          const count = items.filter(it => Array.isArray(it.tags) && it.tags.some(t => String(t).toLowerCase() === tagLower)).length;
+          const count = items.filter(item => Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase() === tagLower)).length;
           const isActive = state.activeTag === tagLower;
           return `<button type="button" class="btn-card-tag ${isActive ? 'active' : ''}" data-tag="${escapeHtml(tagLower)}"><span class="tag-title">${escapeHtml(formatTagLabel(tag))}</span> <span class="tag-count">${count}</span></button>`;
         }).join('')}
@@ -294,7 +300,7 @@
       return;
     }
 
-    const focusedItem = items.find(it => it.id === state.focusedItemId);
+    const focusedItem = items.find(item => item.id === state.focusedItemId);
     if (!focusedItem) {
       zoneTerkaitEl.style.display = 'none';
       zoneTerkaitEl.innerHTML = '';
@@ -313,10 +319,8 @@
       <div class="terkait-header">TERKAIT "Biasanya bareng ini":</div>
       <div class="terkait-items">
         ${related.map(item => {
-          const primaryLink = (Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
-          const primaryUrl = primaryLink ? (primaryLink.url || '') : '';
-          const local = isLocalPath(primaryUrl);
-          return `<a href="${escapeHtml(primaryUrl)}" class="terkait-item" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(primaryUrl)}" data-local="${local}">${escapeHtml(item.title || '')}</a>`;
+          const { url, isLocal } = getPrimaryLinkInfo(item);
+          return `<a href="${escapeHtml(url)}" class="terkait-item" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || '')}</a>`;
         }).join('<span class="terkait-sep"> - </span>')}
       </div>
     `;
@@ -338,7 +342,7 @@
 
     // Bila ada filter kartu tag aktif (Tiket 05), saring hasil berdasarkan tag tersebut
     if (state.activeTag) {
-      results = results.filter(item => Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase() === state.activeTag.toLowerCase()));
+      results = results.filter(item => Array.isArray(item.tags) && item.tags.some(tag => String(tag).toLowerCase() === state.activeTag.toLowerCase()));
     }
 
     // Jika baris yang sedang difokuskan keluar dari hasil saringan, lepas fokusnya
@@ -349,7 +353,7 @@
     const cleanQuery = (typeof query === 'string') ? query.trim() : '';
 
     let displayItems = [];
-    if (cleanQuery === '') {
+    if (cleanQuery === '' && !state.activeTag) {
       if (rekapEl) {
         rekapEl.style.display = 'none';
         rekapEl.textContent = '';
@@ -377,9 +381,7 @@
     }
 
     const html = displayItems.map(item => {
-      const primaryLink = (Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
-      const primaryUrl = primaryLink ? (primaryLink.url || '') : '';
-      const local = isLocalPath(primaryUrl);
+      const { url: primaryUrl, isLocal: local } = getPrimaryLinkInfo(item);
 
       const tagsHtml = Array.isArray(item.tags)
         ? item.tags.map(tag => `<span class="chip-tag">${escapeHtml(tag)}</span>`).join('')
@@ -504,10 +506,15 @@
             return;
           }
 
+          const ubahBtn = e.target.closest('.btn-ubah');
+          if (ubahBtn) {
+            return;
+          }
+
           const itemRow = e.target.closest('.result-item');
           if (itemRow) {
             const id = itemRow.getAttribute('data-id');
-            state.focusedItemId = (state.focusedItemId === id) ? null : id;
+            state.focusedItemId = id;
             const input = document.getElementById('search-input');
             updateIndeksResults(input ? input.value : '');
           }
