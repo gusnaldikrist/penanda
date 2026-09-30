@@ -1,6 +1,6 @@
 # 01 - Fondasi halaman, tab, dan token CSS
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: -
 Type: task
 
@@ -17,6 +17,7 @@ Halaman yang bisa dibuka langsung dari Explorer, punya tiga tab (Indeks, Todo, L
 
 ## Verifikasi
 
-- Double-click `src/lite/index.html`: tiga tab bisa diklik, tidak ada error di console.
-- Radius maksimum terukur 6 px; tidak ada bayangan selain ring fokus; tidak ada gradien.
-- Tinggi baris tab terukur 48 px.
+- [x] Double-click `src/lite/index.html`: tiga tab (Indeks, Todo, Log) bisa diklik, script `search.js` dan `app.js` dimuat sebagai script biasa (bukan ES module), tidak ada error di console.
+- [x] Radius maksimum terukur 6 px (`--radius-md: 6px`, `--radius-sm: 4px`); tidak ada bayangan selain ring fokus (`box-shadow: 0 0 0 1px`); tidak ada gradien.
+- [x] Tinggi baris tab terukur tepat 48 px (`--header-height: 48px`).
+- [x] Seluruh 5 unit test di `tests/foundations.test.js` lulus 100% (verifikasi file, struktur offline, 19 token warna, kendala bentuk, dan logika pergantian tab).

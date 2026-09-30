@@ -1,0 +1,184 @@
+/* ==========================================================================
+   Design Tokens - Penanda V1 (Compact Academic Rigid, vanilla-offline)
+   Rujukan: design-tokens.md di vault Obsidian
+   ========================================================================== */
+
+:root {
+  /* 19 Variabel Warna Resmi V1 */
+  --bg: #f7f9fb;
+  --card: #ffffff;
+  --band: #eceef0;
+  --band-2: #e6e8ea;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --ink: #0f172a;
+  --body: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --on-ink: #ffffff;
+  --action: #4f46e5;
+  --action-hover: #4338ca;
+  --action-soft: #eef2ff;
+  --ok: #059669;
+  --ok-bg: #ecfdf5;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --bad: #e11d48;
+  --bad-bg: #fff1f2;
+
+  /* Tipografi Skala Compact (System Font Stack Windows) */
+  --font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-title: 15px;
+  --font-body: 14px;
+  --font-small: 13px;
+  --font-meta: 12px;
+
+  /* Sifat Bentuk Kaku + Compact */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --transition-fast: 120ms ease;
+  --transition: 150ms ease;
+
+  /* Dimensi Kerangka */
+  --header-height: 48px;
+  --max-width: 1040px;
+}
+
+/* ==========================================================================
+   Reset & Elemen Dasar
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  line-height: 1.45;
+  color: var(--body);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   Header & Navigasi Baris Atas (Tinggi tepat 48px)
+   ========================================================================== */
+
+.top-bar {
+  height: var(--header-height);
+  background-color: var(--card);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  user-select: none;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 100%;
+}
+
+.brand-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nav-tabs {
+  display: flex;
+  height: 100%;
+  gap: 2px;
+}
+
+.nav-tab-btn {
+  height: var(--header-height);
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.nav-tab-btn:hover {
+  color: var(--ink);
+  background-color: var(--band);
+}
+
+.nav-tab-btn.active {
+  color: var(--action);
+  font-weight: 600;
+  border-bottom-color: var(--action);
+  background-color: transparent;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+}
+
+.status-bar {
+  font-size: var(--font-meta);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Konten Panel Utama
+   ========================================================================== */
+
+.main-content {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+.placeholder-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  color: var(--muted);
+  font-size: var(--font-body);
+}
+
+.placeholder-card h2 {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+/* ==========================================================================
+   Aturan Bentuk: Max Radius 6px, Tanpa Shadow (Hanya Focus Ring), Tanpa Gradien
+   ========================================================================== */
+
+button:focus-visible,
+input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--action);
+}
