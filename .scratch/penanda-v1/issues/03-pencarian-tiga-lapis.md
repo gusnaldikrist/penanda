@@ -1,6 +1,6 @@
 # 03 - Pencarian tiga lapis sebagai fungsi murni
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: -
 Type: task
 
@@ -25,7 +25,7 @@ Satu fungsi tanpa DOM, `searchItems(items, kataKunci)`, yang mengembalikan hasil
 
 ## Verifikasi
 
-- `node tests/search.test.js` lulus; sebutkan jumlah kasus di sini.
-- Kata kunci `slims`: hanya SLiMS Bulian di lapis 1.
-- Kata kunci `sheet admin`: cocok pada Sheet Admin TA; `admin sheet` tidak cocok.
-- Kata kunci kosong: 4 item urut `updated_at` menurun, tanpa penanda lapis.
+- [x] `node tests/search.test.js` lulus (15 kasus uji lulus 100%).
+- [x] Kata kunci `slims`: hanya SLiMS Bulian di lapis 1.
+- [x] Kata kunci `sheet admin`: cocok pada Sheet Admin TA; `admin sheet` tidak cocok.
+- [x] Kata kunci kosong: 4 item urut `updated_at` menurun, tanpa penanda lapis.
