@@ -41,21 +41,9 @@
       const title = (item.title || '').toLowerCase();
       const titleMatches = title.includes(query);
 
-      let tagMatches = false;
-      if (Array.isArray(item.tags)) {
-        for (const tag of item.tags) {
-          if (tag && String(tag).toLowerCase().includes(query)) {
-            tagMatches = true;
-            break;
-          }
-        }
-        if (!tagMatches && item.tags.length > 0) {
-          const joinedTags = item.tags.filter(Boolean).map(t => String(t).toLowerCase()).join(' ');
-          if (joinedTags.includes(query)) {
-            tagMatches = true;
-          }
-        }
-      }
+      const tagMatches = Array.isArray(item.tags) && item.tags.some(tag => {
+        return tag && String(tag).toLowerCase().includes(query);
+      });
 
       if (titleMatches || tagMatches) {
         lapis1.push(item);
@@ -114,24 +102,24 @@
       }
     }
 
-    // Urutkan tiap lapis berdasarkan updated_at menurun
-    const sortedLapis1 = sortByUpdatedAtDesc(lapis1).map(item => ({
-      ...item,
-      lapis: 1
-    }));
+    function formatLayer(itemList, lapisNumber, penandaText) {
+      return sortByUpdatedAtDesc(itemList).map(item => {
+        const entry = {
+          ...item,
+          lapis: lapisNumber
+        };
+        if (penandaText) {
+          entry.penanda = penandaText;
+        }
+        return entry;
+      });
+    }
 
-    const sortedLapis2 = sortByUpdatedAtDesc(lapis2).map(item => ({
-      ...item,
-      lapis: 2
-    }));
-
-    const sortedLapis3 = sortByUpdatedAtDesc(lapis3).map(item => ({
-      ...item,
-      lapis: 3,
-      penanda: 'dari catatan'
-    }));
-
-    return [...sortedLapis1, ...sortedLapis2, ...sortedLapis3];
+    return [
+      ...formatLayer(lapis1, 1),
+      ...formatLayer(lapis2, 2),
+      ...formatLayer(lapis3, 3, 'dari catatan')
+    ];
   }
 
   if (typeof window !== 'undefined') {
@@ -139,6 +127,6 @@
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { searchItems, normalizeQuery };
+    module.exports = { searchItems };
   }
 })();

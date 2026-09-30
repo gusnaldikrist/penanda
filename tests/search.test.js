@@ -4,7 +4,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { searchItems, normalizeQuery } = require('../src/lite/search.js');
+const { searchItems } = require('../src/lite/search.js');
 
 const examplePath = path.resolve(__dirname, '../src/shared/data.example.json');
 const rawData = fs.readFileSync(examplePath, 'utf8');
@@ -27,15 +27,18 @@ function runCase(name, fn) {
   }
 }
 
+function getByLapis(result, level) {
+  return result.filter(item => item.lapis === level);
+}
+
 console.log('--- Mulai Pengujian Pencarian Tiga Lapis (Tiket 03) ---');
 
-// Kasus 1: Normalisasi kata kunci
-runCase('normalizeQuery: spasi berlebih dirapikan dan huruf kecil', () => {
-  assert.equal(normalizeQuery('  Sheet    Admin  '), 'sheet admin');
-  assert.equal(normalizeQuery('SLiMS'), 'slims');
-  assert.equal(normalizeQuery(null), '');
-  assert.equal(normalizeQuery(undefined), '');
-  assert.equal(normalizeQuery(123), '');
+// Kasus 1: Toleransi spasi berlebih dan huruf besar/kecil
+runCase('Toleransi spasi dan casing: "  Sheet    Admin  " cocok Sheet Admin TA', () => {
+  const result = searchItems(items, '  Sheet    Admin  ');
+  const lapis1 = getByLapis(result, 1);
+  assert.equal(lapis1.length, 1);
+  assert.equal(lapis1[0].id, 'sheet-ta-admin');
 });
 
 // Kasus 2: Kata kunci kosong
@@ -63,9 +66,9 @@ runCase('Kata kunci hanya spasi: diperlakukan sama seperti kata kunci kosong', (
 // Kasus 4: Kata kunci "slims" (Verifikasi: hanya SLiMS Bulian di lapis 1)
 runCase('Kata kunci "slims": hanya SLiMS Bulian di lapis 1', () => {
   const result = searchItems(items, 'slims');
-  const lapis1 = result.filter(r => r.lapis === 1);
-  const lapis2 = result.filter(r => r.lapis === 2);
-  const lapis3 = result.filter(r => r.lapis === 3);
+  const lapis1 = getByLapis(result, 1);
+  const lapis2 = getByLapis(result, 2);
+  const lapis3 = getByLapis(result, 3);
 
   assert.equal(lapis1.length, 1, 'Hanya ada 1 item di lapis 1');
   assert.equal(lapis1[0].id, 'slims-bulian', 'Item di lapis 1 harus slims-bulian');
@@ -81,13 +84,13 @@ runCase('Kata kunci "slims": hanya SLiMS Bulian di lapis 1', () => {
 // Kasus 5: Kata kunci "sheet admin" (Verifikasi: cocok Sheet Admin TA, admin sheet tidak cocok)
 runCase('Kata kunci "sheet admin": cocok pada Sheet Admin TA di lapis 1', () => {
   const result = searchItems(items, 'sheet admin');
-  const lapis1 = result.filter(r => r.lapis === 1);
+  const lapis1 = getByLapis(result, 1);
 
   assert.equal(lapis1.length, 1, 'Lapis 1 harus ada 1 hasil');
   assert.equal(lapis1[0].id, 'sheet-ta-admin', 'Cocok pada Sheet Admin TA');
 
   // Lapis 2 memuat 3 item sisa karena semua berbagi tag dengan sheet-ta-admin
-  const lapis2 = result.filter(r => r.lapis === 2);
+  const lapis2 = getByLapis(result, 2);
   assert.equal(lapis2.length, 3, 'Ketiga item sisa berbagi tag dengan sheet-ta-admin');
 });
 
@@ -100,8 +103,8 @@ runCase('Kata kunci "admin sheet": tidak cocok pada apa pun (0 hasil)', () => {
 // Kasus 7: Kata kunci "wisuda"
 runCase('Kata kunci "wisuda": Repository UNIGA dan Sheet Admin TA di lapis 1', () => {
   const result = searchItems(items, 'wisuda');
-  const lapis1 = result.filter(r => r.lapis === 1);
-  const lapis2 = result.filter(r => r.lapis === 2);
+  const lapis1 = getByLapis(result, 1);
+  const lapis2 = getByLapis(result, 2);
 
   assert.equal(lapis1.length, 2, 'Lapis 1 harus ada 2 item bertag wisuda');
   const ids1 = lapis1.map(i => i.id).sort();
@@ -115,7 +118,7 @@ runCase('Kata kunci "wisuda": Repository UNIGA dan Sheet Admin TA di lapis 1', (
 // Kasus 8: Kata kunci "ta"
 runCase('Kata kunci "ta": cocok pada Repository UNIGA dan Sheet Admin TA di lapis 1', () => {
   const result = searchItems(items, 'ta');
-  const lapis1 = result.filter(r => r.lapis === 1);
+  const lapis1 = getByLapis(result, 1);
   assert.equal(lapis1.length, 2, 'Lapis 1 memuat 2 item bertag ta');
   const ids1 = lapis1.map(i => i.id).sort();
   assert.deepEqual(ids1, ['repo-uniga', 'sheet-ta-admin']);
@@ -124,8 +127,8 @@ runCase('Kata kunci "ta": cocok pada Repository UNIGA dan Sheet Admin TA di lapi
 // Kasus 9: Kata kunci "magang"
 runCase('Kata kunci "magang": Sheet Job Training di lapis 1, Sheet Admin TA di lapis 2', () => {
   const result = searchItems(items, 'magang');
-  const lapis1 = result.filter(r => r.lapis === 1);
-  const lapis2 = result.filter(r => r.lapis === 2);
+  const lapis1 = getByLapis(result, 1);
+  const lapis2 = getByLapis(result, 2);
 
   assert.equal(lapis1.length, 1, 'Lapis 1 memuat 1 item');
   assert.equal(lapis1[0].id, 'sheet-job-training');
@@ -137,7 +140,7 @@ runCase('Kata kunci "magang": Sheet Job Training di lapis 1, Sheet Admin TA di l
 // Kasus 10: Kata kunci "sheet"
 runCase('Kata kunci "sheet": Sheet Job Training dan Sheet Admin TA di lapis 1', () => {
   const result = searchItems(items, 'sheet');
-  const lapis1 = result.filter(r => r.lapis === 1);
+  const lapis1 = getByLapis(result, 1);
   assert.equal(lapis1.length, 2, 'Ada 2 item sheet di lapis 1');
   const ids1 = lapis1.map(i => i.id).sort();
   assert.deepEqual(ids1, ['sheet-job-training', 'sheet-ta-admin']);
@@ -182,11 +185,19 @@ runCase('Deduplikasi: item yang sudah masuk lapis sebelumnya tidak boleh muncul 
   }
 });
 
-// Kasus 15: Ketahanan input jika items bernilai null, undefined, atau bukan array
+// Kasus 15: Isolasi batas tag (mencegah false positive dari penggabungan string tag)
+runCase('Isolasi batas tag: query lintas tag "load wi" tidak mencocokkan repo-uniga (upload, wisuda)', () => {
+  const result = searchItems(items, 'load wi');
+  assert.equal(result.length, 0, 'Query multi-kata tidak boleh cocok menyeberangi dua tag atomik terpisah');
+});
+
+// Kasus 16: Ketahanan input jika items bernilai null, undefined, atau bukan array
 runCase('Ketahanan input: items null atau undefined mengembalikan array kosong', () => {
   assert.deepEqual(searchItems(null, 'wisuda'), []);
   assert.deepEqual(searchItems(undefined, 'wisuda'), []);
   assert.deepEqual(searchItems('invalid', 'wisuda'), []);
+  assert.deepEqual(searchItems(items, null), searchItems(items, ''));
+  assert.deepEqual(searchItems(items, undefined), searchItems(items, ''));
 });
 
 console.log(`--- Selesai: ${passedTests}/${totalTests} kasus uji lulus 100% ---`);
