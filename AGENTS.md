@@ -15,7 +15,7 @@ Hub dokumen: `C:\vault\01-Projects\Penanda\index.md` (BUKAN `spec.md`).
 
 ## 1. Struktur
 
-- `src/lite/` — Frontend jalur Lite: `index.html`, `app.js`, `search.js`, `style.css` (dipakai kedua jalur)
+- `src/frontend/` — Frontend aplikasi: `index.html`, `app.js`, `search.js`, `style.css` (disajikan `penanda.exe`)
 - `src/pro/` — Backend jalur Pro: `main.go`, `go.mod` (stdlib saja)
 - `src/shared/` — `data.example.json`
 - `tests/` — File testing / unit test

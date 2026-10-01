@@ -3,9 +3,9 @@
 Proyek dikembangkan menggunakan Antigravity dengan integrasi context multi-agent ke Obsidian.
 
 ## Struktur
-- `src/lite/` — Frontend jalur Lite (dipakai kedua jalur)
-- `src/pro/` — Backend jalur Pro (Go, stdlib saja)
-- `src/shared/` — `data.example.json`
+- `src/frontend/` — Frontend aplikasi (disajikan `penanda.exe`)
+- `src/pro/` — Backend Go (stdlib saja)
+- `src/shared/` — `data.example.json`, `local-path-cases.json`
 - `tests/` — File testing / unit test
 - `.agents/` — Konfigurasi aturan dan workflow agent
 - `docs/agents/` — Konfigurasi skill agent

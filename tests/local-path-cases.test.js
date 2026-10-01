@@ -25,7 +25,7 @@ function loadAdapter() {
   sandbox.globalThis = sandbox;
   sandbox.module = { exports: {} };
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync('src/lite/storage-adapter.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('src/frontend/storage-adapter.js', 'utf8'), sandbox);
   return sandbox.module.exports;
 }
 

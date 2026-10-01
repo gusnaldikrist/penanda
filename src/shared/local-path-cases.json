@@ -1,5 +1,5 @@
 {
-  "_catatan": "Sumber kebenaran tunggal untuk aturan path lokal. src/lite/storage-adapter.js (isLocalPath) dan src/pro/main.go (isAllowedLocalPath) dua-duanya harus mengikutinya. Menambah kasus di sini membuat kedua bahasa ikut menguji tanpa perlu mengingat dua daftar.",
+  "_catatan": "Sumber kebenaran tunggal untuk aturan path lokal. src/frontend/storage-adapter.js (isLocalPath) dan src/pro/main.go (isAllowedLocalPath) dua-duanya harus mengikutinya. Menambah kasus di sini membuat kedua bahasa ikut menguji tanpa perlu mengingat dua daftar.",
   "_keputusan": "Go adalah gerbang, jadi aturan Go yang jadi acuan. Urutan: nilai kosong ditolak, skema file harus punya isi, UNC harus menyebut nama server, huruf drive boleh tanpa path. Alamat yang tidak berguna ditolak supaya UI tidak menawarkan tombol yang pasti ditolak backend.",
   "kasus": [
     { "masukan": "D:\\Data", "harapan": true, "alasan": "huruf drive dengan path" },

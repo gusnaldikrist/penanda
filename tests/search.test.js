@@ -4,7 +4,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { searchItems } = require('../src/lite/search.js');
+const { searchItems } = require('../src/frontend/search.js');
 
 const examplePath = path.resolve(__dirname, '../src/shared/data.example.json');
 const rawData = fs.readFileSync(examplePath, 'utf8');
