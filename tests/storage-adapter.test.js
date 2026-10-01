@@ -93,8 +93,31 @@ test('Tiket 11 - Path lokal: huruf drive, UNC, dan skema file', () => {
 test('Tiket 11 - Path lokal: alamat web dan teks biasa bukan path lokal', () => {
   const adapter = loadAdapter();
 
-  for (const addr of ['https://lib.uniga.ac.id', 'http://localhost:8080', 'D:', 'drive.google.com', '', null, undefined]) {
+  for (const addr of ['https://lib.uniga.ac.id', 'http://localhost:8080', 'drive.google.com', 'notas.txt', '', null, undefined]) {
     assert.equal(adapter.isLocalPath(addr), false, `"${addr}" bukan path lokal`);
+  }
+});
+
+test('Path lokal: D: sah karena berarti folder kerja drive itu', () => {
+  const adapter = loadAdapter();
+
+  // Go adalah gerbang endpoint /open, dan Go menerima D:. Test Tiket 11
+  // sebelumnya menyatakan sebaliknya, lalu penyelarasan dengan Go
+  // (src/shared/local-path-cases.json) menetapkan D: sah supaya kedua
+  // bahasa punya satu jawaban.
+  assert.equal(adapter.isLocalPath('D:'), true, '"D:" berarti folder kerja drive itu');
+  assert.equal(adapter.isLocalPath('D:'), adapter.isLocalPath('D:\\'),
+    'D: dan D: harus sama-sama dianggap path lokal');
+});
+
+test('Path lokal: alamat tanpa isi ditolak, bukan offered tombol mati', () => {
+  const adapter = loadAdapter();
+
+  // Dua bentuk ini dulu dianggap path lokal sehingga UI menampilkan tombol
+  // Buka yang pasti ditolak backend dengan 400.
+  for (const addr of ['\\\\', 'file:']) {
+    assert.equal(adapter.isLocalPath(addr), false,
+      `"${addr}" tidak menunjuk apa pun; jangan menawarkan tombol Buka yang pasti gagal`);
   }
 });
 

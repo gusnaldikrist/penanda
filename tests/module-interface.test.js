@@ -65,7 +65,7 @@ test('interface publik: window dan globalThis tidak perlu ditulis dua kali', () 
     'window dan globalThis harus memilih objek yang sama, jadi cukup ditulis sekali');
 });
 
-test('interface publik: state dan isLocalPath hanya untuk test, bukan window', () => {
+test('interface publik: state hanya untuk test, bukan window', () => {
   const sandbox = loadApp();
 
   // Kebijakan sejak tiket 02: state tidak boleh bocor ke browser supaya
@@ -79,10 +79,23 @@ test('interface publik: state dan isLocalPath hanya untuk test, bukan window', (
     'state tetap harus ada di module.exports untuk test');
   assert.equal(typeof sandbox.module.exports.state, 'object',
     'state yang diekspor harus berupa objek');
+});
 
-  assert.equal(sandbox.window.isLocalPath, undefined,
-    'isLocalPath tidak ada di window karena hanya dibutuhkan test');
-  assert.equal(typeof sandbox.module.exports.isLocalPath, 'function');
+test('interface publik: tidak ada pembungkus tipis yang hanya meneruskan', () => {
+  const source = fs.readFileSync(appJsPath, 'utf8');
+
+  // Aturan path lokal hanya ada di storage-adapter.js. app.js pernah punya
+  // wrapper isLocalPath yang isinya satu baris meneruskan ke adapter, tapi
+  // tidak ada yang memakainya selain satu pemanggilan yang bisa langsung ke
+  // adapter. Wrapper seperti itu menambah nama tanpa menambah kemampuan.
+  const wrapper = [...source.matchAll(/function (\w+)\(\s*\w+\s*\)\s*\{\s*return storage\.\w+\([^)]*\);\s*\}/g)];
+  assert.deepEqual(wrapper.map(m => m[1]), [],
+    `ditemukan pembungkus yang hanya meneruskan ke storage: ${wrapper.map(m => m[1]).join(', ')}`);
+
+  // Aturan path lokal tidak diekspor dari app.js sama sekali; yang diuji
+  // adalah versi di adapter.
+  assert.equal('isLocalPath' in loadApp().module.exports, false,
+    'isLocalPath tidak diekspor dari app.js');
 });
 
 test('interface publik: state yang diekspor benar-benar dipakai aplikasi', () => {

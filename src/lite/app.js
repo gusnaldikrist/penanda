@@ -91,10 +91,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
       .replace(/'/g, '&#39;');
   }
 
-  function isLocalPath(url) {
-    return storage.isLocalPath(url);
-  }
-
   function buildRekapText(results) {
     let countLapis1 = 0;
     let countLapis2 = 0;
@@ -671,7 +667,7 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     const primaryLink = (item && Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
     const url = primaryLink ? (primaryLink.url || '') : '';
     const label = primaryLink ? (primaryLink.label || 'Buka Link') : 'Buka Link';
-    const isLocal = isLocalPath(url);
+    const isLocal = storage.isLocalPath(url);
     return { link: primaryLink, url, label, isLocal };
   }
 
@@ -2351,9 +2347,9 @@ async function confirmDestructive(config) {
      cukup satu baris di MODULE_INTERFACE, bukan tiga.
 
      window dan globalThis adalah objek yang sama, jadi cukup ditulis sekali.
-     state dan isLocalPath sengaja tidak masuk daftar ini: keduanya hanya
-     dibutuhkan test, dan membocorkan state ke window memungkinkan aplikasi
-     lain memutasinya dari luar (kebijakan sejak tiket 02).
+     state sengaja tidak masuk daftar ini: hanya dibutuhkan test, dan
+     membocorkan state ke window memungkinkan aplikasi lain memutasinya dari
+     luar (kebijakan sejak tiket 02).
      -------------------------------------------------------------------------- */
   const MODULE_INTERFACE = {
     saveData,
@@ -2391,7 +2387,6 @@ async function confirmDestructive(config) {
 
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = Object.assign({}, MODULE_INTERFACE, {
-      isLocalPath,
       state
     });
   }

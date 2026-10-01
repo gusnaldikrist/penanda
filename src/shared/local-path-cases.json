@@ -1,0 +1,30 @@
+{
+  "_catatan": "Sumber kebenaran tunggal untuk aturan path lokal. src/lite/storage-adapter.js (isLocalPath) dan src/pro/main.go (isAllowedLocalPath) dua-duanya harus mengikutinya. Menambah kasus di sini membuat kedua bahasa ikut menguji tanpa perlu mengingat dua daftar.",
+  "_keputusan": "Go adalah gerbang, jadi aturan Go yang jadi acuan. Urutan: nilai kosong ditolak, skema file harus punya isi, UNC harus menyebut nama server, huruf drive boleh tanpa path. Alamat yang tidak berguna ditolak supaya UI tidak menawarkan tombol yang pasti ditolak backend.",
+  "kasus": [
+    { "masukan": "D:\\Data", "harapan": true, "alasan": "huruf drive dengan path" },
+    { "masukan": "D:/Data", "harapan": true, "alasan": "huruf drive dengan garis miring" },
+    { "masukan": "C:\\Users\\pustakawan", "harapan": true, "alasan": "path Windows biasa" },
+    { "masukan": "d:\\Data", "harapan": true, "alasan": "huruf drive lowercase tetap sah" },
+    { "masukan": "  D:\\Data  ", "harapan": true, "alasan": "spasi tepi diabaikan" },
+    { "masukan": "D:", "harapan": true, "alasan": "drive tanpa path sah: berarti folder kerja drive itu" },
+
+    { "masukan": "\\\\server\\share", "harapan": true, "alasan": "UNC menyebut nama server" },
+    { "masukan": "\\\\server\\share\\data.json", "harapan": true, "alasan": "UNC dengan berkas" },
+
+    { "masukan": "file:///D:/Data", "harapan": true, "alasan": "skema file dengan isi" },
+    { "masukan": "file:\\\\D:\\Data", "harapan": true, "alasan": "skema file gaya Windows" },
+    { "masukan": "FILE:///D:/Data", "harapan": true, "alasan": "skema file huruf besar tetap sah" },
+
+    { "masukan": "", "harapan": false, "alasan": "nilai kosong bukan path" },
+    { "masukan": "   ", "harapan": false, "alasan": "spasi saja bukan path" },
+    { "masukan": "\\\\", "harapan": false, "alasan": "UNC tanpa nama server tidak menyebut apa pun" },
+    { "masukan": "file:", "harapan": false, "alasan": "skema file tanpa isi tidak menunjuk berkas" },
+    { "masukan": "https://lib.uniga.ac.id", "harapan": false, "alasan": "alamat web bukan path lokal" },
+    { "masukan": "http://localhost:8080", "harapan": false, "alasan": "alamat web bukan path lokal" },
+    { "masukan": "drive.google.com", "harapan": false, "alasan": "domain tanpa skema bukan path" },
+    { "masukan": "notas.txt", "harapan": false, "alasan": "nama berkas relatif bukan path lokal" },
+    { "masukan": "1:\\Data", "harapan": false, "alasan": "huruf drive harus huruf, bukan angka" },
+    { "masukan": "D", "harapan": false, "alasan": "satu huruf tanpa titik dua bukan drive" }
+  ]
+}

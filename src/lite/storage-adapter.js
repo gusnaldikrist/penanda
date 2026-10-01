@@ -30,13 +30,39 @@
    * Menentukan apakah alamat sebuah path lokal Windows.
    * Memakai tiga awalan yang disebut arsitektur bagian 5:
    * huruf drive (D:\), UNC (\\server), dan skema file:.
+   *
+   * Aturan ini harus sama persis dengan isAllowedLocalPath di
+   * src/pro/main.go. Go adalah gerbang endpoint /open, jadi kalau dua
+   * implementasi berbeda, user mendapat tombol Buka yang pasti ditolak.
+   * Sumber kebenarannya src/shared/local-path-cases.json, yang dibaca test
+   * kedua bahasa; jangan menambah kasus di salah satu test saja.
    */
   function isLocalPath(address) {
     if (!address || typeof address !== 'string') return false;
     const trimmed = address.trim();
-    return /^[a-zA-Z]:[\\/]/.test(trimmed) ||
-      trimmed.startsWith('\\\\') ||
-      trimmed.toLowerCase().startsWith('file:');
+    if (trimmed === '') return false;
+
+    // Skema file: harus punya isi setelah "file:"
+    if (trimmed.toLowerCase().startsWith('file:')) {
+      return trimmed.length > 'file:'.length;
+    }
+
+    // UNC: \\server\share, minimal harus menyebut nama server
+    if (trimmed.startsWith('\\\\')) {
+      return trimmed.length > 2;
+    }
+
+    // Huruf drive: D: atau D:\Data. Tanpa path tetap sah karena berarti
+    // folder kerja drive itu.
+    if (trimmed.length >= 2 && trimmed[1] === ':') {
+      const drive = trimmed[0];
+      if ((drive >= 'a' && drive <= 'z') || (drive >= 'A' && drive <= 'Z')) {
+        const rest = trimmed.slice(2);
+        return rest === '' || rest.startsWith('\\') || rest.startsWith('/');
+      }
+    }
+
+    return false;
   }
 
   /** Format area status tiga bagian: jalur, jumlah item, waktu simpan. */

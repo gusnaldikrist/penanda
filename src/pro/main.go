@@ -264,14 +264,46 @@ func handleOpenPath(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// openInExplorer menjalankan startfile lewat perintah bawaan Windows.
-func openInExplorer(target string) error {
-	launcher, err := exec.LookPath("rundll32.exe")
+// shellLauncherName mengembalikan nama perintah pembuka bawaan Windows.
+//
+// shellOpen, shellLauncherName, dan shellOpenArgs adalah satu-satunya tempat
+// yang tahu cara menjalankan perintah ini. openInExplorer (endpoint /open)
+// dan openBrowser (saat startup) sama-sama memakainya, supaya keduanya tidak
+// bisa diam-diam berbeda.
+//
+// shellLauncherName sengaja tanpa parameter: nama perintah tidak pernah boleh
+// berasal dari input user, hanya dari kode.
+func shellLauncherName() string {
+	return "rundll32.exe"
+}
+
+// shellOpenArgs menyusun argumen perintah pembuka.
+//
+// ShellExecute tidak ada di paket stdlib Go, jadi perintah bawaan Windows
+// dipakai sebagai pengganti: rundll32.exe url.dll,FileProtocolHandler
+// menjalankan alamat dengan aplikasi default Windows, sama seperti ShellExecute.
+//
+// Argumen hasil fungsi ini menentukan perintah apa yang dieksekusi, jadi
+// diuji sebagai data murni (shell_open_test.go) tanpa menjalankan proses.
+func shellOpenArgs(target string) []string {
+	return []string{"url.dll,FileProtocolHandler", target}
+}
+
+// shellOpen menjalankan alamat lewat perintah pembuka Windows.
+//
+// Fungsi ini tidak menunggu proses selesai; yang dipanggil hanya perlu tahu
+// perintah bisa dijalankan atau tidak.
+func shellOpen(target string) error {
+	launcher, err := exec.LookPath(shellLauncherName())
 	if err != nil {
 		return errors.New("tidak menemukan perintah pembuka Windows")
 	}
-	cmd := exec.Command(launcher, "url.dll,FileProtocolHandler", target)
-	return cmd.Start()
+	return exec.Command(launcher, shellOpenArgs(target)...).Start()
+}
+
+// openInExplorer membuka path lokal milik user lewat perintah bawaan Windows.
+func openInExplorer(target string) error {
+	return shellOpen(target)
 }
 
 // noDataFiles membungkus handler berkas sehingga data.json dan
@@ -386,11 +418,10 @@ func main() {
 	}
 }
 
+// openBrowser membuka browser bawaan user ke alamat server.
+//
+// Memakai shellOpen yang sama dengan openInExplorer, jadi cara membuka
+// browser dan cara membuka path lokal tidak bisa berbeda.
 func openBrowser(url string) error {
-	browserLauncher, err := exec.LookPath("rundll32.exe")
-	if err != nil {
-		return errors.New("tidak menemukan perintah pembuka browser")
-	}
-	cmd := exec.Command(browserLauncher, "url.dll,FileProtocolHandler", url)
-	return cmd.Start()
+	return shellOpen(url)
 }
