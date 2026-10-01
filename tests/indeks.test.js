@@ -400,8 +400,10 @@ test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', async 
   assert.match(resultList.innerHTML, /href="https:\/\/example\.com\/doc"/, 'Link Buka ada untuk URL web');
   assert.match(resultList.innerHTML, /target="_blank"/, 'Target _blank ada untuk membuka di tab baru');
 
-  // Dokumen lokal di Lite TIDAK boleh menampilkan tombol Buka, hanya tombol Copy
-  assert.doesNotMatch(resultList.innerHTML, /href="D:\\Skripsi\\draft\.docx"/, 'Path lokal tidak boleh punya tombol link Buka di Lite');
+  // Path lokal memakai tombol Buka (backend yang membuka), bukan tautan
+  // href: browser tidak boleh membuka path Windows dari halaman web.
+  assert.doesNotMatch(resultList.innerHTML, /href="D:\\Skripsi\\draft\.docx"/, 'Path lokal tidak boleh jadi tautan href');
+  assert.match(resultList.innerHTML, /btn-buka-local/, 'Path lokal punya tombol Buka');
   assert.match(resultList.innerHTML, /data-local="true"/, 'Item lokal ditandai data-local="true"');
 });
 

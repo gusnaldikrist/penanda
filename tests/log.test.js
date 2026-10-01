@@ -266,7 +266,8 @@ function createTestEnvironment(initialData = null) {
       }
     },
     // Environment minimal untuk storage-adapter.js (Tiket 11).
-    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    // Backend palsu dari helper: aplikasi hanya punya satu jalur, jadi
+    // halaman yang siap selalu menghubungi server.
     fetch: backend.fetch,
     AbortController,
     setTimeout, clearTimeout,

@@ -16,8 +16,8 @@ Hub dokumen: `C:\vault\01-Projects\Penanda\index.md` (BUKAN `spec.md`).
 ## 1. Struktur
 
 - `src/frontend/` — Frontend aplikasi: `index.html`, `app.js`, `search.js`, `style.css` (disajikan `penanda.exe`)
-- `src/pro/` — Backend jalur Pro: `main.go`, `go.mod` (stdlib saja)
-- `src/shared/` — `data.example.json`
+- `src/pro/` — Backend: `main.go`, `go.mod` (stdlib saja)
+- `src/shared/` — `data.example.json`, `local-path-cases.json`
 - `tests/` — File testing / unit test
 - `.agents/` — Aturan & workflow agent proyek ini
 - `.agents/rules/` — `vault-logging.md`, `git-convention.md`, `code-style.md`
@@ -142,5 +142,5 @@ Label triage memakai default kanonik: `needs-triage`, `needs-info`, `ready-for-a
 
 ### Domain docs
 
-Layout **single-context**: satu `CONTEXT.md` + `docs/adr/` di root repo. Lihat `docs/agents/domain.md`.
+Dokumen domain **belum ada** di repo ini: tidak ada `CONTEXT.md`, tidak ada glosarium, dan tidak ada `docs/adr/`. Keputusan arsitektur dan istilah produk dicatat di vault Obsidian (`C:\vault\01-Projects\Penanda\`), sesuai keputusan tanggal 2026-09-30 bahwa dokumen produk tetap di vault dan dokumen petunjuk agent tetap di repo. Lihat `docs/agents/domain.md` untuk cara membacanya, dan `.agents/doc-map.md` untuk peta pemilik topik.
 

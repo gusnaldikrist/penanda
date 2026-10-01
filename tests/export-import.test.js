@@ -247,7 +247,8 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
     setTimeout,
     clearTimeout,
     // Environment minimal untuk storage-adapter.js (Tiket 11).
-    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    // Backend palsu dari helper: aplikasi hanya punya satu jalur, jadi
+    // halaman yang siap selalu menghubungi server.
     fetch: backend.fetch,
     AbortController
   };
@@ -667,11 +668,11 @@ test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', as
   assert.equal(result.valid, false, 'version string harus ditolak, bukan diterima diam-diam');
   assert.match(result.error, /version/, 'Pesan harus menyebut version');
 
-  // spec kontrak 5: Lite dan Pro harus menerima bentuk berkas yang sama,
-  // jadi Lite juga menolak version angka yang bukan 1.
+  // spec kontrak 5: frontend dan backend harus menerima bentuk berkas yang
+  // sama, jadi frontend juga menolak version angka yang bukan 1.
   const futureVersion = { ...base, version: 99 };
   const futureResult = validateImportedData(futureVersion);
-  assert.equal(futureResult.valid, false, 'version 99 harus ditolak Lite, sama seperti ditolak Pro');
+  assert.equal(futureResult.valid, false, 'version 99 harus ditolak, sama seperti ditolak backend');
   assert.match(futureResult.error, /version/, 'Pesan harus menyebut version');
 });
 

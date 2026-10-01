@@ -4,38 +4,65 @@ Bagaimana skill engineering membaca dokumentasi domain repo ini saat menelusuri 
 
 ## Sebelum menelusuri, baca ini
 
-- `CONTEXT.md` di root repo, atau
-- `CONTEXT-MAP.md` di root repo bila ada: file itu menunjuk satu `CONTEXT.md` per konteks. Baca masing-masing yang relevan dengan topik.
-- `docs/adr/`: baca ADR yang menyentuh area yang akan Anda kerjakan. Di repo multi-konteks, cek juga `src/<context>/docs/adr/` untuk keputusan berskala konteks.
+Repo ini **tidak punya** `CONTEXT.md`, glosarium, atau `docs/adr/`. Yang ada
+adalah dua hal di repo dan vault Obsidian:
 
-Bila file-file itu belum ada, **lanjut diam-diam**. Jangan menandai ketiadaannya; jangan menyarankan membuatnya di awal. Skill `/domain-modeling` (diakses lewat `/grill-with-docs` dan `/improve-codebase-architecture`) akan membuatnya secara bertahap saat istilah atau keputusan benar-benar matang.
+- `.agents/doc-map.md` - peta siapa pemilik topik dan urutan menyentuh dokumen
+  saat ada perubahan. Baca ini lebih dulu kalau akan mengubah dokumen.
+- `C:\vault\01-Projects\Penanda\` - produk dan keputusan. `prd.md` adalah
+  pemilik perilaku, `decisions.md` adalah log keputusan, `prd-skema.md`
+  menjelaskan bentuk data.
+
+Bila `CONTEXT.md` atau `docs/adr/` belum ada, **lanjut diam-diam**. Jangan
+menandai ketiadaannya, dan jangan menyarankan membuatnya di awal. Skill
+`/domain-modeling` (diakses lewat `/grill-with-docs` dan
+`/improve-codebase-architecture`) akan membuatnya secara bertahap saat istilah
+atau keputusan benar-benar matang.
 
 ## Struktur file
 
-Repo ini **single-context**:
+Layout yang biasanya dipakai skill ini:
 
 ```text
 /
-├── CONTEXT.md
+├── CONTEXT.md        <- glosarium + peta konteks
 ├── docs/adr/
 │   ├── 0001-<keputusan>.md
 │   └── 0002-<keputusan>.md
 └── src/
 ```
 
-## Pakai kosakata glosarium
+Penanda belum punya berkas-berkas itu, dan tidak akan membuatnya supaya
+strukturnya terlihat rapi. Buat berkasnya kalau ada istilah atau keputusan
+yang benar-benar matang.
 
-Saat output Anda menyebut konsep domain (di judul issue, usulan refactor, hipotesis, nama test), pakai istilah seperti yang didefinisikan di `CONTEXT.md`. Jangan bergeser ke sinonim yang secara eksplisit dihindari glosarium.
+## Pakai kosakata yang sudah ada
 
-Bila konsep yang Anda butuhkan belum ada di glosarium, itu sinyal: entah Anda sedang menciptakan bahasa yang tidak dipakai proyek (pertimbangkan ulang) atau memang ada celah nyata (catat untuk `/domain-modeling`).
+Istilah domain Penanda sudah dipakai di kode dan di PRD: **item**, **tag**,
+**pinned_tags**, **todo**, **log**, **backend**, **satuan data**. Pertahankan
+kosakata itu; jangan mengarang sinonim.
 
-## Tandai konflik ADR
+Definisi lengkap ada di `prd.md` dan `prd-skema.md` di vault. Bila istilah yang
+Anda butuhkan belum ada di sana, itu sinyal: entah Anda sedang menciptakan
+bahasa yang tidak dipakai proyek (pertimbangkan ulang), atau memang ada celah
+nyata (catat untuk `/domain-modeling`).
 
-Bila output Anda bertentangan dengan ADR yang ada, munculkan secara eksplisit alih-alih menimpanya diam-diam:
+## Tandai konflik keputusan
 
-> _Bertentangan dengan ADR-0007 (event-sourced orders), tapi layak dibuka ulang karena…_
+Bila output Anda bertentangan dengan keputusan yang sudah tercatat, munculkan
+secara eksplisit alih-alih menimpanya diam-diam. Keputusan Penanda ada di
+`decisions.md` di vault, ditulis sebagai tanggal + judul, bukan bernomor:
+
+> _Bertentangan dengan keputusan "Aturan path lokal punya satu sumber
+> kebenaran" (2026-10-01), tapi layak dibuka ulang karena…_
 
 ## Catatan proyek
 
-- Istilah domain proyek ini (item, tag, pinned_tags, todo, log, Lite, Pro) sudah dipakai di `docs/agents/` dan di kode; pertahankan kosakata itu.
-- Dokumentasi produk dan keputusan arsitektur tingkat produk dicatat di vault Obsidian, bukan di `docs/adr/` repo ini. Lihat `AGENTS.md` bagian 5.
+- Istilah domain (item, tag, pinned_tags, todo, log) berasal dari `prd.md` dan
+  `prd-skema.md`. Jangan menambah istilah baru tanpa menyentuh PRD itu.
+- Keputusan arsitektur dicatat di vault Obsidian (`decisions.md`), bukan di
+  `docs/adr/` repo ini. Alasannya: dokumen produk tinggal di vault supaya
+  keputusan dan spec bisa dibaca berdampingan, sedangkan repo menyimpan
+  petunjuk agent yang selalu dibutuhkan saat mengedit kode.
+- Jalur Lite sudah dihapus (2026-10-01). Istilah "jalur" tidak lagi
+  merupakan konsep domain - aplikasi hanya punya satu cara jalan.
