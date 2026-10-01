@@ -874,6 +874,12 @@
       if (btnEmptyAdd) {
         btnEmptyAdd.addEventListener('click', () => openItemModal());
       }
+      // PRD 5.8: keadaan kosong punya dua jalan keluar, Tambah item atau Import JSON
+      const btnEmptyImport = document.getElementById('btn-empty-import');
+      if (btnEmptyImport && !btnEmptyImport.dataset.boundClick) {
+        btnEmptyImport.dataset.boundClick = 'true';
+        btnEmptyImport.addEventListener('click', () => openImportFilePicker());
+      }
       return;
     }
 
@@ -1803,6 +1809,204 @@
     }
   }
 
+  /* ==========================================================================
+     Modul Export dan Import JSON (Tiket 09)
+     ========================================================================== */
+
+  // Tanggal hari ini dalam bentuk YYYYMMDD untuk nama berkas unduhan
+  function getTodayCompactString() {
+    const todayString = getTodayDateString();
+    return todayString.split('-').join('');
+  }
+
+  function exportDataAsJson() {
+    const payload = normalizeData(state.data);
+    const jsonText = JSON.stringify(payload, null, 2);
+    const fileName = `indeks-data-${getTodayCompactString()}.json`;
+
+    const blob = new Blob([jsonText], { type: 'application/json' });
+    const downloadUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    if (link.parentNode) {
+      link.parentNode.removeChild(link);
+    }
+    // Ditunda satu gilir render: memanggil revokeObjectURL langsung setelah
+    // click bisa membatalkan unduhan di sebagian browser
+    setTimeout(() => {
+      URL.revokeObjectURL(downloadUrl);
+    }, 0);
+  }
+
+  // Bentuk berkas yang dipakai jalur Pro juga (arsitektur bagian 5)
+  function validateImportedData(parsed) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { valid: false, error: 'Berkas ditolak: isinya bukan objek data Penanda' };
+    }
+    if (typeof parsed.version !== 'number') {
+      return { valid: false, error: 'Berkas ditolak: "version" harus berupa angka' };
+    }
+    const requiredArrays = ['items', 'todo', 'logs', 'pinned_tags'];
+    for (const fieldName of requiredArrays) {
+      if (!Array.isArray(parsed[fieldName])) {
+        return { valid: false, error: `Berkas ditolak: "${fieldName}" harus berupa array` };
+      }
+    }
+    return { valid: true, data: parsed, error: '' };
+  }
+
+  function showImportRejectedModal(errorMessage) {
+    closeActiveModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-import-rejected-box">
+        <div class="modal-header">
+          <div class="modal-title">Import Gagal</div>
+          <button type="button" class="btn-close" id="btn-close-import-rejected" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="delete-warning">${escapeHtml(errorMessage)}</div>
+          <div class="form-hint">Data yang sudah ada tidak berubah.</div>
+        </div>
+        <div class="modal-footer">
+          <div></div>
+          <div class="modal-footer-actions">
+            <button type="button" id="btn-tutup-penolakan" class="btn btn-secondary">Tutup</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('btn-close-import-rejected');
+    const tutupBtn = document.getElementById('btn-tutup-penolakan');
+    if (closeBtn) closeBtn.addEventListener('click', closeActiveModal);
+    if (tutupBtn) tutupBtn.addEventListener('click', closeActiveModal);
+  }
+
+  function showImportConfirmationModal(importedData) {
+    closeActiveModal();
+
+    const itemCount = importedData.items.length;
+    const todoCount = importedData.todo.length;
+    const logCount = importedData.logs.length;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-import-confirm-box">
+        <div class="modal-header">
+          <div class="modal-title">Impor Data Penanda</div>
+          <button type="button" class="btn-close" id="btn-close-import-confirm" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body delete-confirm-box">
+          <div class="delete-warning">
+            Berkas berisi <strong>${itemCount} item</strong>, <strong>${todoCount} todo</strong>, dan <strong>${logCount} log</strong>.
+            Menghapus seluruh data yang sekarang ada dan menggantinya dengan isi berkas ini. Aksi ini tidak dapat dibatalkan.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div></div>
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-import">Batal</button>
+            <button type="button" id="btn-confirm-import" class="btn-text-danger" style="font-weight: 600; padding: 6px 12px;">Impor dan Ganti</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('btn-close-import-confirm');
+    const cancelBtn = overlay.querySelector('.btn-cancel-import');
+    const confirmBtn = document.getElementById('btn-confirm-import');
+
+    if (closeBtn) closeBtn.addEventListener('click', closeActiveModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeActiveModal);
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        closeActiveModal();
+        state.data = importedData;
+        // Saringan lama bisa menunjuk data yang tidak ada lagi di berkas baru
+        state.activeTag = null;
+        state.focusedItemId = null;
+        saveData(state.data);
+      });
+    }
+  }
+
+  async function handleImportFileChange(event) {
+    const fileInput = event.target;
+    const file = fileInput.files && fileInput.files[0];
+
+    // Kosongkan input supaya berkas yang sama bisa dipilih ulang
+    if (fileInput) fileInput.value = '';
+
+    if (!file) return;
+
+    let parsed = null;
+    try {
+      const fileText = await file.text();
+      parsed = JSON.parse(fileText);
+    } catch (parseErr) {
+      showImportRejectedModal('Berkas ditolak: isinya bukan JSON yang bisa dibaca');
+      return;
+    }
+
+    const validationResult = validateImportedData(parsed);
+    if (!validationResult.valid) {
+      showImportRejectedModal(validationResult.error);
+      return;
+    }
+
+    showImportConfirmationModal(normalizeData(validationResult.data));
+  }
+
+  function openImportFilePicker() {
+    const fileInput = document.getElementById('import-file-input');
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  function initBackupListeners() {
+    const exportBtn = document.getElementById('btn-export-json');
+    if (exportBtn && !exportBtn.dataset.boundClick) {
+      exportBtn.dataset.boundClick = 'true';
+      exportBtn.addEventListener('click', () => {
+        exportDataAsJson();
+      });
+    }
+
+    const importBtn = document.getElementById('btn-import-json');
+    if (importBtn && !importBtn.dataset.boundClick) {
+      importBtn.dataset.boundClick = 'true';
+      importBtn.addEventListener('click', () => {
+        openImportFilePicker();
+      });
+    }
+
+    const fileInput = document.getElementById('import-file-input');
+    if (fileInput && !fileInput.dataset.boundChange) {
+      fileInput.dataset.boundChange = 'true';
+      fileInput.addEventListener('change', (e) => {
+        handleImportFileChange(e);
+      });
+    }
+  }
+
   function loadData() {
     let raw = null;
     try {
@@ -1946,6 +2150,7 @@
 
     initTodoListeners();
     initLogListeners();
+    initBackupListeners();
     loadData();
     switchTab(state.activeTab);
   }
@@ -1976,6 +2181,9 @@
     window.renderLogView = renderLogView;
     window.openLogModal = openLogModal;
     window.showDeleteLogConfirmation = showDeleteLogConfirmation;
+    window.exportDataAsJson = exportDataAsJson;
+    window.validateImportedData = validateImportedData;
+    window.openImportFilePicker = openImportFilePicker;
   }
 
   if (typeof globalThis !== 'undefined') {
@@ -1996,6 +2204,9 @@
     globalThis.renderLogView = renderLogView;
     globalThis.openLogModal = openLogModal;
     globalThis.showDeleteLogConfirmation = showDeleteLogConfirmation;
+    globalThis.exportDataAsJson = exportDataAsJson;
+    globalThis.validateImportedData = validateImportedData;
+    globalThis.openImportFilePicker = openImportFilePicker;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -2018,7 +2229,10 @@
       filterLogs,
       renderLogView,
       openLogModal,
-      showDeleteLogConfirmation
+      showDeleteLogConfirmation,
+      exportDataAsJson,
+      validateImportedData,
+      openImportFilePicker
     };
   }
 })();

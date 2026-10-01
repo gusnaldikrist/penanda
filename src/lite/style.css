@@ -141,6 +141,22 @@ body {
 .top-bar-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-topbar {
+  white-space: nowrap;
+}
+
+/* Input berkas disembunyikan; tombol Import yang memanggilnya */
+.file-input-hidden {
+  display: none;
 }
 
 .status-bar {

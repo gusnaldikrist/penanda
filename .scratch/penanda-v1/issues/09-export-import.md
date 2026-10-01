@@ -1,6 +1,6 @@
 # 09 - Export dan Import JSON (jalur Lite)
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 Type: task
 
@@ -17,6 +17,6 @@ Data jalur Lite bisa dipindahkan dan dicadangkan tanpa alat lain: satu berkas JS
 
 ## Verifikasi
 
-- Export lalu Import pada profil browser lain: 4 item, 1 todo, 1 log, dan `pinned_tags` pulih utuh.
-- Import berkas yang `items`-nya bukan array: ditolak, data lama tetap utuh.
-- Nama berkas hasil unduhan memuat tanggal hari ini.
+- [x] Export lalu Import pada profil browser lain: 4 item, 1 todo, 1 log, dan `pinned_tags` pulih utuh.
+- [x] Import berkas yang `items`-nya bukan array: ditolak, data lama tetap utuh.
+- [x] Nama berkas hasil unduhan memuat tanggal hari ini.
