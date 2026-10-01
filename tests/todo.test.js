@@ -592,3 +592,59 @@ test('Tiket 07 - Retensi modal saat penyimpanan gagal (wireframe §5)', () => {
   assert.equal(env.activeModals.length, 1, 'Modal Todo harus tetap terbuka jika penyimpanan gagal');
   assert.equal(textArea.value, 'Todo gagal disimpan', 'Isian form tidak boleh hilang');
 });
+
+test('Tiket 07 - Verifikasi Review: Atribut ARIA modal, validasi panjang teks 200 karakter, dan Escape tidak menutup modal', () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+
+  const { switchTab, openTodoModal, showDeleteTodoConfirmation } = env.sandbox;
+  switchTab('todo');
+
+  // 1. Cek atribut ARIA pada modal tambah/ubah
+  openTodoModal(null);
+  assert.equal(env.activeModals.length, 1);
+  const todoModalOverlay = env.activeModals[0];
+  assert.equal(todoModalOverlay.getAttribute('role'), 'dialog', 'Overlay modal harus memiliki role="dialog"');
+  assert.equal(todoModalOverlay.getAttribute('aria-modal'), 'true', 'Overlay modal harus memiliki aria-modal="true"');
+
+  // 2. Escape tidak boleh menutup modal
+  env.triggerDoc('keydown', { key: 'Escape' });
+  assert.equal(env.activeModals.length, 1, 'Tombol Escape tidak boleh menutup modal todo (wireframe §8)');
+
+  // 3. Validasi batas teks 200 karakter
+  const textArea = env.getOrCreateElement('todo-text');
+  const saveBtn = env.getOrCreateElement('btn-todo-save');
+
+  textArea.value = 'a'.repeat(201);
+  textArea.trigger('input');
+  assert.equal(saveBtn.disabled, true, 'Tombol simpan harus nonaktif jika teks melebihi 200 karakter');
+
+  const errorEl = env.getOrCreateElement('todo-text-error');
+  assert.match(errorEl.textContent, /200/, 'Pesan error harus memberitahu batas maksimal 200 karakter');
+
+  textArea.value = 'a'.repeat(200);
+  textArea.trigger('input');
+  assert.equal(saveBtn.disabled, false, 'Tombol simpan harus aktif jika teks pas 200 karakter');
+
+  // 4. Cek atribut ARIA pada modal hapus
+  showDeleteTodoConfirmation(exampleData.todo[0]);
+  assert.equal(env.activeModals.length, 1);
+  const deleteModalOverlay = env.activeModals[0];
+  assert.equal(deleteModalOverlay.getAttribute('role'), 'dialog', 'Overlay konfirmasi hapus harus memiliki role="dialog"');
+  assert.equal(deleteModalOverlay.getAttribute('aria-modal'), 'true', 'Overlay konfirmasi hapus harus memiliki aria-modal="true"');
+
+  env.triggerDoc('keydown', { key: 'Escape' });
+  assert.equal(env.activeModals.length, 1, 'Tombol Escape tidak boleh menutup modal konfirmasi hapus todo');
+});
+
+test('Tiket 07 - Verifikasi CSS: Tidak memakai token var(--surface) dan tidak memakai line-through pada todo selesai', () => {
+  const cssContent = fs.readFileSync(styleCssPath, 'utf8');
+
+  // 1. Memastikan var(--surface) tidak dipakai di seluruh file CSS
+  assert.ok(!cssContent.includes('var(--surface)'), 'CSS tidak boleh memakai token tidak resmi var(--surface)');
+
+  // 2. Memastikan tidak ada text-decoration: line-through pada .todo-text.is-done
+  const isDoneBlockMatch = cssContent.match(/\.todo-text\.is-done\s*\{([^}]+)\}/);
+  assert.ok(isDoneBlockMatch, 'Blok .todo-text.is-done harus ditemukan');
+  assert.ok(!isDoneBlockMatch[1].includes('line-through'), 'Teks todo selesai tidak boleh dicoret garis (line-through)');
+});

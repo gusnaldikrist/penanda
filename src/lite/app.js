@@ -1019,7 +1019,7 @@
     if (todo.done) {
       return { type: 'selesai', label: 'selesai' };
     }
-    if (!todo.deadline) {
+    if (!todo.deadline || !/^\d{4}-\d{2}-\d{2}$/.test(String(todo.deadline))) {
       return { type: 'none', label: '' };
     }
     const deadlineParts = String(todo.deadline).split('-').map(Number);
@@ -1050,6 +1050,9 @@
   }
 
   function normalizeTodoQuery(queryString) {
+    if (typeof normalizeQuery === 'function') {
+      return normalizeQuery(queryString);
+    }
     return String(queryString || '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
 
@@ -1133,38 +1136,30 @@
       todoListContainer.dataset.boundClick = 'true';
       todoListContainer.addEventListener('click', (e) => {
         const checkbox = e.target.closest('.todo-checkbox');
-        if (checkbox) {
-          const id = checkbox.getAttribute('data-id');
-          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
-          const targetTodo = currentTodos.find(candidate => candidate.id === id);
-          if (targetTodo) {
-            targetTodo.done = !targetTodo.done;
-            targetTodo.updated_at = getTodayDateString();
-            saveData(state.data);
-            renderTodoView();
-          }
-          return;
-        }
-
         const ubahBtn = e.target.closest('.btn-ubah-todo');
-        if (ubahBtn) {
-          const id = ubahBtn.getAttribute('data-id');
-          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
-          const targetTodo = currentTodos.find(candidate => candidate.id === id);
-          if (targetTodo) {
-            openTodoModal(targetTodo);
-          }
+        const hapusBtn = e.target.closest('.btn-hapus-todo');
+        const actionEl = checkbox || ubahBtn || hapusBtn;
+        if (!actionEl) return;
+
+        const id = actionEl.getAttribute('data-id');
+        const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+        const targetTodo = currentTodos.find(candidate => candidate.id === id);
+        if (!targetTodo) return;
+
+        if (checkbox) {
+          targetTodo.done = !targetTodo.done;
+          targetTodo.updated_at = getTodayDateString();
+          saveData(state.data);
           return;
         }
 
-        const hapusBtn = e.target.closest('.btn-hapus-todo');
+        if (ubahBtn) {
+          openTodoModal(targetTodo);
+          return;
+        }
+
         if (hapusBtn) {
-          const id = hapusBtn.getAttribute('data-id');
-          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
-          const targetTodo = currentTodos.find(candidate => candidate.id === id);
-          if (targetTodo) {
-            showDeleteTodoConfirmation(targetTodo);
-          }
+          showDeleteTodoConfirmation(targetTodo);
           return;
         }
       });
@@ -1220,6 +1215,8 @@
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
       <div class="modal-box" id="modal-todo-box">
         <div class="modal-header">
@@ -1271,8 +1268,8 @@
     const cancelBtn = overlay.querySelector('.btn-cancel-todo-modal');
 
     function validateTodoForm() {
-      const textVal = textArea ? textArea.value.trim() : '';
-      const isValid = textVal.length >= 1 && textVal.length <= 200;
+      const textValue = textArea ? textArea.value.trim() : '';
+      const isValid = textValue.length >= 1 && textValue.length <= 200;
       if (saveBtn) {
         saveBtn.disabled = !isValid;
       }
@@ -1307,9 +1304,9 @@
       saveBtn.addEventListener('click', () => {
         if (!validateTodoForm()) return;
 
-        const teks = textArea.value.trim();
-        const deadline = deadlineInput && deadlineInput.value ? deadlineInput.value : null;
-        const itemId = itemSelect && itemSelect.value ? itemSelect.value : null;
+        const textValue = textArea.value.trim();
+        const deadlineValue = deadlineInput && deadlineInput.value ? deadlineInput.value : null;
+        const selectedItemId = itemSelect && itemSelect.value ? itemSelect.value : null;
         const today = getTodayDateString();
 
         const todos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
@@ -1317,18 +1314,18 @@
         if (isEdit) {
           const todoIdx = todos.findIndex(item => item.id === todoToEdit.id);
           if (todoIdx >= 0) {
-            todos[todoIdx].teks = teks;
-            todos[todoIdx].deadline = deadline;
-            todos[todoIdx].item_id = itemId;
+            todos[todoIdx].teks = textValue;
+            todos[todoIdx].deadline = deadlineValue;
+            todos[todoIdx].item_id = selectedItemId;
             todos[todoIdx].updated_at = today;
           }
         } else {
           const newId = generateTodoId(todos);
           todos.unshift({
             id: newId,
-            teks,
-            item_id: itemId,
-            deadline,
+            teks: textValue,
+            item_id: selectedItemId,
+            deadline: deadlineValue,
             done: false,
             updated_at: today
           });
@@ -1341,7 +1338,6 @@
         }
 
         closeActiveModal();
-        renderTodoView();
       });
     }
   }
@@ -1351,6 +1347,8 @@
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
       <div class="modal-box" id="modal-delete-todo-box">
         <div class="modal-header">
@@ -1404,7 +1402,7 @@
         if (typed !== 'hapus') return;
 
         if (state.data && Array.isArray(state.data.todo)) {
-          state.data.todo = state.data.todo.filter(t => t.id !== todo.id);
+          state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
         }
 
         const saveSuccess = saveData(state.data);
@@ -1413,7 +1411,6 @@
         }
 
         closeActiveModal();
-        renderTodoView();
       });
     }
   }
