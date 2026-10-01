@@ -18,6 +18,18 @@ data-*.json
 dist/
 build/
 
+# Paket rilis V1 ikut di-track supaya bisa diunduh langsung dari GitHub.
+# penanda.exe tetap diabaikan: 9,7 MB artefak build, dibangun sendiri
+# dengan `go build -o dist/v1/penanda.exe ./src/pro`.
+!dist/
+!dist/*.txt
+!dist/v1/
+!dist/v1/*.html
+!dist/v1/*.js
+!dist/v1/*.css
+!dist/v1/*.txt
+!dist/v1/data.example.json
+
 # OS & Editor
 Thumbs.db
 ehthumbs.db

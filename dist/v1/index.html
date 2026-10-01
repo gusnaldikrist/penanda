@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penanda</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Baris Navigasi Atas (Tinggi 48px) -->
+  <header class="top-bar">
+    <div class="top-bar-left">
+      <div class="brand-title">Penanda</div>
+      <nav class="nav-tabs" role="tablist" aria-label="Modul Penanda">
+        <button id="tab-indeks" class="nav-tab-btn active" data-tab="indeks" role="tab" aria-selected="true" aria-controls="panel-indeks">Indeks</button>
+        <button id="tab-todo" class="nav-tab-btn" data-tab="todo" role="tab" aria-selected="false" aria-controls="panel-todo">Todo</button>
+        <button id="tab-log" class="nav-tab-btn" data-tab="log" role="tab" aria-selected="false" aria-controls="panel-log">Log</button>
+      </nav>
+    </div>
+    <div class="top-bar-right">
+      <div class="top-bar-actions">
+        <button type="button" id="btn-export-json" class="btn btn-secondary btn-sm btn-topbar">Export</button>
+        <button type="button" id="btn-import-json" class="btn btn-secondary btn-sm btn-topbar">Import</button>
+        <input type="file" id="import-file-input" class="file-input-hidden" accept="application/json,.json">
+      </div>
+      <div id="status-bar" class="status-bar" aria-live="polite">Lite</div>
+    </div>
+  </header>
+
+  <!-- Area Konten Utama -->
+  <main class="main-content">
+    <!-- Panel Indeks -->
+    <section id="panel-indeks" class="tab-panel active" role="tabpanel" aria-labelledby="tab-indeks">
+      <div class="placeholder-card">
+        <h2>Modul Indeks</h2>
+        <p>Pencarian, item kerja harian, dan kartu tag akan diimplementasikan pada tiket berikutnya.</p>
+      </div>
+    </section>
+
+    <!-- Panel Todo -->
+    <section id="panel-todo" class="tab-panel" role="tabpanel" aria-labelledby="tab-todo" hidden>
+      <div class="todo-view-container">
+        <div class="todo-header-row">
+          <div class="todo-search-box">
+            <input type="text" id="todo-search-input" class="search-input" placeholder="Cari todo" autocomplete="off">
+          </div>
+          <div class="todo-filter-group" role="group" aria-label="Saringan Status Todo">
+            <button type="button" class="btn btn-secondary btn-todo-filter active" data-filter="semua">Semua</button>
+            <button type="button" class="btn btn-secondary btn-todo-filter" data-filter="belum">Belum</button>
+            <button type="button" class="btn btn-secondary btn-todo-filter" data-filter="selesai">Selesai</button>
+          </div>
+          <button type="button" id="btn-tambah-todo" class="btn btn-primary btn-tambah">+ Tambah</button>
+        </div>
+        <div id="todo-list" class="todo-list">
+          <!-- Daftar item todo dirender secara dinamis oleh app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel Log -->
+    <section id="panel-log" class="tab-panel" role="tabpanel" aria-labelledby="tab-log" hidden>
+      <div class="log-view-container">
+        <div class="log-header-row">
+          <div class="log-search-box">
+            <input type="text" id="log-search-input" class="search-input" placeholder="Cari log" autocomplete="off">
+          </div>
+          <div class="log-date-filter-group" role="group" aria-label="Saringan Rentang Tanggal Log">
+            <label class="log-date-filter" for="log-date-from">
+              Dari<input type="date" id="log-date-from" class="form-input">
+            </label>
+            <label class="log-date-filter" for="log-date-sampai">
+              Sampai<input type="date" id="log-date-sampai" class="form-input">
+            </label>
+          </div>
+          <button type="button" id="btn-catat-log" class="btn btn-primary btn-tambah">+ Catat</button>
+        </div>
+        <div id="log-list" class="log-list">
+          <!-- Daftar entri log dirender secara dinamis oleh app.js -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Skrip dimuat biasa (bukan ES Module) agar kompatibel dengan protokol file:// -->
+  <script src="search.js"></script>
+  <script src="storage-adapter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

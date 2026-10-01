@@ -1,0 +1,1117 @@
+/* ==========================================================================
+   Design Tokens - Penanda V1 (Compact Academic Rigid, vanilla-offline)
+   Rujukan: design-tokens.md di vault Obsidian
+   ========================================================================== */
+
+:root {
+  /* 19 Variabel Warna Resmi V1 */
+  --bg: #f7f9fb;
+  --card: #ffffff;
+  --band: #eceef0;
+  --band-2: #e6e8ea;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --ink: #0f172a;
+  --body: #334155;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --on-ink: #ffffff;
+  --action: #4f46e5;
+  --action-hover: #4338ca;
+  --action-soft: #eef2ff;
+  --ok: #059669;
+  --ok-bg: #ecfdf5;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --bad: #e11d48;
+  --bad-bg: #fff1f2;
+
+  /* Tipografi Skala Compact (System Font Stack Windows: 15/14/13/11-12 px) */
+  --font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-title: 15px;
+  --font-body: 14px;
+  --font-small: 13px;
+  --font-meta: 12px;
+  --font-meta-sm: 11px;
+
+  /* Sifat Bentuk Kaku + Compact */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --transition-fast: 120ms ease;
+  --transition: 150ms ease;
+
+  /* Dimensi Kerangka */
+  --header-height: 48px;
+}
+
+/* ==========================================================================
+   Reset & Elemen Dasar
+   ========================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  line-height: 1.45;
+  color: var(--body);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   Header & Navigasi Baris Atas (Tinggi tepat 48px)
+   ========================================================================== */
+
+.top-bar {
+  flex-shrink: 0;
+  height: var(--header-height);
+  background-color: var(--card);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  user-select: none;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 100%;
+}
+
+.brand-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.nav-tabs {
+  display: flex;
+  height: 100%;
+  gap: 2px;
+}
+
+.nav-tab-btn {
+  height: var(--header-height);
+  padding: 0 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.nav-tab-btn:hover {
+  color: var(--ink);
+  background-color: var(--band);
+}
+
+.nav-tab-btn.active {
+  color: var(--action);
+  font-weight: 600;
+  border-bottom-color: var(--action);
+  background-color: transparent;
+}
+
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-topbar {
+  white-space: nowrap;
+}
+
+/* Input berkas disembunyikan; tombol Import yang memanggilnya */
+.file-input-hidden {
+  display: none;
+}
+
+.status-bar {
+  font-size: var(--font-meta);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.status-bar.error {
+  color: var(--bad);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   Konten Panel Utama
+   ========================================================================== */
+
+.main-content {
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+#panel-indeks.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   Tombol (Pola Komponen 4 di design-tokens.md)
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 12px;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  text-decoration: none;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--ink);
+  color: var(--on-ink);
+  border-color: var(--ink);
+}
+
+.btn-primary:hover {
+  background-color: var(--body);
+}
+
+.btn-secondary {
+  background-color: var(--card);
+  color: var(--body);
+  border-color: var(--line);
+}
+
+.btn-secondary:hover {
+  background-color: var(--band);
+  color: var(--ink);
+}
+
+/* ==========================================================================
+   Keadaan Kosong (Empty State - PRD 5.8 & Wireframe 6)
+   ========================================================================== */
+
+.empty-state {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.empty-state-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.empty-state-desc {
+  font-size: var(--font-body);
+  color: var(--muted);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.path-notice {
+  font-size: var(--font-meta);
+  color: var(--muted);
+  margin-top: 12px;
+}
+
+.placeholder-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  color: var(--muted);
+  font-size: var(--font-body);
+}
+
+.placeholder-card h2 {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Zona Pencarian & Zona Hasil (Tiket 04 - PRD 5.1 & Wireframe 2)
+   ========================================================================== */
+
+.search-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+
+.search-bar-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-tambah {
+  height: 40px;
+  padding: 0 16px;
+  font-size: var(--font-small);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  color: var(--ink);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast);
+}
+
+.search-input::placeholder {
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   Zona 2 (Harian) & Zona 3 (Kartu Pinned Tags) - Tiket 05
+   ========================================================================== */
+
+.zone-harian,
+.zone-kartu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.zone-label {
+  font-size: var(--font-meta);
+  font-weight: 700;
+  color: var(--faint);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 52px;
+}
+
+.harian-scroll,
+.kartu-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.chip-harian {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  background-color: var(--band);
+  color: var(--ink);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.chip-harian:hover {
+  background-color: var(--band-2);
+  border-color: var(--line-strong);
+}
+
+.btn-card-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  background-color: var(--card);
+  color: var(--body);
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-card-tag:hover {
+  background-color: var(--band-2);
+  border-color: var(--line-strong);
+}
+
+.btn-card-tag.active {
+  background-color: var(--action-soft);
+  color: var(--action);
+  border-color: var(--action);
+  font-weight: 600;
+}
+
+.tag-count {
+  font-size: var(--font-meta);
+  color: var(--faint);
+}
+
+.btn-card-tag.active .tag-count {
+  color: var(--action);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Zona 4: Baris Rekap & Zona Hasil (Scrollable Vertikal)
+   ========================================================================== */
+
+.search-rekap {
+  font-size: var(--font-meta);
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 4px;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.result-list {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.result-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background-color: var(--card);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-left var(--transition-fast);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item:hover {
+  background-color: var(--band-2);
+}
+
+.result-item.focused {
+  background-color: var(--action-soft);
+  border-left: 2px solid var(--action);
+}
+
+/* ==========================================================================
+   Zona 5: Terkait ("Biasanya bareng ini")
+   ========================================================================== */
+
+.zone-terkait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.terkait-header {
+  font-size: var(--font-meta);
+  font-weight: 700;
+  color: var(--body);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.terkait-items {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.terkait-item {
+  font-size: var(--font-small);
+  color: var(--action);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.terkait-item:hover {
+  text-decoration: underline;
+}
+
+.terkait-sep {
+  color: var(--faint);
+  font-size: var(--font-meta);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.result-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.badge-catatan {
+  font-size: var(--font-meta);
+  font-weight: 600;
+  color: var(--action);
+  margin-right: 4px;
+}
+
+.result-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chip-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: var(--font-meta);
+  color: var(--body);
+  background-color: var(--band);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.result-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.result-catatan {
+  font-size: var(--font-body);
+  color: var(--body);
+  line-height: 1.4;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--font-meta);
+}
+
+.no-results {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--font-body);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+/* Toast Notifikasi (Copy Status) */
+.toast-notice {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: var(--ink);
+  color: var(--on-ink);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-small);
+  z-index: 1000;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+/* Modal Salin Manual (Jaring Pengaman Ketiga) */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-content {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  width: 90%;
+  max-width: 480px;
+}
+
+.modal-message {
+  font-size: var(--font-body);
+  color: var(--body);
+  margin-bottom: 12px;
+}
+
+.modal-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Modal Form CRUD Item (Lebar 640px, Terpusat, Tiket 06) */
+.modal-box {
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  width: 90%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.btn-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.btn-close:hover {
+  color: var(--ink);
+  background-color: var(--band);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: var(--font-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.form-label .req {
+  color: var(--bad);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  color: var(--body);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 56px;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: var(--action);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--action);
+}
+
+.form-hint {
+  font-size: var(--font-meta);
+  color: var(--muted);
+}
+
+.form-error {
+  font-size: var(--font-meta);
+  color: var(--bad);
+  font-weight: 500;
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.link-row .link-label-input {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.link-row .link-url-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-del-link {
+  flex-shrink: 0;
+  color: var(--bad);
+  border-color: var(--line);
+}
+
+.btn-del-link:hover {
+  border-color: var(--bad);
+  background-color: var(--bad-bg);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.modal-footer-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.btn-text-danger {
+  background: transparent;
+  border: none;
+  color: var(--bad);
+  font-family: var(--font-family);
+  font-size: var(--font-small);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: opacity var(--transition-fast);
+}
+
+.btn-text-danger:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-text-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.delete-confirm-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.delete-warning {
+  font-size: var(--font-small);
+  color: var(--body);
+  line-height: 1.4;
+  padding: 8px 12px;
+  background-color: var(--bad-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--bad);
+}
+
+/* ==========================================================================
+   Tab Todo (Tiket 07)
+   ========================================================================== */
+
+.todo-view-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.todo-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.todo-search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-filter-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-todo-filter {
+  padding: 6px 12px;
+  font-size: var(--font-small);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--body);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-todo-filter.active {
+  background: var(--action-soft);
+  color: var(--action);
+  border-color: var(--action);
+  font-weight: 500;
+}
+
+.todo-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.todo-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--action);
+  flex-shrink: 0;
+}
+
+.todo-text {
+  font-size: var(--font-body);
+  color: var(--ink);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.todo-text.is-done {
+  color: var(--muted);
+}
+
+.todo-linked-item {
+  font-size: var(--font-small);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.todo-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.badge-status {
+  display: inline-block;
+  font-size: var(--font-micro);
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.badge-ok {
+  background-color: var(--ok-bg);
+  color: var(--ok);
+}
+
+.badge-warn {
+  background-color: var(--warn-bg);
+  color: var(--warn);
+}
+
+.badge-bad {
+  background-color: var(--bad-bg);
+  color: var(--bad);
+}
+
+.form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  color: var(--ink);
+  background-color: var(--card);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--action);
+}
+
+/* ==========================================================================
+   Tab Log (Tiket 08)
+   ========================================================================== */
+
+.log-view-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.log-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.log-search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.log-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-small);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.log-date-filter .form-input {
+  width: auto;
+  padding: 4px 8px;
+  font-size: var(--font-small);
+}
+
+.log-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.log-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.log-item-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Kolom tanggal tetap di kiri agar urutan menurun mudah dipindai */
+.log-date-cell {
+  flex: 0 0 90px;
+  width: 90px;
+  font-size: var(--font-small);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-text {
+  font-size: var(--font-body);
+  color: var(--ink);
+  line-height: 1.4;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.log-linked-item {
+  font-size: var(--font-small);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.log-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Aturan Bentuk: Max Radius 6px, Tanpa Shadow (Hanya Focus Ring), Tanpa Gradien
+   ========================================================================== */
+
+button:focus-visible,
+input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--action);
+}
