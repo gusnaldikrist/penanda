@@ -1,24 +1,29 @@
-// app.js — Aplikasi Penanda V1 (Frontend Lite)
-// Dimuat sebagai script biasa (bukan ES module) agar bisa berjalan langsung dari file://
+// app.js — Aplikasi Penanda
+//
+// Dimuat sebagai script biasa (bukan ES module), disajikan penanda.exe dari
+// folder binary lewat HTTP.
 
 (function () {
   'use strict';
 
-  // Adapter penyimpanan (Tiket 11) dimuat sebelum app.js di index.html.
-  // Amino adapter yang menentukan jalur Lite atau Pro.
+  // Adapter penyimpanan dimuat sebelum app.js di index.html.
   const storage = (typeof window !== 'undefined' && window.PenandaStorage)
     ? window.PenandaStorage
     : (typeof PenandaStorage !== 'undefined' ? PenandaStorage : null);
 
   if (!storage) {
-    // app.js tidak boleh jalan tanpa adapter: tanpa itu tidak diketahui
-    // apakah aplikasi berada di jalur Lite atau Pro.
+    // app.js tidak boleh jalan tanpa adapter: semua baca dan tulis data
+    // melewati lapisan itu.
     throw new Error('storage-adapter.js harus dimuat sebelum app.js');
   }
 
-  // Satu pesan untuk dua tempat: localStorage diblokir saat membaca maupun
-// saat menulis (PRD 5.10).
-const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih ke jalur Pro untuk menyimpan';
+  // Pesan untuk halaman yang dibuka tanpa server. Kondisi ini nyata: orang
+  // bisa salah klik index.html di folder frontend. Pesannya menyebut apa
+  // yang harus dilakukan, bukan galat teknis.
+  //
+  // Tidak ada fallback localStorage di sini. Kalau ada, data user bisa
+  // diam-diam terpecah di dua tempat: satu di browser, satu di data.json.
+  const NO_SERVER_MESSAGE = 'Aplikasi ini berjalan lewat penanda.exe. Tutup halaman ini, lalu jalankan penanda.exe.';
 
   function createEmptyData() {
     return {
@@ -52,12 +57,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     logSearchQuery: '',
     logDateFrom: '',
     logDateTo: '',
-    // Jalur aplikasi: 'Lite' (localStorage) atau 'Pro' (API ke penanda.exe)
-    mode: storage.MODE_LITE,
-    isLoading: false,
-    // False sampai jalur terdeteksi dan data selesai dimuat. saveData
-    // menolak selama ini supaya tidak menimpa data dengan data kosong.
-    isModeReady: false,
     // Alasan singkat kalau ada masalah; null kalau semua baik-baik saja
     statusMessage: null,
     data: createEmptyData(),
@@ -78,7 +77,7 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     }
 
     statusBar.className = 'status-bar';
-    statusBar.textContent = storage.formatStatus(state.mode, count, state.savedAt, state.isLoading);
+    statusBar.textContent = storage.formatStatus(count, state.savedAt, state.isLoading);
   }
 
   function escapeHtml(str) {
@@ -162,9 +161,8 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
   }
 
   /**
-   * Membuka path lokal Windows lewat backend. Hanya dipakai di jalur Pro,
-   * karena browser memblokir halaman biasa membuka skema berkas
-   * (arsitektur bagian 5).
+   * Membuka path lokal Windows lewat backend. Harus lewat backend karena
+   * browser memblokir halaman biasa membuka skema berkas (arsitektur bagian 5).
    */
   async function openLocalPathViaBackend(localPath) {
     try {
@@ -186,8 +184,10 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     if (!text) return;
 
     function onCopySuccess() {
+      // Path lokal punya tombol Buka, jadi menyalinnya biasanya jalan keluar
+      // saja - misalnya tombol Buka gagal karena backend tidak merespons.
       if (isLocal) {
-        showToast('Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin');
+        showToast('Path sudah disalin; tombol Buka adalah cara yang lebih cepat');
       }
     }
 
@@ -862,12 +862,9 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
 
       const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
 
-      // Jalur Pro bisa membuka path lokal lewat backend, jadi tombol Buka
-      // tetap ada dan Copy menjadi jalan keluar. Jalur Lite tidak bisa, jadi
-      // hanya Copy dengan pesan arahan (PRD 5.2).
-      const localActions = state.mode === 'Pro'
-        ? `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`
-        : `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
+      // Path lokal selalu bisa dibuka: backend ada di setiap cara menjalankan
+      // aplikasi, jadi tombol Buka dan Copy selalu keduanya tersedia.
+      const localActions = `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
 
       const actionsHtml = local
         ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
@@ -893,16 +890,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     renderTerkaitZone(items);
   }
 
-  /**
- * Kalimat konsekuensi jalur di keadaan kosong (PRD 5.8). Hanya ditampilkan
- * di jalur Lite, karena di jalur Pro path lokal justru bisa dibuka dengan
- * satu klik sehingga kalimatnya akan menyesatkan.
- */
-function pathNoticeHtml() {
-    if (state.mode !== 'Lite') return '';
-    return '<p class="path-notice">Path lokal hanya bisa dibuka di jalur Pro</p>';
-  }
-
   function renderIndeksView() {
     const container = document.getElementById('panel-indeks');
     if (!container) return;
@@ -918,7 +905,6 @@ function pathNoticeHtml() {
             <button id="btn-empty-add" class="btn btn-primary">+ Tambah Item</button>
             <button id="btn-empty-import" class="btn btn-secondary">Import JSON</button>
           </div>
-          ${pathNoticeHtml()}
         </div>
       `;
       const btnEmptyAdd = document.getElementById('btn-empty-add');
@@ -1009,7 +995,7 @@ function pathNoticeHtml() {
             return;
           }
 
-          // Path lokal di jalur Pro: backend yang menjalankan startfile. Bila
+          // Path lokal: backend yang menjalankan perintah pembuka. Bila
           // gagal, area status memberi alasan dan tombol Copy tetap ada
           // sebagai jalan keluar (tiket 11 langkah 7).
           const bukaLocalBtn = e.target.closest('.btn-buka-local');
@@ -1871,7 +1857,7 @@ async function confirmDestructive(config) {
 
   // Versi skema yang dikenali di V1 (prd-skema.md bagian pembuka). Nilainya
   // harus sama dengan supportedVersion di src/pro/main.go supaya berkas hasil
-  // Export Lite dapat dipakai jalur Pro dan sebaliknya (spec kontrak 5).
+  // Export dan hasil POST backend saling serasi (spec kontrak 5).
   const SUPPORTED_VERSION = 1;
 
   // Tanggal hari ini dalam bentuk YYYYMMDD untuk nama berkas unduhan
@@ -1903,7 +1889,7 @@ async function confirmDestructive(config) {
     }, 0);
   }
 
-  // Bentuk berkas yang dipakai jalur Pro juga (arsitektur bagian 5)
+  // Bentuk berkas yang sama dengan yang diterima backend (arsitektur bagian 5)
   function validateImportedData(parsed) {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { valid: false, error: 'Berkas ditolak: isinya bukan objek data Penanda' };
@@ -2072,120 +2058,66 @@ async function confirmDestructive(config) {
   }
 
   /**
-   * Membaca seluruh isi berkas data dari jalur yang sedang aktif.
-   * Jalur ditentukan lebih dulu oleh detectStorageMode(); jalur Lite memakai
-   * localStorage, jalur Pro memakai API ke penanda.exe.
+   * Membaca seluruh isi berkas data dari backend.
+   *
+   * Tidak ada fallback lain. Halaman tanpa server berarti halaman yang
+   * dibuka salah cara, dan itu diberi tahu lewat pesan yang menyebut
+   * penanda.exe - bukan diisi data kosong yang terlihat seperti data hilang.
    */
   async function loadData() {
-    if (state.mode === 'Pro') {
-      // Wireframe bagian 6: jalur Pro menampilkan kata "memuat" selagi
-      // membaca berkas, lalu berubah menjadi jam simpan.
-      state.isLoading = true;
-      updateStatusBar();
-      try {
-        const remoteJson = await storage.readRemote();
-        state.data = normalizeData(JSON.parse(remoteJson));
-        state.storageBlocked = false;
-        state.statusMessage = '';
-      } catch (err) {
-        // Backend ada tapi gagal membaca: beri tahu, jangan diam-diam
-        // menampilkan data kosong karena itu bisa membuat user menimpa data.
-        state.storageBlocked = true;
-        state.statusMessage = 'Gagal membaca data dari server';
-        state.data = createEmptyData();
-      }
-      state.isLoading = false;
-      updateStatusBar();
-      renderAllViews();
-      return state.data;
-    }
-
-    let raw = null;
-    try {
-      raw = storage.readLocal();
-      state.storageBlocked = false;
-      state.statusMessage = null;
-    } catch (err) {
-      // localStorage diblokir browser: beri tahu user, jangan diam-diam
-      // menampilkan layar kosong seolah semua beres (PRD 5.10).
-      state.storageBlocked = true;
-      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
-      state.data = createEmptyData();
-      updateStatusBar();
-      renderIndeksView();
-      return state.data;
-    }
-
-    if (!raw) {
-      state.data = createEmptyData();
-    } else {
-      try {
-        const parsed = JSON.parse(raw);
-        state.data = normalizeData(parsed);
-      } catch (parseErr) {
-        state.data = createEmptyData();
-      }
-    }
-
+    // Wireframe bagian 6: kata "memuat" tampil selagi membaca berkas,
+    // lalu berubah menjadi jam simpan.
+    state.isLoading = true;
     updateStatusBar();
-    renderIndeksView();
+
+    try {
+      const remoteJson = await storage.readRemote();
+      state.data = normalizeData(JSON.parse(remoteJson));
+      state.storageBlocked = false;
+      state.statusMessage = '';
+    } catch (err) {
+      // Jangan diam-diam menampilkan data kosong: user bisa mengira datanya
+      // hilang lalu mengetik ulang, dan penulisan berikutnya bisa menimpa
+      // data.json yang sebenarnya masih utuh.
+      state.storageBlocked = true;
+      state.statusMessage = NO_SERVER_MESSAGE;
+      state.data = createEmptyData();
+    }
+
+    state.isLoading = false;
+    updateStatusBar();
+    renderAllViews();
     return state.data;
   }
 
   /**
-   * Menyimpan seluruh isi berkas data ke jalur yang sedang aktif.
+   * Menyimpan seluruh isi berkas data ke backend.
    * Mengembalikan true bila berhasil. Bila gagal, modal yang memanggilnya
    * tetap terbuka supaya isian pengguna tidak hilang (wireframe bagian 6).
    */
   async function saveData(newData) {
     if (!newData || typeof newData !== 'object') return false;
 
-    // Jalur belum diketahui: data di layar belum berasal dari mana pun, jadi
-    // simpan sekarang bisa menimpa data.json user dengan data kosong.
-    if (!state.isModeReady) {
-      state.statusMessage = 'Data belum selesai dimuat. Tunggu sebentar lalu coba lagi.';
-      updateStatusBar();
-      return false;
-    }
-
     const normalized = normalizeData(newData);
     state.data = normalized;
 
-    if (state.mode === 'Pro') {
-      try {
-        await storage.writeRemote(JSON.stringify(normalized));
-        state.storageBlocked = false;
-        state.statusMessage = '';
-        state.savedAt = storage.formatSavedTime(new Date());
-      } catch (err) {
-        state.storageBlocked = true;
-        state.statusMessage = 'Gagal menyimpan ke server';
-      }
-      updateStatusBar();
-      // Re-render hanya bila simpan berhasil; kalau gagal, DOM dibiarkan
-      // agar isian atau form yang sedang aktif tidak hilang.
-      if (!state.storageBlocked) {
-        renderAllViews();
-      }
-      return !state.storageBlocked;
-    }
-
     try {
-      storage.writeLocal(JSON.stringify(normalized));
+      await storage.writeRemote(JSON.stringify(normalized));
       state.storageBlocked = false;
       state.statusMessage = '';
       state.savedAt = storage.formatSavedTime(new Date());
-
-      updateStatusBar();
-      renderAllViews();
-      return true;
     } catch (err) {
       state.storageBlocked = true;
-      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
-      updateStatusBar();
-      // Jangan re-render DOM agar isian atau form yang sedang aktif tidak hilang
-      return false;
+      state.statusMessage = 'Gagal menyimpan ke server';
     }
+
+    updateStatusBar();
+    // Re-render hanya bila simpan berhasil; kalau gagal, DOM dibiarkan
+    // agar isian atau form yang sedang aktif tidak hilang.
+    if (!state.storageBlocked) {
+      renderAllViews();
+    }
+    return !state.storageBlocked;
   }
 
   function renderAllViews() {
@@ -2194,16 +2126,6 @@ async function confirmDestructive(config) {
     renderLogView();
   }
 
-  /**
-   * Menentukan jalur aplikasi dengan satu percobaan GET /api/data.
-   * Sukses berarti Pro; apa pun selain itu berarti Lite, termasuk halaman
-   * yang dibuka langsung dari Explorer (arsitektur bagian 2).
-   */
-  async function detectStorageMode() {
-    const mode = await storage.detectMode();
-    state.mode = mode;
-    return mode;
-  }
 
   function switchTab(tabName, options = {}) {
     if (!['indeks', 'todo', 'log'].includes(tabName)) return;
@@ -2295,21 +2217,10 @@ async function confirmDestructive(config) {
     // (input itu baru ada setelah panel diisi).
     switchTab(state.activeTab, { focusSearch: false });
 
-    // Jalur harus diketahui sebelum data dibaca: Lite memakai localStorage,
-    // Pro memakai API. Selama pendeteksian, area status menampilkan "memuat".
-    // isModeReady menahan saveData sampai jalur diketahui dan data termuat;
-    // tanpa itu, simpan yang keburu bisa menimpa data.json dengan data kosong.
-    state.isLoading = true;
-    updateStatusBar();
-    detectStorageMode()
-      .then(() => loadData())
+    // Data dibaca dari backend. loadData sudah menampilkan kata "memuat"
+    // selama pembacaan berjalan, lalu membersihkannya sendiri.
+    loadData()
       .then(() => {
-        // Semua selesai: baru sekarang simpan diizinkan. Pesan "memuat"
-        // dibersihkan di sini karena hanya berlaku selama proses awal.
-        // statusMessage tidak disentuh bila ada masalah nyata seperti
-        // localStorage diblokir, supaya pesan itu tidak hilang.
-        state.isModeReady = true;
-        state.isLoading = false;
         if (!state.statusMessage) {
           state.storageBlocked = false;
         }
@@ -2317,7 +2228,7 @@ async function confirmDestructive(config) {
         renderAllViews();
         if (state.activeTab === 'indeks') focusSearchInput();
       })
-      .catch((err) => {
+      .catch(() => {
         state.statusMessage = 'Gagal menjalankan aplikasi';
         state.isLoading = false;
         updateStatusBar();
@@ -2375,7 +2286,6 @@ async function confirmDestructive(config) {
     exportDataAsJson,
     validateImportedData,
     openImportFilePicker,
-    detectStorageMode,
     renderAllViews,
     renderIndeksView,
     openLocalPathViaBackend

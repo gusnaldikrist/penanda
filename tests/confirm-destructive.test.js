@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,9 +10,9 @@ import vm from 'node:vm';
 // showDeleteLogConfirmation yang sebelumnya kembar 143 baris.
 
 const repoRoot = path.resolve('.');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
 
 // Harness minimal: cukup untuk satu modal konfirmasi.
 function createTestEnvironment(initialData = null) {
@@ -80,6 +81,7 @@ function createTestEnvironment(initialData = null) {
 
   const store = {};
   if (initialData) store.indeks_v1 = JSON.stringify(initialData);
+  const backend = buatBackendPalsu(store);
 
   const domDocument = {
     readyState: 'complete',
@@ -112,7 +114,7 @@ function createTestEnvironment(initialData = null) {
       removeItem: (k) => { delete store[k]; },
       clear: () => { for (const k of Object.keys(store)) delete store[k]; }
     },
-    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    fetch: backend.fetch,
     AbortController, setTimeout, clearTimeout, console, Date
   };
   sandbox.window = sandbox;

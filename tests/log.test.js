@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,11 +7,11 @@ import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
-const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
-const indexHtmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
+const styleCssPath = path.join(repoRoot, 'src', 'frontend', 'style.css');
+const indexHtmlPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
 
 function createTestEnvironment(initialData = null) {
   const elements = new Map();
@@ -246,6 +247,7 @@ function createTestEnvironment(initialData = null) {
   };
 
   const store = {};
+  const backend = buatBackendPalsu(store);
   if (initialData) {
     store['indeks_v1'] = JSON.stringify(initialData);
   }
@@ -265,7 +267,7 @@ function createTestEnvironment(initialData = null) {
     },
     // Environment minimal untuk storage-adapter.js (Tiket 11).
     // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
-    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    fetch: backend.fetch,
     AbortController,
     setTimeout, clearTimeout,
     console,
@@ -552,8 +554,8 @@ test('Tiket 08 - Area status tetap tiga bagian, tidak menambah penghitung entri 
   const statusBar = env.getOrCreateElement('status-bar');
   assert.equal(
     statusBar.textContent,
-    'Lite - 4 item',
-    'Area status tetap "Lite - X item" tanpa penghitung entri log'
+    'Penanda - 4 item',
+    'Area status tetap "Penanda - X item" tanpa penghitung entri log'
   );
   assert.ok(!/entri/i.test(statusBar.textContent), 'Area status tidak boleh memuat kata "entri"');
 });
@@ -714,7 +716,7 @@ test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus'
   exampleData.logs.push({ id: 'l2', date: '2026-09-28', item_id: 'item-yang-dihapus', teks: 'Item sudah dihapus' });
   exampleData.logs.push({ id: 'l3', date: '2026-09-27', item_id: null, teks: 'Sengaja tanpa tautan' });
   const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
+  // loadData async saat halaman siap
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 
@@ -726,7 +728,7 @@ test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus'
   assert.match(logList.innerHTML, /Sheet Admin TA/, 'Entri yang masih ber-tautan menampilkan judul item');
 
   // Simulasikan item tertaut dihapus: entri log tetap ada, item_id menjadi null
-  saveData({
+  await saveData({
     version: 1,
     items: exampleData.items.filter(item => item.id !== 'sheet-ta-admin'),
     todo: exampleData.todo.map(todo => (
@@ -752,12 +754,19 @@ test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus'
 test('Tiket 08 - Retensi isian form saat penyimpanan gagal (wireframe §5)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
+  // loadData async saat halaman siap
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 
-  env.sandbox.localStorage.setItem = () => {
-    throw new Error('Quota exceeded');
+  // Server menolak penyimpanan (misal data.json sedang terkunci). Dulu ini
+  // disimulasikan lewat localStorage.setItem yang melempar; sekarang
+  // penyimpanan hanya lewat backend, jadi gagalnya harus datang dari sana.
+  const fetchAsli = env.sandbox.fetch;
+  env.sandbox.fetch = async (url, opts) => {
+    if (opts && opts.method === 'POST') {
+      return { ok: false, status: 500, text: async () => 'gagal' };
+    }
+    return fetchAsli(url, opts);
   };
 
   const { switchTab, openLogModal } = env.sandbox;

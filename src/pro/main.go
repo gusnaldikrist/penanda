@@ -1,4 +1,4 @@
-// main.go — Penanda jalur Pro (Tiket 10)
+// main.go — Backend Penanda (Tiket 10)
 //
 // Binary tunggal tanpa dependency luar. Menyajikan berkas frontend dari
 // folder tempat binary berada, dan menyimpan data ke data.json di folder
@@ -32,7 +32,7 @@ const (
 
 // validatePayload menolak apa pun yang bukan bentuk data Penanda.
 // Bentuk yang diterima sengaja sama persis dengan validateImportedData di
-// frontend, supaya berkas hasil Export Lite dan hasil POST Pro serasi.
+// frontend, supaya berkas hasil Export dan hasil POST backend serasi.
 func validatePayload(raw []byte) error {
 	// Dilakukan dua tahap supaya pesan galat tidak membocorkan jargon Go
 	// ("cannot unmarshal ... into Go value of type ...") ke user.
@@ -54,7 +54,7 @@ func validatePayload(raw []byte) error {
 		return fmt.Errorf("field version harus berupa angka, dapat %T", versionValue)
 	}
 	// Perbandingan dilakukan pada nilai float apa adanya, bukan int(), supaya
-	// version 1.5 tidak ikut diterima karena terpotong jadi 1. Lite memakai
+	// version 1.5 tidak ikut diterima karena terpotong jadi 1. Frontend memakai
 	// perbandingan ketat juga, jadi keduanya menerima berkas yang sama.
 	if versionNumber != supportedVersion {
 		return fmt.Errorf("version %v tidak dikenal; hanya version %d yang dipakai", versionNumber, supportedVersion)

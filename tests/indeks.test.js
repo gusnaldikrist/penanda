@@ -1,14 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
 
 function createTestEnvironment(initialData = null, options = {}) {
   const elements = new Map();
@@ -125,6 +126,11 @@ function createTestEnvironment(initialData = null, options = {}) {
     setItem: (k, v) => { store[k] = String(v); }
   };
 
+  // Server palsu: aplikasi hanya punya satu jalur, jadi data harus datang
+  // dari backend, bukan localStorage. Backend menulis ke store yang sama,
+  // jadi assertion yang sudah ada tetap berlaku.
+  const backend = buatBackendPalsu(store);
+
   const toasts = [];
   const toastsHistory = [];
   const modals = [];
@@ -237,6 +243,9 @@ function createTestEnvironment(initialData = null, options = {}) {
       return setTimeout(fn, delay);
     },
     clearTimeout,
+    fetch: backend.fetch,
+    AbortController,
+    Date,
     console
   };
 
@@ -414,7 +423,7 @@ test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa 
 
 test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', async () => {
   const env = createTestEnvironment(twoItemsFixture);
-  // detectStorageMode lalu loadData async sejak tiket 11
+  // loadData async saat halaman siap
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
   const resultList = env.getOrCreateElement('result-list');
@@ -425,8 +434,12 @@ test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', async 
   assert.equal(env.toasts.length, 1, 'Toast harus muncul untuk path lokal');
   assert.match(
     env.toasts[0].textContent,
-    /Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin/,
-    'Pesan konsekuensi path lokal harus tepat'
+    /Path sudah disalin/,
+    'Toast copy path lokal harus menyebutkan teksnya tersalin'
+  );
+  assert.ok(
+    !/hanya bisa dibuka/.test(env.toasts[0].textContent),
+    'Toast tidak boleh menyatakan path lokal tidak bisa dibuka: sekarang ada tombol Buka'
   );
 });
 

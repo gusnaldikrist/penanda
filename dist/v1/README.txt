@@ -8,45 +8,50 @@ Semua data disimpan di komputer Anda sendiri. Tidak ada akun, tidak ada
 server, tidak ada request ke internet.
 
 
-CARA JALAN LITE (tanpa instal apa pun)
---------------------------------------
+CARA JALAN
+----------
 
 1. Ekstrak ZIP ini ke satu folder tetap, misalnya D:\Penanda\
    Jangan langsung membuka dari dalam ZIP.
-2. Double-click index.html.
-3. Aplikasi terbuka di browser. Selesai.
-
-Data Lite disimpan di localStorage browser. Untuk memindahkan data ke
-komputer lain: klik Export, lalu di komputer lain klik Import dan pilih
-berkas itu.
-
-Catatan: di jalur Lite, path lokal seperti D:\Data\laporan.xlsx tidak bisa
-dibuka oleh browser. Untuk itu pakai jalur Pro.
-
-
-CARA JALAN PRO (punya path lokal banyak)
-----------------------------------------
-
-1. Ekstrak ZIP ini ke satu folder tetap, misalnya D:\Penanda\
 2. Double-click penanda.exe
 3. Browser otomatis terbuka ke http://localhost:8080
 
-Yang berbeda dari Lite:
-- Path lokal bisa dibuka satu klik, bukan disalin manual.
-- Setiap kali menyimpan, aplikasi membuat salinan harian otomatis
-  (data-YYYYMMDD.json) di folder yang sama. Kalau data rusak, salinan
-  terbaru bisa dipakai kembali.
-- Data disimpan di berkas data.json di folder penanda.exe, jadi mudah
-  dicadangkan: cukup salin foldernya.
+Satu cara jalan saja. Tidak ada mode lain, tidak ada pilihan yang perlu
+dibuat saat memasang.
+
+
+MENYIMPAN DATA
+--------------
+
+Setiap kali Anda menyimpan, aplikasi menulis ke berkas data.json di
+folder yang sama dengan penanda.exe, sekaligus membuat salinan harian
+data-YYYYMMDD.json. Kalau data.json rusak, salinan terbaru bisa dipakai
+lagi.
+
+Mencadangkan cukup dengan menyalin folder penanda.exe ke tempat lain.
+Tidak perlu ada langkah backup khusus.
+
+Untuk berpindah ke komputer lain: klik Export JSON di aplikasi, salin
+berkasnya ke komputer tujuan, lalu di sana klik Import JSON dan pilih
+berkas itu.
+
+
+BERKAS LOKAL
+-------------
+
+Path lokal seperti D:\Data\laporan.xlsx bisa dibuka satu klik, lewat
+tombol Buka. Aplikasi meneruskan permintaan itu ke penanda.exe, jadi
+Windows yang membukanya dengan aplikasi bawaannya.
+
+Kalau tombol Buka gagal, teksnya sudah disalin; ada tombol Copy di
+sampingnya sebagai jalan keluar.
 
 
 CADANGKAN DATA
 --------------
 
-Jalur Lite  : Export JSON setiap sekarang dan kemudian. Simpan berkasnya
-              di tempat aman. Itu satu-satunya cadangan Anda.
-Jalur Pro   : salinan harian dibuat otomatis. Tetap disarankan menyalin
-              folder penanda.exe ke tempat lain sesekali.
+  Salinan harian  dibuat otomatis tiap kali Anda menyimpan.
+  Cadangan penuh  salin folder penanda.exe ke tempat lain sesekali.
 
 
 CATATAN KEAMANAN
@@ -59,6 +64,9 @@ CATATAN KEAMANAN
   menampilkan peringatan SmartScreen untuk binary yang belum ditandatangani.
   Pilih "More info" lalu "Run anyway". Itu perilaku normal Windows untuk
   program yang belum terbukti reputasinya, bukan tanda kerusakan.
+- Kalau halaman terbuka tapi aplikasi complaining tidak menemukan
+  server, Anda mungkin terklik index.html secara tidak sengaja. Tutup
+  halaman itu, lalu jalankan penanda.exe.
 
 
 MULAI DARI MANA
@@ -82,10 +90,12 @@ MASALAH UMUM
   jalankan penanda.exe lagi.
 
 Data tidak muncul padahal pernah diisi
-  Kalau lewat Lite, cek apakah sedang buka di browser atau profil yang
-  sama. localStorage terpisah per browser. Kalau lewat Pro, cek apakah
-  file data.json masih ada di folder penanda.exe.
+  Cek apakah file data.json masih ada di folder penanda.exe, dan apakah
+  folder itu yang sama dengan tempat penanda.exe dijalankan. Kalau
+  concorrannya, data Anda ada di folder yang berbeda - cari di riwayat
+  folder penanda.exe.
 
-"Path lokal hanya bisa dibuka di jalur Pro"
-  Itu memang begitu. Browser tidak boleh membuka path Windows dari
-  halaman web. Pakai jalur Pro kalau perlu membuka berkas lokal.
+"Aplikasi ini berjalan lewat penanda.exe"
+  Anda membuka index.html langsung. Penanda.exe adalah server; tanpa
+  itu tidak ada tempat menyimpan data. Tutup halaman, klik dua kali
+  penanda.exe, lalu pakai browser yang terbuka otomatis.

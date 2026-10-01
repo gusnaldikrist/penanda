@@ -5,8 +5,8 @@ import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
-const adapterPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
+const adapterPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
 
 function loadAdapter() {
   const sandbox = {
@@ -37,46 +37,6 @@ function createFetchStub(handler) {
 function jsonResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, text: async () => body };
 }
-
-// ---------------------------------------------------------------------------
-// Deteksi jalur
-// ---------------------------------------------------------------------------
-
-test('Tiket 11 - Deteksi jalur: GET /api/data sukses berarti Pro', async () => {
-  const adapter = loadAdapter();
-  const fetchStub = createFetchStub(() => jsonResponse(200, '{"version":1}'));
-
-  const mode = await adapter.detectMode(fetchStub);
-
-  assert.equal(mode, 'Pro');
-  assert.equal(fetchStub.calls[0].url, '/api/data');
-  assert.equal(fetchStub.calls[0].method, 'GET');
-});
-
-test('Tiket 11 - Deteksi jalur: backend menjawab galat berarti Lite', async () => {
-  const adapter = loadAdapter();
-
-  for (const status of [400, 404, 500, 503]) {
-    const mode = await adapter.detectMode(createFetchStub(() => jsonResponse(status, '')));
-    assert.equal(mode, 'Lite', `status ${status} harus berarti Lite`);
-  }
-});
-
-test('Tiket 11 - Deteksi jalur: fetch ditolak (dibuka dari Explorer) berarti Lite', async () => {
-  const adapter = loadAdapter();
-  const fetchStub = createFetchStub(() => {
-    throw new TypeError('Failed to fetch');
-  });
-
-  const mode = await adapter.detectMode(fetchStub);
-  assert.equal(mode, 'Lite');
-});
-
-test('Tiket 11 - Deteksi jalur: tanpa fungsi fetch sama sekali berarti Lite', async () => {
-  const adapter = loadAdapter();
-  const mode = await adapter.detectMode(null);
-  assert.equal(mode, 'Lite', 'Browser tua tanpa fetch harus tetap jalan di Lite');
-});
 
 // ---------------------------------------------------------------------------
 // Path lokal vs alamat web (arsitektur bagian 5)
@@ -134,24 +94,23 @@ test('Tiket 11 - Path lokal: 주소 web tidak tertukar dengan path lokal', () =>
 // Area status tiga bagian (PRD 5.9, wireframe bagian 6)
 // ---------------------------------------------------------------------------
 
-test('Tiket 11 - Area status tiga bagian dipisah tanda hubung', () => {
+test('Area status tiga bagian dipisah tanda hubung', () => {
   const adapter = loadAdapter();
 
-  assert.equal(adapter.formatStatus('Lite', 24, '16:02'), 'Lite - 24 item - tersimpan 16:02');
-  assert.equal(adapter.formatStatus('Pro', 24, '16:02'), 'Pro - 24 item - tersimpan 16:02');
+  assert.equal(adapter.formatStatus(24, '16:02'), 'Penanda - 24 item - tersimpan 16:02');
 });
 
-test('Tiket 11 - Area status: kata memuat hanya saat membaca berkas, jam belum ada', () => {
+test('Area status: kata memuat hanya saat membaca berkas, jam belum ada', () => {
   const adapter = loadAdapter();
 
-  assert.equal(adapter.formatStatus('Pro', 0, null, true), 'Pro - 0 item - memuat');
+  assert.equal(adapter.formatStatus(0, null, true), 'Penanda - 0 item - memuat');
   // Setelah simpan sukses, jam muncul dan kata memuat hilang
-  assert.equal(adapter.formatStatus('Pro', 24, '16:02', false), 'Pro - 24 item - tersimpan 16:02');
+  assert.equal(adapter.formatStatus(24, '16:02', false), 'Penanda - 24 item - tersimpan 16:02');
 });
 
-test('Tiket 11 - Area status tanpa jam simpan hanya dua bagian', () => {
+test('Area status tanpa jam simpan hanya dua bagian', () => {
   const adapter = loadAdapter();
-  assert.equal(adapter.formatStatus('Lite', 4, null), 'Lite - 4 item');
+  assert.equal(adapter.formatStatus(4, null), 'Penanda - 4 item');
 });
 
 test('Tiket 11 - Jam simpan memakai format 24 jam dua digit', () => {
@@ -211,10 +170,10 @@ test('Tiket 11 - Buka path lokal lewat backend: galat dilempar agar bisa fallbac
 });
 
 // ---------------------------------------------------------------------------
-// Batas waktu: halaman dari Explorer tidak punya server
+// Batas waktu: server yang tidak menjawab tidak boleh menggantung selamanya
 // ---------------------------------------------------------------------------
 
-test('Tiket 11 - Deteksi jalur: permintaan menggantung dibatasi waktu lalu jadi Lite', async () => {
+test('Permintaan menggantung dibatasi waktu, bukan menggantung selamanya', async () => {
   const adapter = loadAdapter();
   // Fetch yang tidak pernah selesai, hanya menunggu abort signal.
   const fetchStub = (url, options) => new Promise((resolve, reject) => {
@@ -223,62 +182,10 @@ test('Tiket 11 - Deteksi jalur: permintaan menggantung dibatasi waktu lalu jadi 
     }
   });
 
-  const mode = await adapter.detectMode(fetchStub);
-  assert.equal(mode, 'Lite', 'Permintaan menggantung harus berakhir sebagai Lite, bukan menggantung selamanya');
-});
-
-// ---------------------------------------------------------------------------
-// Jalur Lite: localStorage
-// ---------------------------------------------------------------------------
-
-test('Tiket 11 - Jalur Lite baca dan tulis lewat kunci indeks_v1', () => {
-  const adapter = loadAdapter();
-  const store = {};
-  const fakeLocalStorage = {
-    getItem: (k) => (k in store ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); }
-  };
-
-  const sandbox = { console, Date };
-  sandbox.localStorage = fakeLocalStorage;
-  sandbox.window = sandbox;
-  sandbox.globalThis = sandbox;
-  sandbox.module = { exports: {} };
-  vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(adapterPath, 'utf8'), sandbox);
-  const litAdapter = sandbox.module.exports;
-
-  assert.equal(litAdapter.readLocal(), null, 'Belum ada data harus mengembalikan null');
-  litAdapter.writeLocal('{"version":1}');
-  assert.equal(store.indeks_v1, '{"version":1}', 'Kunci localStorage harus indeks_v1');
-  assert.equal(litAdapter.readLocal(), '{"version":1}');
-});
-
-test('Tiket 11 - Jalur Lite: localStorage diblokir tidak melempar keluar', () => {
-  const adapter = loadAdapter();
-  const sandbox = {
-    console, Date,
-    localStorage: {
-      getItem: () => { throw new Error('SecurityError'); },
-      setItem: () => { throw new Error('SecurityError'); }
-    }
-  };
-  sandbox.window = sandbox;
-  sandbox.globalThis = sandbox;
-  sandbox.module = { exports: {} };
-  vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(adapterPath, 'utf8'), sandbox);
-  const litAdapter = sandbox.module.exports;
-
-  assert.throws(
-    () => litAdapter.readLocal(),
-    /SecurityError/,
-    'localStorage diblokir harus melempar, bukan dibaca sebagai null supaya pemanggil tahu'
-  );
-  assert.throws(
-    () => litAdapter.writeLocal('{}'),
-    /SecurityError/,
-    'Penulisan yang diblokir harus tetap melempar agar pemanggil tahu'
+  await assert.rejects(
+    () => adapter.readRemote(fetchStub),
+    /aborted/,
+    'Permintaan menggantung harus berakhir dengan galat, bukan menggantung'
   );
 });
 
@@ -295,10 +202,15 @@ test('Tiket 11 - Constanta versi adapter sama dengan yang dipakai app.js', () =>
   const goMatch = goSource.match(/supportedVersion\s*=\s*(\d+)/);
   assert.ok(goMatch, 'main.go harus mendeklarasikan supportedVersion');
 
-  assert.equal(match[1], goMatch[1], 'Lite dan Pro harus memakai angka versi yang sama');
+  assert.equal(match[1], goMatch[1], 'Frontend dan backend harus memakai angka versi yang sama');
 });
 
-test('Tiket 11 - Kunci localStorage adapter sama dengan(app.js)', () => {
+test('adapter tidak lagi mengekspor jalur penyimpanan', () => {
+  // Jalur Lite dihapus: tidak ada lagi kunci localStorage, mode, atau
+  // fungsi baca-tulis lokal. Kalau salah satunya kembali, Lite tumbuh lagi.
   const adapter = loadAdapter();
-  assert.equal(adapter.STORAGE_KEY, 'indeks_v1', 'Kunci localStorage harus indeks_v1 (spec kontrak 8)');
+
+  for (const nama of ['STORAGE_KEY', 'MODE_LITE', 'MODE_PRO', 'detectMode', 'readLocal', 'writeLocal', 'detectModeFromResponse']) {
+    assert.equal(nama in adapter, false, `${nama} tidak boleh ada di adapter`);
+  }
 });

@@ -1,15 +1,16 @@
 import test from 'node:test';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
-const htmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
-const cssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
+const htmlPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
+const cssPath = path.join(repoRoot, 'src', 'frontend', 'style.css');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
 
 test('File dasar tiket 01 harus ada', () => {
   assert.ok(fs.existsSync(htmlPath), 'index.html harus ada');
@@ -136,6 +137,7 @@ test('app.js: inisialisasi state dan logika pergantian tab di memori', () => {
     new Element('section', { id: 'panel-log', class: 'tab-panel', hidden: '' })
   ];
   const statusBar = new Element('div', { id: 'status-bar' });
+  const backend = buatBackendPalsu({});
 
   const sandbox = {
     document: {
@@ -155,9 +157,8 @@ test('app.js: inisialisasi state dan logika pergantian tab di memori', () => {
     },
     window: {},
     localStorage: { getItem: () => null, setItem() {}, removeItem() {}, clear() {} },
-    // Environment minimal untuk storage-adapter.js (Tiket 11).
-    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
-    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    // Server palsu supaya aplikasi bisa membaca data saat halaman siap.
+    fetch: backend.fetch,
     AbortController,
     setTimeout, clearTimeout,
     console, Date

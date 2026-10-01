@@ -66,10 +66,11 @@ func TestValidatePayload_MenolakVersionTidakDikenal(t *testing.T) {
 	if err := validatePayload([]byte(payload)); err == nil {
 		t.Fatal("version yang hilang harus ditolak")
 	}
-	// 1.5 akan terpotong jadi 1 kalau dibandingkan lewat int(); Lite memakai
-	// perbandingan ketat, jadi Pro harus menolaknya juga (spec kontrak 5).
+	// 1.5 akan terpotong jadi 1 kalau dibandingkan lewat int(); frontend
+	// memakai perbandingan ketat, jadi backend harus menolaknya juga
+	// (spec kontrak 5).
 	if err := validatePayload([]byte(`{"version":1.5,"items":[],"todo":[],"logs":[],"pinned_tags":[]}`)); err == nil {
-		t.Fatal("version 1.5 harus ditolak, sama seperti di Lite")
+		t.Fatal("version 1.5 harus ditolak, sama seperti di frontend")
 	}
 }
 

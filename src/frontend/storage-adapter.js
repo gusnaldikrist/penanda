@@ -1,9 +1,13 @@
-// storage-adapter.js — Adapter Penyimpanan Penanda V1 (Tiket 11)
+// storage-adapter.js — Adapter Penyimpanan Penanda
 //
-// Satu frontend, dua jalur (arsitektur bagian 2). Saat halaman siap, adapter
-// mencoba GET /api/data:
-//   - Sukses  : jalur Pro, semua baca dan tulis lewat API ke penanda.exe
-//   - Gagral   : jalur Lite, baca dan tulis lewat localStorage
+// Frontend Penanda hanya punya satu cara jalan: lewat penanda.exe. Frontend
+// ini disajikan server dari folder binary, dan semua baca serta tulis data
+// lewat API ke server itu.
+//
+// Tidak ada localStorage. Aplikasi yang dibuka langsung dari Explorer (tanpa
+// server) diberi tahu agar menjalankan penanda.exe, bukan diam-diam memakai
+// penyimpanan browser - kalau ada fallback, data user bisa terpecah di dua
+// tempat tanpa diasadari.
 //
 // Bagian ini sengaja tanpa DOM; semua akses DOM tetap di app.js.
 // Fungsi murni bisa diuji di Node.js tanpa mock peramban.
@@ -11,20 +15,12 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'indeks_v1';
   const API_DATA_PATH = '/api/data';
   const API_OPEN_PATH = '/open';
 
-  const MODE_LITE = 'Lite';
-  const MODE_PRO = 'Pro';
-
   // Batas waktu menunggu backend. Angka pendek supaya halaman yang dibuka
-  // dari Explorer (yang tidak punya server) tidak menggantung lama.
+  // dari Explorer tidak menggantung lama sebelum memberi tahu cara yang benar.
   const DETECT_TIMEOUT_MS = 1500;
-
-  function detectModeFromResponse(ok) {
-    return ok ? MODE_PRO : MODE_LITE;
-  }
 
   /**
    * Menentukan apakah alamat sebuah path lokal Windows.
@@ -65,9 +61,10 @@
     return false;
   }
 
-  /** Format area status tiga bagian: jalur, jumlah item, waktu simpan. */
-  function formatStatus(mode, itemCount, savedAt, isLoading) {
-    const parts = [mode + ' - ' + itemCount + ' item'];
+  // Format area status: nama aplikasi, jumlah item, waktu simpan.
+  // Tidak ada lagi nama jalur karena aplikasi hanya punya satu cara jalan.
+  function formatStatus(itemCount, savedAt, isLoading) {
+    const parts = ['Penanda - ' + itemCount + ' item'];
     if (isLoading) {
       parts.push('memuat');
     } else if (savedAt) {
@@ -83,25 +80,7 @@
   }
 
   // --------------------------------------------------------------------------
-  // Jalur Lite: localStorage
-  // --------------------------------------------------------------------------
-
-  /**
-   * Baca data dari localStorage. Error TIDAK ditangkap di sini: pemanggil
-   * harus bisa membedakan "belum ada data" (null) dari "localStorage
-   * diblokir browser" (SecurityError). Menelan error-nya akan membuat
-   * aplikasi mengira storage kosong padahal tidak bisa menyimpan.
-   */
-  function readLocal() {
-    return localStorage.getItem(STORAGE_KEY);
-  }
-
-  function writeLocal(jsonText) {
-    localStorage.setItem(STORAGE_KEY, jsonText);
-  }
-
-  // --------------------------------------------------------------------------
-  // Jalur Pro: HTTP ke penanda.exe
+  // Penyimpanan: hanya lewat backend
   // --------------------------------------------------------------------------
 
   /**
@@ -128,18 +107,6 @@
     }
   }
 
-  /** Deteksi jalur: satu percobaan GET /api/data. */
-  async function detectMode(fetchImpl) {
-    if (!fetchImpl && typeof fetch !== 'function') return MODE_LITE;
-
-    try {
-      const response = await fetchWithTimeout(API_DATA_PATH, { method: 'GET' }, DETECT_TIMEOUT_MS, fetchImpl);
-      return detectModeFromResponse(response.ok);
-    } catch (err) {
-      return MODE_LITE;
-    }
-  }
-
   /** Baca seluruh isi berkas data dari backend. */
   async function readRemote(fetchImpl) {
     const response = await fetchWithTimeout(API_DATA_PATH, { method: 'GET' }, DETECT_TIMEOUT_MS, fetchImpl);
@@ -162,8 +129,8 @@
   }
 
   /**
-   * Buka path lokal lewat backend. Hanya mungkin di jalur Pro karena
-   * browser memblokir halaman biasa membuka skema berkas (arsitektur bagian 5).
+   * Buka path lokal lewat backend. Harus lewat backend karena browser
+   * memblokir halaman biasa membuka skema berkas (arsitektur bagian 5).
    */
   async function openRemotePath(localPath, fetchImpl) {
     const response = await fetchWithTimeout(API_OPEN_PATH, {
@@ -177,19 +144,12 @@
   }
 
   const api = {
-    STORAGE_KEY,
     API_DATA_PATH,
     API_OPEN_PATH,
-    MODE_LITE,
-    MODE_PRO,
-    detectModeFromResponse,
     isLocalPath,
     formatStatus,
     formatSavedTime,
-    readLocal,
-    writeLocal,
     fetchWithTimeout,
-    detectMode,
     readRemote,
     writeRemote,
     openRemotePath

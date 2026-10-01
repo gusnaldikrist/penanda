@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,8 +7,8 @@ import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
 
 // init() memanggil detectStorageMode() lalu loadData() sebagai dua promise,
 // jadi dua gilir event loop diperlukan sebelum DOM ter-render.
@@ -32,6 +33,7 @@ function createStorageEnvironment(options = {}) {
   };
 
   const store = {};
+  const backend = buatBackendPalsu(store);
   const mockLocalStorage = storage || {
     getItem: (k) => (k in store ? store[k] : null),
     setItem: (k, v) => { store[k] = String(v); },
@@ -55,7 +57,7 @@ function createStorageEnvironment(options = {}) {
     localStorage: mockLocalStorage,
     // Environment minimal untuk storage-adapter.js (Tiket 11).
     // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
-    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    fetch: backend.fetch,
     AbortController,
     setTimeout, clearTimeout,
     console, Date,
@@ -101,32 +103,32 @@ test('app.js: loadData() bentuk kosong awal dan render empty state', async () =>
   const env = createStorageEnvironment();
   await env.settle();
 
-  assert.match(env.getStatusText(), /Lite - 0 item/, 'Status awal harus menunjukkan Lite - 0 item');
+  assert.match(env.getStatusText(), /Penanda - 0 item/, 'Status awal harus menunjukkan Penanda - 0 item');
   assert.match(env.getPanelHtml(), /Belum ada item kerja/, 'Empty state harus tampil saat data kosong');
   assert.match(env.getPanelHtml(), /\+ Tambah Item/, 'Tombol Tambah Item ada di empty state');
   assert.match(env.getPanelHtml(), /Import JSON/, 'Tombol Import JSON ada di empty state');
-  assert.match(
-    env.getPanelHtml(),
-    /Path lokal hanya bisa dibuka di jalur Pro/,
-    'Kalimat konsekuensi jalur harus ada'
+  // Tidak ada lagi kalimat konsekuensi jalur: path lokal selalu bisa dibuka.
+  assert.ok(
+    !env.getPanelHtml().includes('hanya bisa dibuka di jalur Pro'),
+    'Kalimat tentang jalur Pro tidak boleh tampil, karena path lokal bisa dibuka'
   );
 });
 
-test('app.js: saveData() dan loadData() siklus baca tulis localStorage indeks_v1', async () => {
+test('app.js: saveData() dan loadData() siklus baca tulis lewat backend', async () => {
   const exampleJson = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createStorageEnvironment();
   await env.settle();
 
   const saveSuccess = await env.sandbox.saveData(exampleJson);
   assert.equal(saveSuccess, true, 'saveData harus sukses');
-  assert.ok(env.store.indeks_v1, 'Kunci indeks_v1 harus tersimpan di localStorage');
+  assert.ok(env.store.indeks_v1, 'Data harus tersimpan di backend');
 
   const storedJson = JSON.parse(env.store.indeks_v1);
   assert.equal(storedJson.items.length, 4, 'Data tersimpan harus memiliki 4 item');
 
   assert.match(
     env.getStatusText(),
-    /Lite - 4 item - tersimpan \d{2}:\d{2}/,
+    /Penanda - 4 item - tersimpan \d{2}:\d{2}/,
     'Status bar harus diperbarui dengan jam simpan'
   );
   assert.match(env.getPanelHtml(), /search-input/, 'Panel indeks harus menampilkan kotak pencarian setelah data tersimpan');
@@ -135,28 +137,29 @@ test('app.js: saveData() dan loadData() siklus baca tulis localStorage indeks_v1
   assert.equal(loaded.items.length, 4, 'loadData harus mengembalikan 4 item');
 });
 
-test('app.js: penanganan SecurityError saat localStorage diblokir browser', async () => {
-  const blockedLocalStorage = {
-    getItem() { throw new Error('SecurityError'); },
-    setItem() { throw new Error('SecurityError'); }
-  };
-
-  const env = createStorageEnvironment({ storage: blockedLocalStorage });
+test('app.js: backend menolak menyimpan tidak merusak isian yang sedang diisi', async () => {
+  const env = createStorageEnvironment();
   await env.settle();
 
-  assert.equal(env.getStatusClass(), 'status-bar error', 'Status bar harus memiliki class error');
-  assert.match(
-    env.getStatusText(),
-    /diblokir browser.*jalur Pro/,
-    'Pesan error harus mengarahkan ke jalur Pro'
-  );
+  // Server hidup untuk baca tapi menolak untuk tulis.
+  const fetchAsli = env.sandbox.fetch;
+  env.sandbox.fetch = async (url, opts) => {
+    if (opts && opts.method === 'POST') {
+      return { ok: false, status: 500, text: async () => 'gagal' };
+    }
+    return fetchAsli(url, opts);
+  };
+  await env.sandbox.loadData();
+
+  assert.equal(env.getStatusClass(), 'status-bar', 'Baca berhasil jadi tidak ada tanda galat');
+  assert.ok(!/Gagal membaca/.test(env.getStatusText()), 'Baca dari server yang hidup tidak boleh gagal');
 
   // Simulasikan user sedang mengisi form di layar
   env.setPanelHtml('<form id="active-item-form"><input value="draft catatan user"></form>');
 
   // saveData tidak boleh crash, mengembalikan false, dan TIDAK me-render ulang DOM
   const saved = await env.sandbox.saveData({ version: 1, items: [{ id: 'test' }] });
-  assert.equal(saved, false, 'saveData harus mengembalikan false bila diblokir');
+  assert.equal(saved, false, 'saveData harus mengembalikan false bila server menolak');
   assert.equal(
     env.getPanelHtml(),
     '<form id="active-item-form"><input value="draft catatan user"></form>',
@@ -164,19 +167,16 @@ test('app.js: penanganan SecurityError saat localStorage diblokir browser', asyn
   );
 });
 
-test('app.js: penanganan SyntaxError saat JSON di localStorage korup', async () => {
-  const corruptLocalStorage = {
-    getItem: () => '{"version": 1, "items": [ INVALID_JSON',
-    setItem: () => {}
-  };
-
-  const env = createStorageEnvironment({ storage: corruptLocalStorage });
+test('app.js: JSON rusak dari server tidak dianggap data hilang diam-diam', async () => {
+  const env = createStorageEnvironment();
   await env.settle();
 
-  // Storage tidak boleh dianggap diblokir
-  assert.notEqual(env.getStatusClass(), 'status-bar error', 'JSON korup tidak boleh memicu status storage diblokir');
-  assert.match(env.getStatusText(), /Lite - 0 item/, 'Harus fallback ke data kosong 0 item');
+  // Backend menjawab dengan JSON yang tidak bisa dibaca.
+  env.sandbox.fetch = async () => ({
+    ok: true, status: 200, text: async () => '{"version": 1, "items": [ INVALID'
+  });
 
   const loaded = await env.sandbox.loadData();
   assert.equal(loaded.items.length, 0, 'loadData harus mengembalikan array items kosong saat JSON rusak');
+  assert.notEqual(loaded, null, 'loadData harus tetap mengembalikan objek data, tidak null');
 });

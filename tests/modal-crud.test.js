@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
-const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
+const styleCssPath = path.join(repoRoot, 'src', 'frontend', 'style.css');
 
 function createTestEnvironment(initialData = null) {
   const elements = new Map();
@@ -191,6 +192,11 @@ function createTestEnvironment(initialData = null) {
     setItem: (k, v) => { store[k] = String(v); }
   };
 
+  // Server palsu: aplikasi hanya punya satu jalur, jadi data harus datang
+  // dari backend, bukan localStorage. Backend menulis ke store yang sama,
+  // jadi assertion yang sudah ada tetap berlaku.
+  const backend = buatBackendPalsu(store);
+
   const activeModals = [];
 
   const domDocument = {
@@ -256,6 +262,9 @@ function createTestEnvironment(initialData = null) {
     },
     setTimeout: (fn, delay) => setTimeout(fn, delay),
     clearTimeout,
+    fetch: backend.fetch,
+    AbortController,
+    Date,
     console
   };
   sandbox.window = sandbox;
@@ -601,13 +610,19 @@ test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah
 test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gagal (wireframe §5 & prd §5.10)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
+  // loadData async saat halaman siap
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 
-  // Buat setItem melempar error (simulasikan QuotaExceededError / SecurityError)
-  env.sandbox.localStorage.setItem = () => {
-    throw new Error('Storage quota exceeded');
+  // Simulasikan server menolak penyimpanan (misal data.json sedang terkunci).
+  // Dulu ini disimulasikan lewat localStorage.setItem yang melempar; sekarang
+  // penyimpanan hanya lewat backend, jadi gagalnya harus datang dari sana.
+  const fetchAsli = env.sandbox.fetch;
+  env.sandbox.fetch = async (url, opts) => {
+    if (opts && opts.method === 'POST') {
+      return { ok: false, status: 500, text: async () => 'gagal' };
+    }
+    return fetchAsli(url, opts);
   };
 
   const btnTambah = env.getOrCreateElement('btn-tambah-item');

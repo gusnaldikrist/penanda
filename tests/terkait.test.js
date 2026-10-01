@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
-const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
+const styleCssPath = path.join(repoRoot, 'src', 'frontend', 'style.css');
 
 function createTestEnvironment(initialData = null, options = {}) {
   const elements = new Map();
@@ -155,6 +156,11 @@ function createTestEnvironment(initialData = null, options = {}) {
     setItem: (k, v) => { store[k] = String(v); }
   };
 
+  // Server palsu: aplikasi hanya punya satu jalur, jadi data harus datang
+  // dari backend, bukan localStorage. Backend menulis ke store yang sama,
+  // jadi assertion yang sudah ada tetap berlaku.
+  const backend = buatBackendPalsu(store);
+
   const toasts = [];
   const modals = [];
 
@@ -229,6 +235,9 @@ function createTestEnvironment(initialData = null, options = {}) {
     },
     setTimeout: (fn, delay) => setTimeout(fn, delay),
     clearTimeout,
+    fetch: backend.fetch,
+    AbortController,
+    Date,
     console
   };
 

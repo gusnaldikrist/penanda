@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { buatBackendPalsu } from './helpers/fake-backend.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -6,11 +7,11 @@ import vm from 'node:vm';
 
 const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
-const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
-const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
-const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
-const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
-const indexHtmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
+const appJsPath = path.join(repoRoot, 'src', 'frontend', 'app.js');
+const searchJsPath = path.join(repoRoot, 'src', 'frontend', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'frontend', 'storage-adapter.js');
+const styleCssPath = path.join(repoRoot, 'src', 'frontend', 'style.css');
+const indexHtmlPath = path.join(repoRoot, 'src', 'frontend', 'index.html');
 
 async function readDownloadJson(download) {
   assert.ok(download.blob, 'Link unduhan harus membawa Blob berisi JSON');
@@ -217,6 +218,7 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
   };
 
   const store = {};
+  const backend = buatBackendPalsu(store);
   if (initialData) store['indeks_v1'] = JSON.stringify(initialData);
 
   const sandbox = {
@@ -246,7 +248,7 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
     clearTimeout,
     // Environment minimal untuk storage-adapter.js (Tiket 11).
     // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
-    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    fetch: backend.fetch,
     AbortController
   };
 
@@ -698,7 +700,7 @@ test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', a
 test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
+  // loadData async saat halaman siap
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 
@@ -720,6 +722,9 @@ test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async 
 
   await env.pickFile(otherData);
   env.getOrCreateElement('btn-confirm-import').trigger('click');
+  // Import memicu simpan lewat backend yang async, lalu render ulang
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Saringan tag basi harus dilepas, kalau tidak layar menampilkan "tidak ada"
   // padahal data hasil import ada

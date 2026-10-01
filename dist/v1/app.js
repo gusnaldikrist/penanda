@@ -1,24 +1,29 @@
-// app.js — Aplikasi Penanda V1 (Frontend Lite)
-// Dimuat sebagai script biasa (bukan ES module) agar bisa berjalan langsung dari file://
+// app.js — Aplikasi Penanda
+//
+// Dimuat sebagai script biasa (bukan ES module), disajikan penanda.exe dari
+// folder binary lewat HTTP.
 
 (function () {
   'use strict';
 
-  // Adapter penyimpanan (Tiket 11) dimuat sebelum app.js di index.html.
-  // Amino adapter yang menentukan jalur Lite atau Pro.
+  // Adapter penyimpanan dimuat sebelum app.js di index.html.
   const storage = (typeof window !== 'undefined' && window.PenandaStorage)
     ? window.PenandaStorage
     : (typeof PenandaStorage !== 'undefined' ? PenandaStorage : null);
 
   if (!storage) {
-    // app.js tidak boleh jalan tanpa adapter: tanpa itu tidak diketahui
-    // apakah aplikasi berada di jalur Lite atau Pro.
+    // app.js tidak boleh jalan tanpa adapter: semua baca dan tulis data
+    // melewati lapisan itu.
     throw new Error('storage-adapter.js harus dimuat sebelum app.js');
   }
 
-  // Satu pesan untuk dua tempat: localStorage diblokir saat membaca maupun
-// saat menulis (PRD 5.10).
-const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih ke jalur Pro untuk menyimpan';
+  // Pesan untuk halaman yang dibuka tanpa server. Kondisi ini nyata: orang
+  // bisa salah klik index.html di folder frontend. Pesannya menyebut apa
+  // yang harus dilakukan, bukan galat teknis.
+  //
+  // Tidak ada fallback localStorage di sini. Kalau ada, data user bisa
+  // diam-diam terpecah di dua tempat: satu di browser, satu di data.json.
+  const NO_SERVER_MESSAGE = 'Aplikasi ini berjalan lewat penanda.exe. Tutup halaman ini, lalu jalankan penanda.exe.';
 
   function createEmptyData() {
     return {
@@ -52,12 +57,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     logSearchQuery: '',
     logDateFrom: '',
     logDateTo: '',
-    // Jalur aplikasi: 'Lite' (localStorage) atau 'Pro' (API ke penanda.exe)
-    mode: storage.MODE_LITE,
-    isLoading: false,
-    // False sampai jalur terdeteksi dan data selesai dimuat. saveData
-    // menolak selama ini supaya tidak menimpa data dengan data kosong.
-    isModeReady: false,
     // Alasan singkat kalau ada masalah; null kalau semua baik-baik saja
     statusMessage: null,
     data: createEmptyData(),
@@ -78,7 +77,7 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     }
 
     statusBar.className = 'status-bar';
-    statusBar.textContent = storage.formatStatus(state.mode, count, state.savedAt, state.isLoading);
+    statusBar.textContent = storage.formatStatus(count, state.savedAt, state.isLoading);
   }
 
   function escapeHtml(str) {
@@ -89,10 +88,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
-  }
-
-  function isLocalPath(url) {
-    return storage.isLocalPath(url);
   }
 
   function buildRekapText(results) {
@@ -166,9 +161,8 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
   }
 
   /**
-   * Membuka path lokal Windows lewat backend. Hanya dipakai di jalur Pro,
-   * karena browser memblokir halaman biasa membuka skema berkas
-   * (arsitektur bagian 5).
+   * Membuka path lokal Windows lewat backend. Harus lewat backend karena
+   * browser memblokir halaman biasa membuka skema berkas (arsitektur bagian 5).
    */
   async function openLocalPathViaBackend(localPath) {
     try {
@@ -190,8 +184,10 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     if (!text) return;
 
     function onCopySuccess() {
+      // Path lokal punya tombol Buka, jadi menyalinnya biasanya jalan keluar
+      // saja - misalnya tombol Buka gagal karena backend tidak merespons.
       if (isLocal) {
-        showToast('Path lokal hanya bisa dibuka di jalur Pro; teks sudah disalin');
+        showToast('Path sudah disalin; tombol Buka adalah cara yang lebih cepat');
       }
     }
 
@@ -671,7 +667,7 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     const primaryLink = (item && Array.isArray(item.links) && item.links.length > 0) ? item.links[0] : null;
     const url = primaryLink ? (primaryLink.url || '') : '';
     const label = primaryLink ? (primaryLink.label || 'Buka Link') : 'Buka Link';
-    const isLocal = isLocalPath(url);
+    const isLocal = storage.isLocalPath(url);
     return { link: primaryLink, url, label, isLocal };
   }
 
@@ -866,12 +862,9 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
 
       const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
 
-      // Jalur Pro bisa membuka path lokal lewat backend, jadi tombol Buka
-      // tetap ada dan Copy menjadi jalan keluar. Jalur Lite tidak bisa, jadi
-      // hanya Copy dengan pesan arahan (PRD 5.2).
-      const localActions = state.mode === 'Pro'
-        ? `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`
-        : `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
+      // Path lokal selalu bisa dibuka: backend ada di setiap cara menjalankan
+      // aplikasi, jadi tombol Buka dan Copy selalu keduanya tersedia.
+      const localActions = `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
 
       const actionsHtml = local
         ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
@@ -897,16 +890,6 @@ const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih 
     renderTerkaitZone(items);
   }
 
-  /**
- * Kalimat konsekuensi jalur di keadaan kosong (PRD 5.8). Hanya ditampilkan
- * di jalur Lite, karena di jalur Pro path lokal justru bisa dibuka dengan
- * satu klik sehingga kalimatnya akan menyesatkan.
- */
-function pathNoticeHtml() {
-    if (state.mode !== 'Lite') return '';
-    return '<p class="path-notice">Path lokal hanya bisa dibuka di jalur Pro</p>';
-  }
-
   function renderIndeksView() {
     const container = document.getElementById('panel-indeks');
     if (!container) return;
@@ -922,7 +905,6 @@ function pathNoticeHtml() {
             <button id="btn-empty-add" class="btn btn-primary">+ Tambah Item</button>
             <button id="btn-empty-import" class="btn btn-secondary">Import JSON</button>
           </div>
-          ${pathNoticeHtml()}
         </div>
       `;
       const btnEmptyAdd = document.getElementById('btn-empty-add');
@@ -1013,7 +995,7 @@ function pathNoticeHtml() {
             return;
           }
 
-          // Path lokal di jalur Pro: backend yang menjalankan startfile. Bila
+          // Path lokal: backend yang menjalankan perintah pembuka. Bila
           // gagal, area status memberi alasan dan tombol Copy tetap ada
           // sebagai jalan keluar (tiket 11 langkah 7).
           const bukaLocalBtn = e.target.closest('.btn-buka-local');
@@ -1124,7 +1106,45 @@ function pathNoticeHtml() {
     return `<span class="${badgeClass}">${escapeHtml(status.label)}</span>`;
   }
 
-  function normalizeTodoQuery(queryString) {
+  /**
+   * Penyaringan baris yang tertaut ke item: Todo dan Log memakai aturan
+   * kata kunci yang sama persis (PRD 5.1) karena keduanya cocok pada teks
+   * baris itu sendiri atau pada judul item yang ditautkan.
+   *
+   * Modul ini menjawab satu pertanyaan: "apakah baris ini lolos?". Urutan
+   * dan saringan tambahan milik pemanggil lewat spec.
+   *
+   * @param {Array} rows      Baris yang disaring (Todo atau Log)
+   * @param {Array} items     Item indeks, untuk mencari judul tertaut
+   * @param {string} query    Kata kunci; kosong berarti semua lolos
+   * @param {Function} spec.keep     (row) => boolean, saringan tambahan
+   * @param {Function} spec.compare  (rowA, rowB) => number, pengurutan
+   */
+function filterLinkedRows(rows, items, query, spec) {
+    const normalizedQuery = normalizeRowQuery(query);
+    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
+
+    const keep = spec.keep || (() => true);
+    const compare = spec.compare || (() => 0);
+
+    const filtered = (Array.isArray(rows) ? rows : []).filter(row => {
+      if (!keep(row)) return false;
+      if (!normalizedQuery) return true;
+
+      const rowText = normalizeRowQuery(row.teks);
+      const linkedItem = row.item_id ? itemsMap.get(row.item_id) : null;
+      const linkedItemTitle = linkedItem ? normalizeRowQuery(linkedItem.title) : '';
+
+      return rowText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
+    });
+
+    // filter sudah menyalin, jadi sort di sini tidak menyentuh array pemanggil
+    return filtered.sort(compare);
+  }
+
+  // Aturan kata kunci PRD 5.1: spasi dirapikan, huruf besar-kecil diabaikan,
+  // beberapa kata diperlakukan sebagai satu rangkaian berurutan.
+  function normalizeRowQuery(queryString) {
     if (typeof normalizeQuery === 'function') {
       return normalizeQuery(queryString);
     }
@@ -1132,29 +1152,20 @@ function pathNoticeHtml() {
   }
 
   function filterTodos(todos, items, query, filterStatus) {
-    const normalizedQuery = normalizeTodoQuery(query);
-    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
-
-    const filtered = (Array.isArray(todos) ? todos : []).filter(todo => {
-      if (filterStatus === 'belum' && todo.done) return false;
-      if (filterStatus === 'selesai' && !todo.done) return false;
-
-      if (!normalizedQuery) return true;
-
-      const todoText = normalizeTodoQuery(todo.teks);
-      const linkedItem = todo.item_id ? itemsMap.get(todo.item_id) : null;
-      const linkedItemTitle = linkedItem ? normalizeTodoQuery(linkedItem.title) : '';
-
-      return todoText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
-    });
-
-    return filtered.sort((todoA, todoB) => {
-      if (todoA.done !== todoB.done) {
-        return todoA.done ? 1 : -1;
+    return filterLinkedRows(todos, items, query, {
+      keep(todo) {
+        if (filterStatus === 'belum' && todo.done) return false;
+        if (filterStatus === 'selesai' && !todo.done) return false;
+        return true;
+      },
+      compare(todoA, todoB) {
+        if (todoA.done !== todoB.done) {
+          return todoA.done ? 1 : -1;
+        }
+        const dateA = todoA.updated_at || '';
+        const dateB = todoB.updated_at || '';
+        return dateB.localeCompare(dateA);
       }
-      const dateA = todoA.updated_at || '';
-      const dateB = todoB.updated_at || '';
-      return dateB.localeCompare(dateA);
     });
   }
 
@@ -1417,33 +1428,51 @@ function pathNoticeHtml() {
     }
   }
 
-  function showDeleteTodoConfirmation(todo) {
+  /**
+   * Modal konfirmasi untuk aksi merusak. Satu module dipakai bersama oleh
+   * hapus todo dan hapus log: keduanya menuntut frasa yang sama sebelum
+   * tombol merah aktif (PRD 5.4), dan keduanya menutup modal hanya bila
+   * penyimpanan berhasil.
+   *
+   * @param {object} config
+   * @param {string} config.title            Judul modal
+   * @param {string} config.warning          Peringatan singkat yang ditampilkan
+   * @param {string} config.confirmPhrase    Kata yang harus diketik, case-insensitive
+   * @param {string} config.inputId          id input konfirmasi
+   * @param {string} config.confirmButtonId  id tombol konfirmasi
+   * @param {string} config.cancelClass      class tombol batal
+   * @param {string} config.closeButtonId    id tombol tutup
+   * @param {string} config.boxId            id kotak modal
+   * @param {Function} config.onConfirm      Dipanggil setelah frasa cocok.
+   *                                        Mengembalikan false bila gagal; modal tetap terbuka.
+   */
+async function confirmDestructive(config) {
     closeActiveModal();
+
+    const phrase = config.confirmPhrase;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
-      <div class="modal-box" id="modal-delete-todo-box">
+      <div class="modal-box" id="${config.boxId}">
         <div class="modal-header">
-          <div class="modal-title">Hapus Todo</div>
-          <button type="button" class="btn-close" id="btn-close-delete-todo-modal" aria-label="Tutup">&times;</button>
+          <div class="modal-title">${escapeHtml(config.title)}</div>
+          <button type="button" class="btn-close" id="${config.closeButtonId}" aria-label="Tutup">&times;</button>
         </div>
         <div class="modal-body delete-confirm-box">
-          <div class="delete-warning">
-            Menghapus todo ini tidak akan menghapus item dokumen yang ditautkan.
-          </div>
+          <div class="delete-warning">${escapeHtml(config.warning)}</div>
           <div class="form-group">
-            <label class="form-label" for="input-confirm-delete-todo">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
-            <input type="text" id="input-confirm-delete-todo" class="form-input" placeholder="hapus" autocomplete="off">
+            <label class="form-label" for="${config.inputId}">Ketik <strong>${escapeHtml(phrase)}</strong> untuk mengonfirmasi:</label>
+            <input type="text" id="${config.inputId}" class="form-input" placeholder="${escapeHtml(phrase)}" autocomplete="off">
             <div class="form-hint">Huruf besar-kecil diabaikan</div>
           </div>
         </div>
         <div class="modal-footer">
           <div class="modal-footer-actions">
-            <button type="button" class="btn btn-secondary btn-cancel-delete-todo">Batal</button>
-            <button type="button" id="btn-confirm-delete-todo" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
+            <button type="button" class="btn btn-secondary ${config.cancelClass}">Batal</button>
+            <button type="button" id="${config.confirmButtonId}" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
           </div>
         </div>
       </div>
@@ -1451,15 +1480,18 @@ function pathNoticeHtml() {
 
     document.body.appendChild(overlay);
 
-    const inputConfirm = document.getElementById('input-confirm-delete-todo');
-    const confirmBtn = document.getElementById('btn-confirm-delete-todo');
-    const cancelBtn = overlay.querySelector('.btn-cancel-delete-todo');
-    const closeBtn = document.getElementById('btn-close-delete-todo-modal');
+    const inputConfirm = document.getElementById(config.inputId);
+    const confirmBtn = document.getElementById(config.confirmButtonId);
+    const cancelBtn = overlay.querySelector('.' + config.cancelClass);
+    const closeBtn = document.getElementById(config.closeButtonId);
+
+    function phraseTyped(value) {
+      return String(value || '').trim().toLowerCase() === phrase.toLowerCase();
+    }
 
     if (inputConfirm && confirmBtn) {
       inputConfirm.addEventListener('input', (e) => {
-        const typed = e.target.value.trim().toLowerCase();
-        confirmBtn.disabled = (typed !== 'hapus');
+        confirmBtn.disabled = !phraseTyped(e.target.value);
       });
       inputConfirm.focus();
     }
@@ -1473,21 +1505,35 @@ function pathNoticeHtml() {
 
     if (confirmBtn) {
       confirmBtn.addEventListener('click', async () => {
-        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
-        if (typed !== 'hapus') return;
+        if (!phraseTyped(inputConfirm ? inputConfirm.value : '')) return;
 
-        if (state.data && Array.isArray(state.data.todo)) {
-          state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
-        }
-
-        const saveSuccess = await saveData(state.data);
-        if (!saveSuccess) {
+        const succeeded = await config.onConfirm();
+        if (succeeded === false) {
           return;
         }
 
         closeActiveModal();
       });
     }
+  }
+
+  function showDeleteTodoConfirmation(todo) {
+    confirmDestructive({
+      title: 'Hapus Todo',
+      warning: 'Menghapus todo ini tidak akan menghapus item dokumen yang ditautkan.',
+      confirmPhrase: 'hapus',
+      inputId: 'input-confirm-delete-todo',
+      confirmButtonId: 'btn-confirm-delete-todo',
+      cancelClass: 'btn-cancel-delete-todo',
+      closeButtonId: 'btn-close-delete-todo-modal',
+      boxId: 'modal-delete-todo-box',
+      onConfirm: async () => {
+        if (state.data && Array.isArray(state.data.todo)) {
+          state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
+        }
+        return saveData(state.data);
+      }
+    });
   }
 
   /* ==========================================================================
@@ -1506,37 +1552,20 @@ function pathNoticeHtml() {
     return `l${counter}`;
   }
 
-  function normalizeLogQuery(queryString) {
-    if (typeof normalizeQuery === 'function') {
-      return normalizeQuery(queryString);
-    }
-    return String(queryString || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  }
-
   function filterLogs(logs, items, query, dateFrom, dateTo) {
-    const normalizedQuery = normalizeLogQuery(query);
     const fromValue = DATE_PATTERN.test(String(dateFrom || '')) ? String(dateFrom) : '';
     const toValue = DATE_PATTERN.test(String(dateTo || '')) ? String(dateTo) : '';
-    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
 
-    const filtered = (Array.isArray(logs) ? logs : []).filter(logEntry => {
-      const entryDate = String(logEntry.date || '');
-
-      if (fromValue && entryDate < fromValue) return false;
-      if (toValue && entryDate > toValue) return false;
-
-      if (!normalizedQuery) return true;
-
-      const logText = normalizeLogQuery(logEntry.teks);
-      const linkedItem = logEntry.item_id ? itemsMap.get(logEntry.item_id) : null;
-      const linkedItemTitle = linkedItem ? normalizeLogQuery(linkedItem.title) : '';
-
-      return logText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
-    });
-
-    // Urut tanggal menurun; sort stabil mempertahankan urutan array (masukan terbaru di atas)
-    return filtered.slice().sort((logA, logB) => {
-      return String(logB.date || '').localeCompare(String(logA.date || ''));
+    return filterLinkedRows(logs, items, query, {
+      keep(logEntry) {
+        const entryDate = String(logEntry.date || '');
+        if (fromValue && entryDate < fromValue) return false;
+        if (toValue && entryDate > toValue) return false;
+        return true;
+      },
+      // Urut tanggal menurun; sort stabil mempertahankan urutan array
+      // sehingga entri masukan terbaru tetap di atas pada tanggal sama
+      compare: (logA, logB) => String(logB.date || '').localeCompare(String(logA.date || ''))
     });
   }
 
@@ -1804,75 +1833,22 @@ function pathNoticeHtml() {
   }
 
   function showDeleteLogConfirmation(logEntry) {
-    closeActiveModal();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML = `
-      <div class="modal-box" id="modal-delete-log-box">
-        <div class="modal-header">
-          <div class="modal-title">Hapus Log</div>
-          <button type="button" class="btn-close" id="btn-close-delete-log-modal" aria-label="Tutup">&times;</button>
-        </div>
-        <div class="modal-body delete-confirm-box">
-          <div class="delete-warning">
-            Menghapus log ini tidak akan menghapus item dokumen yang ditautkan.
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="input-confirm-delete-log">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
-            <input type="text" id="input-confirm-delete-log" class="form-input" placeholder="hapus" autocomplete="off">
-            <div class="form-hint">Huruf besar-kecil diabaikan</div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <div class="modal-footer-actions">
-            <button type="button" class="btn btn-secondary btn-cancel-delete-log">Batal</button>
-            <button type="button" id="btn-confirm-delete-log" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const inputConfirm = document.getElementById('input-confirm-delete-log');
-    const confirmBtn = document.getElementById('btn-confirm-delete-log');
-    const cancelBtn = overlay.querySelector('.btn-cancel-delete-log');
-    const closeBtn = document.getElementById('btn-close-delete-log-modal');
-
-    if (inputConfirm && confirmBtn) {
-      inputConfirm.addEventListener('input', (e) => {
-        confirmBtn.disabled = (e.target.value.trim().toLowerCase() !== 'hapus');
-      });
-      inputConfirm.focus();
-    }
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', closeActiveModal);
-    }
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeActiveModal);
-    }
-
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', async () => {
-        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
-        if (typed !== 'hapus') return;
-
+    confirmDestructive({
+      title: 'Hapus Log',
+      warning: 'Menghapus log ini tidak akan menghapus item dokumen yang ditautkan.',
+      confirmPhrase: 'hapus',
+      inputId: 'input-confirm-delete-log',
+      confirmButtonId: 'btn-confirm-delete-log',
+      cancelClass: 'btn-cancel-delete-log',
+      closeButtonId: 'btn-close-delete-log-modal',
+      boxId: 'modal-delete-log-box',
+      onConfirm: async () => {
         if (state.data && Array.isArray(state.data.logs)) {
           state.data.logs = state.data.logs.filter(candidate => candidate.id !== logEntry.id);
         }
-
-        const saveSuccess = await saveData(state.data);
-        if (!saveSuccess) {
-          return;
-        }
-
-        closeActiveModal();
-      });
-    }
+        return saveData(state.data);
+      }
+    });
   }
 
   /* ==========================================================================
@@ -1881,7 +1857,7 @@ function pathNoticeHtml() {
 
   // Versi skema yang dikenali di V1 (prd-skema.md bagian pembuka). Nilainya
   // harus sama dengan supportedVersion di src/pro/main.go supaya berkas hasil
-  // Export Lite dapat dipakai jalur Pro dan sebaliknya (spec kontrak 5).
+  // Export dan hasil POST backend saling serasi (spec kontrak 5).
   const SUPPORTED_VERSION = 1;
 
   // Tanggal hari ini dalam bentuk YYYYMMDD untuk nama berkas unduhan
@@ -1913,7 +1889,7 @@ function pathNoticeHtml() {
     }, 0);
   }
 
-  // Bentuk berkas yang dipakai jalur Pro juga (arsitektur bagian 5)
+  // Bentuk berkas yang sama dengan yang diterima backend (arsitektur bagian 5)
   function validateImportedData(parsed) {
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { valid: false, error: 'Berkas ditolak: isinya bukan objek data Penanda' };
@@ -2082,120 +2058,66 @@ function pathNoticeHtml() {
   }
 
   /**
-   * Membaca seluruh isi berkas data dari jalur yang sedang aktif.
-   * Jalur ditentukan lebih dulu oleh detectStorageMode(); jalur Lite memakai
-   * localStorage, jalur Pro memakai API ke penanda.exe.
+   * Membaca seluruh isi berkas data dari backend.
+   *
+   * Tidak ada fallback lain. Halaman tanpa server berarti halaman yang
+   * dibuka salah cara, dan itu diberi tahu lewat pesan yang menyebut
+   * penanda.exe - bukan diisi data kosong yang terlihat seperti data hilang.
    */
   async function loadData() {
-    if (state.mode === 'Pro') {
-      // Wireframe bagian 6: jalur Pro menampilkan kata "memuat" selagi
-      // membaca berkas, lalu berubah menjadi jam simpan.
-      state.isLoading = true;
-      updateStatusBar();
-      try {
-        const remoteJson = await storage.readRemote();
-        state.data = normalizeData(JSON.parse(remoteJson));
-        state.storageBlocked = false;
-        state.statusMessage = '';
-      } catch (err) {
-        // Backend ada tapi gagal membaca: beri tahu, jangan diam-diam
-        // menampilkan data kosong karena itu bisa membuat user menimpa data.
-        state.storageBlocked = true;
-        state.statusMessage = 'Gagal membaca data dari server';
-        state.data = createEmptyData();
-      }
-      state.isLoading = false;
-      updateStatusBar();
-      renderAllViews();
-      return state.data;
-    }
-
-    let raw = null;
-    try {
-      raw = storage.readLocal();
-      state.storageBlocked = false;
-      state.statusMessage = null;
-    } catch (err) {
-      // localStorage diblokir browser: beri tahu user, jangan diam-diam
-      // menampilkan layar kosong seolah semua beres (PRD 5.10).
-      state.storageBlocked = true;
-      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
-      state.data = createEmptyData();
-      updateStatusBar();
-      renderIndeksView();
-      return state.data;
-    }
-
-    if (!raw) {
-      state.data = createEmptyData();
-    } else {
-      try {
-        const parsed = JSON.parse(raw);
-        state.data = normalizeData(parsed);
-      } catch (parseErr) {
-        state.data = createEmptyData();
-      }
-    }
-
+    // Wireframe bagian 6: kata "memuat" tampil selagi membaca berkas,
+    // lalu berubah menjadi jam simpan.
+    state.isLoading = true;
     updateStatusBar();
-    renderIndeksView();
+
+    try {
+      const remoteJson = await storage.readRemote();
+      state.data = normalizeData(JSON.parse(remoteJson));
+      state.storageBlocked = false;
+      state.statusMessage = '';
+    } catch (err) {
+      // Jangan diam-diam menampilkan data kosong: user bisa mengira datanya
+      // hilang lalu mengetik ulang, dan penulisan berikutnya bisa menimpa
+      // data.json yang sebenarnya masih utuh.
+      state.storageBlocked = true;
+      state.statusMessage = NO_SERVER_MESSAGE;
+      state.data = createEmptyData();
+    }
+
+    state.isLoading = false;
+    updateStatusBar();
+    renderAllViews();
     return state.data;
   }
 
   /**
-   * Menyimpan seluruh isi berkas data ke jalur yang sedang aktif.
+   * Menyimpan seluruh isi berkas data ke backend.
    * Mengembalikan true bila berhasil. Bila gagal, modal yang memanggilnya
    * tetap terbuka supaya isian pengguna tidak hilang (wireframe bagian 6).
    */
   async function saveData(newData) {
     if (!newData || typeof newData !== 'object') return false;
 
-    // Jalur belum diketahui: data di layar belum berasal dari mana pun, jadi
-    // simpan sekarang bisa menimpa data.json user dengan data kosong.
-    if (!state.isModeReady) {
-      state.statusMessage = 'Data belum selesai dimuat. Tunggu sebentar lalu coba lagi.';
-      updateStatusBar();
-      return false;
-    }
-
     const normalized = normalizeData(newData);
     state.data = normalized;
 
-    if (state.mode === 'Pro') {
-      try {
-        await storage.writeRemote(JSON.stringify(normalized));
-        state.storageBlocked = false;
-        state.statusMessage = '';
-        state.savedAt = storage.formatSavedTime(new Date());
-      } catch (err) {
-        state.storageBlocked = true;
-        state.statusMessage = 'Gagal menyimpan ke server';
-      }
-      updateStatusBar();
-      // Re-render hanya bila simpan berhasil; kalau gagal, DOM dibiarkan
-      // agar isian atau form yang sedang aktif tidak hilang.
-      if (!state.storageBlocked) {
-        renderAllViews();
-      }
-      return !state.storageBlocked;
-    }
-
     try {
-      storage.writeLocal(JSON.stringify(normalized));
+      await storage.writeRemote(JSON.stringify(normalized));
       state.storageBlocked = false;
       state.statusMessage = '';
       state.savedAt = storage.formatSavedTime(new Date());
-
-      updateStatusBar();
-      renderAllViews();
-      return true;
     } catch (err) {
       state.storageBlocked = true;
-      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
-      updateStatusBar();
-      // Jangan re-render DOM agar isian atau form yang sedang aktif tidak hilang
-      return false;
+      state.statusMessage = 'Gagal menyimpan ke server';
     }
+
+    updateStatusBar();
+    // Re-render hanya bila simpan berhasil; kalau gagal, DOM dibiarkan
+    // agar isian atau form yang sedang aktif tidak hilang.
+    if (!state.storageBlocked) {
+      renderAllViews();
+    }
+    return !state.storageBlocked;
   }
 
   function renderAllViews() {
@@ -2204,16 +2126,6 @@ function pathNoticeHtml() {
     renderLogView();
   }
 
-  /**
-   * Menentukan jalur aplikasi dengan satu percobaan GET /api/data.
-   * Sukses berarti Pro; apa pun selain itu berarti Lite, termasuk halaman
-   * yang dibuka langsung dari Explorer (arsitektur bagian 2).
-   */
-  async function detectStorageMode() {
-    const mode = await storage.detectMode();
-    state.mode = mode;
-    return mode;
-  }
 
   function switchTab(tabName, options = {}) {
     if (!['indeks', 'todo', 'log'].includes(tabName)) return;
@@ -2305,21 +2217,10 @@ function pathNoticeHtml() {
     // (input itu baru ada setelah panel diisi).
     switchTab(state.activeTab, { focusSearch: false });
 
-    // Jalur harus diketahui sebelum data dibaca: Lite memakai localStorage,
-    // Pro memakai API. Selama pendeteksian, area status menampilkan "memuat".
-    // isModeReady menahan saveData sampai jalur diketahui dan data termuat;
-    // tanpa itu, simpan yang keburu bisa menimpa data.json dengan data kosong.
-    state.isLoading = true;
-    updateStatusBar();
-    detectStorageMode()
-      .then(() => loadData())
+    // Data dibaca dari backend. loadData sudah menampilkan kata "memuat"
+    // selama pembacaan berjalan, lalu membersihkannya sendiri.
+    loadData()
       .then(() => {
-        // Semua selesai: baru sekarang simpan diizinkan. Pesan "memuat"
-        // dibersihkan di sini karena hanya berlaku selama proses awal.
-        // statusMessage tidak disentuh bila ada masalah nyata seperti
-        // localStorage diblokir, supaya pesan itu tidak hilang.
-        state.isModeReady = true;
-        state.isLoading = false;
         if (!state.statusMessage) {
           state.storageBlocked = false;
         }
@@ -2327,7 +2228,7 @@ function pathNoticeHtml() {
         renderAllViews();
         if (state.activeTab === 'indeks') focusSearchInput();
       })
-      .catch((err) => {
+      .catch(() => {
         state.statusMessage = 'Gagal menjalankan aplikasi';
         state.isLoading = false;
         updateStatusBar();
@@ -2349,92 +2250,58 @@ function pathNoticeHtml() {
     }
   }
 
-  if (typeof window !== 'undefined') {
-    window.saveData = saveData;
-    window.loadData = loadData;
-    window.switchTab = switchTab;
-    window.generateItemId = generateItemId;
-    window.validateTags = validateTags;
-    window.openItemModal = openItemModal;
-    window.generateTodoId = generateTodoId;
-    window.getTodoStatus = getTodoStatus;
-    window.filterTodos = filterTodos;
-    window.renderTodoView = renderTodoView;
-    window.openTodoModal = openTodoModal;
-    window.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
-    window.generateLogId = generateLogId;
-    window.filterLogs = filterLogs;
-    window.renderLogView = renderLogView;
-    window.openLogModal = openLogModal;
-    window.showDeleteLogConfirmation = showDeleteLogConfirmation;
-    window.exportDataAsJson = exportDataAsJson;
-    window.validateImportedData = validateImportedData;
-    window.openImportFilePicker = openImportFilePicker;
-    window.detectStorageMode = detectStorageMode;
-    window.renderAllViews = renderAllViews;
-    window.renderIndeksView = renderIndeksView;
-    window.openLocalPathViaBackend = openLocalPathViaBackend;
-  }
+  /* --------------------------------------------------------------------------
+     Interface publik.
 
-  if (typeof globalThis !== 'undefined') {
-    globalThis.saveData = saveData;
-    globalThis.loadData = loadData;
-    globalThis.switchTab = switchTab;
-    globalThis.generateItemId = generateItemId;
-    globalThis.validateTags = validateTags;
-    globalThis.openItemModal = openItemModal;
-    globalThis.generateTodoId = generateTodoId;
-    globalThis.getTodoStatus = getTodoStatus;
-    globalThis.filterTodos = filterTodos;
-    globalThis.renderTodoView = renderTodoView;
-    globalThis.openTodoModal = openTodoModal;
-    globalThis.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
-    globalThis.generateLogId = generateLogId;
-    globalThis.filterLogs = filterLogs;
-    globalThis.renderLogView = renderLogView;
-    globalThis.openLogModal = openLogModal;
-    globalThis.showDeleteLogConfirmation = showDeleteLogConfirmation;
-    globalThis.exportDataAsJson = exportDataAsJson;
-    globalThis.validateImportedData = validateImportedData;
-    globalThis.openImportFilePicker = openImportFilePicker;
-    globalThis.detectStorageMode = detectStorageMode;
-    globalThis.renderAllViews = renderAllViews;
-    globalThis.renderIndeksView = renderIndeksView;
-    globalThis.openLocalPathViaBackend = openLocalPathViaBackend;
+     Satu daftar simbol, tiga permukaan mengikuti: window (dipakai browser),
+     globalThis (sandbox test), dan module.exports (test Node). Menambah simbol
+     cukup satu baris di MODULE_INTERFACE, bukan tiga.
+
+     window dan globalThis adalah objek yang sama, jadi cukup ditulis sekali.
+     state sengaja tidak masuk daftar ini: hanya dibutuhkan test, dan
+     membocorkan state ke window memungkinkan aplikasi lain memutasinya dari
+     luar (kebijakan sejak tiket 02).
+     -------------------------------------------------------------------------- */
+  const MODULE_INTERFACE = {
+    saveData,
+    loadData,
+    switchTab,
+    generateItemId,
+    validateTags,
+    openItemModal,
+    generateTodoId,
+    getTodoStatus,
+    filterTodos,
+    renderTodoView,
+    openTodoModal,
+    showDeleteTodoConfirmation,
+    confirmDestructive,
+    filterLinkedRows,
+    normalizeRowQuery,
+    generateLogId,
+    filterLogs,
+    renderLogView,
+    openLogModal,
+    showDeleteLogConfirmation,
+    exportDataAsJson,
+    validateImportedData,
+    openImportFilePicker,
+    renderAllViews,
+    renderIndeksView,
+    openLocalPathViaBackend
+  };
+
+  if (typeof window !== 'undefined') {
+    Object.assign(window, MODULE_INTERFACE);
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-      state,
-      loadData,
-      saveData,
-      switchTab,
-      isLocalPath,
-      generateItemId,
-      validateTags,
-      openItemModal,
-      generateTodoId,
-      getTodoStatus,
-      filterTodos,
-      renderTodoView,
-      openTodoModal,
-      showDeleteTodoConfirmation,
-      generateLogId,
-      filterLogs,
-      renderLogView,
-      openLogModal,
-      showDeleteLogConfirmation,
-      exportDataAsJson,
-      validateImportedData,
-      openImportFilePicker,
-      detectStorageMode,
-      renderAllViews,
-      renderIndeksView,
-      openLocalPathViaBackend,
-      // state diekspor ke module.exports saja, bukan ke window, supaya test
-      // bisa memeriksa jalur aktif tanpa membuat state mutable yang bisa
-      // diubah dari luar di browser (kebijakan sejak tiket 02).
+    module.exports = Object.assign({}, MODULE_INTERFACE, {
       state
-    };
+    });
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    globalThis.MODULE_INTERFACE = MODULE_INTERFACE;
   }
 })();
