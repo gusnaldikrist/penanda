@@ -1124,7 +1124,45 @@ function pathNoticeHtml() {
     return `<span class="${badgeClass}">${escapeHtml(status.label)}</span>`;
   }
 
-  function normalizeTodoQuery(queryString) {
+  /**
+   * Penyaringan baris yang tertaut ke item: Todo dan Log memakai aturan
+   * kata kunci yang sama persis (PRD 5.1) karena keduanya cocok pada teks
+   * baris itu sendiri atau pada judul item yang ditautkan.
+   *
+   * Modul ini menjawab satu pertanyaan: "apakah baris ini lolos?". Urutan
+   * dan saringan tambahan milik pemanggil lewat spec.
+   *
+   * @param {Array} rows      Baris yang disaring (Todo atau Log)
+   * @param {Array} items     Item indeks, untuk mencari judul tertaut
+   * @param {string} query    Kata kunci; kosong berarti semua lolos
+   * @param {Function} spec.keep     (row) => boolean, saringan tambahan
+   * @param {Function} spec.compare  (rowA, rowB) => number, pengurutan
+   */
+function filterLinkedRows(rows, items, query, spec) {
+    const normalizedQuery = normalizeRowQuery(query);
+    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
+
+    const keep = spec.keep || (() => true);
+    const compare = spec.compare || (() => 0);
+
+    const filtered = (Array.isArray(rows) ? rows : []).filter(row => {
+      if (!keep(row)) return false;
+      if (!normalizedQuery) return true;
+
+      const rowText = normalizeRowQuery(row.teks);
+      const linkedItem = row.item_id ? itemsMap.get(row.item_id) : null;
+      const linkedItemTitle = linkedItem ? normalizeRowQuery(linkedItem.title) : '';
+
+      return rowText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
+    });
+
+    // filter sudah menyalin, jadi sort di sini tidak menyentuh array pemanggil
+    return filtered.sort(compare);
+  }
+
+  // Aturan kata kunci PRD 5.1: spasi dirapikan, huruf besar-kecil diabaikan,
+  // beberapa kata diperlakukan sebagai satu rangkaian berurutan.
+  function normalizeRowQuery(queryString) {
     if (typeof normalizeQuery === 'function') {
       return normalizeQuery(queryString);
     }
@@ -1132,29 +1170,20 @@ function pathNoticeHtml() {
   }
 
   function filterTodos(todos, items, query, filterStatus) {
-    const normalizedQuery = normalizeTodoQuery(query);
-    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
-
-    const filtered = (Array.isArray(todos) ? todos : []).filter(todo => {
-      if (filterStatus === 'belum' && todo.done) return false;
-      if (filterStatus === 'selesai' && !todo.done) return false;
-
-      if (!normalizedQuery) return true;
-
-      const todoText = normalizeTodoQuery(todo.teks);
-      const linkedItem = todo.item_id ? itemsMap.get(todo.item_id) : null;
-      const linkedItemTitle = linkedItem ? normalizeTodoQuery(linkedItem.title) : '';
-
-      return todoText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
-    });
-
-    return filtered.sort((todoA, todoB) => {
-      if (todoA.done !== todoB.done) {
-        return todoA.done ? 1 : -1;
+    return filterLinkedRows(todos, items, query, {
+      keep(todo) {
+        if (filterStatus === 'belum' && todo.done) return false;
+        if (filterStatus === 'selesai' && !todo.done) return false;
+        return true;
+      },
+      compare(todoA, todoB) {
+        if (todoA.done !== todoB.done) {
+          return todoA.done ? 1 : -1;
+        }
+        const dateA = todoA.updated_at || '';
+        const dateB = todoB.updated_at || '';
+        return dateB.localeCompare(dateA);
       }
-      const dateA = todoA.updated_at || '';
-      const dateB = todoB.updated_at || '';
-      return dateB.localeCompare(dateA);
     });
   }
 
@@ -1417,33 +1446,51 @@ function pathNoticeHtml() {
     }
   }
 
-  function showDeleteTodoConfirmation(todo) {
+  /**
+   * Modal konfirmasi untuk aksi merusak. Satu module dipakai bersama oleh
+   * hapus todo dan hapus log: keduanya menuntut frasa yang sama sebelum
+   * tombol merah aktif (PRD 5.4), dan keduanya menutup modal hanya bila
+   * penyimpanan berhasil.
+   *
+   * @param {object} config
+   * @param {string} config.title            Judul modal
+   * @param {string} config.warning          Peringatan singkat yang ditampilkan
+   * @param {string} config.confirmPhrase    Kata yang harus diketik, case-insensitive
+   * @param {string} config.inputId          id input konfirmasi
+   * @param {string} config.confirmButtonId  id tombol konfirmasi
+   * @param {string} config.cancelClass      class tombol batal
+   * @param {string} config.closeButtonId    id tombol tutup
+   * @param {string} config.boxId            id kotak modal
+   * @param {Function} config.onConfirm      Dipanggil setelah frasa cocok.
+   *                                        Mengembalikan false bila gagal; modal tetap terbuka.
+   */
+async function confirmDestructive(config) {
     closeActiveModal();
+
+    const phrase = config.confirmPhrase;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.innerHTML = `
-      <div class="modal-box" id="modal-delete-todo-box">
+      <div class="modal-box" id="${config.boxId}">
         <div class="modal-header">
-          <div class="modal-title">Hapus Todo</div>
-          <button type="button" class="btn-close" id="btn-close-delete-todo-modal" aria-label="Tutup">&times;</button>
+          <div class="modal-title">${escapeHtml(config.title)}</div>
+          <button type="button" class="btn-close" id="${config.closeButtonId}" aria-label="Tutup">&times;</button>
         </div>
         <div class="modal-body delete-confirm-box">
-          <div class="delete-warning">
-            Menghapus todo ini tidak akan menghapus item dokumen yang ditautkan.
-          </div>
+          <div class="delete-warning">${escapeHtml(config.warning)}</div>
           <div class="form-group">
-            <label class="form-label" for="input-confirm-delete-todo">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
-            <input type="text" id="input-confirm-delete-todo" class="form-input" placeholder="hapus" autocomplete="off">
+            <label class="form-label" for="${config.inputId}">Ketik <strong>${escapeHtml(phrase)}</strong> untuk mengonfirmasi:</label>
+            <input type="text" id="${config.inputId}" class="form-input" placeholder="${escapeHtml(phrase)}" autocomplete="off">
             <div class="form-hint">Huruf besar-kecil diabaikan</div>
           </div>
         </div>
         <div class="modal-footer">
           <div class="modal-footer-actions">
-            <button type="button" class="btn btn-secondary btn-cancel-delete-todo">Batal</button>
-            <button type="button" id="btn-confirm-delete-todo" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
+            <button type="button" class="btn btn-secondary ${config.cancelClass}">Batal</button>
+            <button type="button" id="${config.confirmButtonId}" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
           </div>
         </div>
       </div>
@@ -1451,15 +1498,18 @@ function pathNoticeHtml() {
 
     document.body.appendChild(overlay);
 
-    const inputConfirm = document.getElementById('input-confirm-delete-todo');
-    const confirmBtn = document.getElementById('btn-confirm-delete-todo');
-    const cancelBtn = overlay.querySelector('.btn-cancel-delete-todo');
-    const closeBtn = document.getElementById('btn-close-delete-todo-modal');
+    const inputConfirm = document.getElementById(config.inputId);
+    const confirmBtn = document.getElementById(config.confirmButtonId);
+    const cancelBtn = overlay.querySelector('.' + config.cancelClass);
+    const closeBtn = document.getElementById(config.closeButtonId);
+
+    function phraseTyped(value) {
+      return String(value || '').trim().toLowerCase() === phrase.toLowerCase();
+    }
 
     if (inputConfirm && confirmBtn) {
       inputConfirm.addEventListener('input', (e) => {
-        const typed = e.target.value.trim().toLowerCase();
-        confirmBtn.disabled = (typed !== 'hapus');
+        confirmBtn.disabled = !phraseTyped(e.target.value);
       });
       inputConfirm.focus();
     }
@@ -1473,21 +1523,35 @@ function pathNoticeHtml() {
 
     if (confirmBtn) {
       confirmBtn.addEventListener('click', async () => {
-        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
-        if (typed !== 'hapus') return;
+        if (!phraseTyped(inputConfirm ? inputConfirm.value : '')) return;
 
-        if (state.data && Array.isArray(state.data.todo)) {
-          state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
-        }
-
-        const saveSuccess = await saveData(state.data);
-        if (!saveSuccess) {
+        const succeeded = await config.onConfirm();
+        if (succeeded === false) {
           return;
         }
 
         closeActiveModal();
       });
     }
+  }
+
+  function showDeleteTodoConfirmation(todo) {
+    confirmDestructive({
+      title: 'Hapus Todo',
+      warning: 'Menghapus todo ini tidak akan menghapus item dokumen yang ditautkan.',
+      confirmPhrase: 'hapus',
+      inputId: 'input-confirm-delete-todo',
+      confirmButtonId: 'btn-confirm-delete-todo',
+      cancelClass: 'btn-cancel-delete-todo',
+      closeButtonId: 'btn-close-delete-todo-modal',
+      boxId: 'modal-delete-todo-box',
+      onConfirm: async () => {
+        if (state.data && Array.isArray(state.data.todo)) {
+          state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
+        }
+        return saveData(state.data);
+      }
+    });
   }
 
   /* ==========================================================================
@@ -1506,37 +1570,20 @@ function pathNoticeHtml() {
     return `l${counter}`;
   }
 
-  function normalizeLogQuery(queryString) {
-    if (typeof normalizeQuery === 'function') {
-      return normalizeQuery(queryString);
-    }
-    return String(queryString || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  }
-
   function filterLogs(logs, items, query, dateFrom, dateTo) {
-    const normalizedQuery = normalizeLogQuery(query);
     const fromValue = DATE_PATTERN.test(String(dateFrom || '')) ? String(dateFrom) : '';
     const toValue = DATE_PATTERN.test(String(dateTo || '')) ? String(dateTo) : '';
-    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
 
-    const filtered = (Array.isArray(logs) ? logs : []).filter(logEntry => {
-      const entryDate = String(logEntry.date || '');
-
-      if (fromValue && entryDate < fromValue) return false;
-      if (toValue && entryDate > toValue) return false;
-
-      if (!normalizedQuery) return true;
-
-      const logText = normalizeLogQuery(logEntry.teks);
-      const linkedItem = logEntry.item_id ? itemsMap.get(logEntry.item_id) : null;
-      const linkedItemTitle = linkedItem ? normalizeLogQuery(linkedItem.title) : '';
-
-      return logText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
-    });
-
-    // Urut tanggal menurun; sort stabil mempertahankan urutan array (masukan terbaru di atas)
-    return filtered.slice().sort((logA, logB) => {
-      return String(logB.date || '').localeCompare(String(logA.date || ''));
+    return filterLinkedRows(logs, items, query, {
+      keep(logEntry) {
+        const entryDate = String(logEntry.date || '');
+        if (fromValue && entryDate < fromValue) return false;
+        if (toValue && entryDate > toValue) return false;
+        return true;
+      },
+      // Urut tanggal menurun; sort stabil mempertahankan urutan array
+      // sehingga entri masukan terbaru tetap di atas pada tanggal sama
+      compare: (logA, logB) => String(logB.date || '').localeCompare(String(logA.date || ''))
     });
   }
 
@@ -1804,75 +1851,22 @@ function pathNoticeHtml() {
   }
 
   function showDeleteLogConfirmation(logEntry) {
-    closeActiveModal();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML = `
-      <div class="modal-box" id="modal-delete-log-box">
-        <div class="modal-header">
-          <div class="modal-title">Hapus Log</div>
-          <button type="button" class="btn-close" id="btn-close-delete-log-modal" aria-label="Tutup">&times;</button>
-        </div>
-        <div class="modal-body delete-confirm-box">
-          <div class="delete-warning">
-            Menghapus log ini tidak akan menghapus item dokumen yang ditautkan.
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="input-confirm-delete-log">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
-            <input type="text" id="input-confirm-delete-log" class="form-input" placeholder="hapus" autocomplete="off">
-            <div class="form-hint">Huruf besar-kecil diabaikan</div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <div class="modal-footer-actions">
-            <button type="button" class="btn btn-secondary btn-cancel-delete-log">Batal</button>
-            <button type="button" id="btn-confirm-delete-log" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    const inputConfirm = document.getElementById('input-confirm-delete-log');
-    const confirmBtn = document.getElementById('btn-confirm-delete-log');
-    const cancelBtn = overlay.querySelector('.btn-cancel-delete-log');
-    const closeBtn = document.getElementById('btn-close-delete-log-modal');
-
-    if (inputConfirm && confirmBtn) {
-      inputConfirm.addEventListener('input', (e) => {
-        confirmBtn.disabled = (e.target.value.trim().toLowerCase() !== 'hapus');
-      });
-      inputConfirm.focus();
-    }
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', closeActiveModal);
-    }
-    if (closeBtn) {
-      closeBtn.addEventListener('click', closeActiveModal);
-    }
-
-    if (confirmBtn) {
-      confirmBtn.addEventListener('click', async () => {
-        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
-        if (typed !== 'hapus') return;
-
+    confirmDestructive({
+      title: 'Hapus Log',
+      warning: 'Menghapus log ini tidak akan menghapus item dokumen yang ditautkan.',
+      confirmPhrase: 'hapus',
+      inputId: 'input-confirm-delete-log',
+      confirmButtonId: 'btn-confirm-delete-log',
+      cancelClass: 'btn-cancel-delete-log',
+      closeButtonId: 'btn-close-delete-log-modal',
+      boxId: 'modal-delete-log-box',
+      onConfirm: async () => {
         if (state.data && Array.isArray(state.data.logs)) {
           state.data.logs = state.data.logs.filter(candidate => candidate.id !== logEntry.id);
         }
-
-        const saveSuccess = await saveData(state.data);
-        if (!saveSuccess) {
-          return;
-        }
-
-        closeActiveModal();
-      });
-    }
+        return saveData(state.data);
+      }
+    });
   }
 
   /* ==========================================================================
@@ -2349,92 +2343,60 @@ function pathNoticeHtml() {
     }
   }
 
-  if (typeof window !== 'undefined') {
-    window.saveData = saveData;
-    window.loadData = loadData;
-    window.switchTab = switchTab;
-    window.generateItemId = generateItemId;
-    window.validateTags = validateTags;
-    window.openItemModal = openItemModal;
-    window.generateTodoId = generateTodoId;
-    window.getTodoStatus = getTodoStatus;
-    window.filterTodos = filterTodos;
-    window.renderTodoView = renderTodoView;
-    window.openTodoModal = openTodoModal;
-    window.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
-    window.generateLogId = generateLogId;
-    window.filterLogs = filterLogs;
-    window.renderLogView = renderLogView;
-    window.openLogModal = openLogModal;
-    window.showDeleteLogConfirmation = showDeleteLogConfirmation;
-    window.exportDataAsJson = exportDataAsJson;
-    window.validateImportedData = validateImportedData;
-    window.openImportFilePicker = openImportFilePicker;
-    window.detectStorageMode = detectStorageMode;
-    window.renderAllViews = renderAllViews;
-    window.renderIndeksView = renderIndeksView;
-    window.openLocalPathViaBackend = openLocalPathViaBackend;
-  }
+  /* --------------------------------------------------------------------------
+     Interface publik.
 
-  if (typeof globalThis !== 'undefined') {
-    globalThis.saveData = saveData;
-    globalThis.loadData = loadData;
-    globalThis.switchTab = switchTab;
-    globalThis.generateItemId = generateItemId;
-    globalThis.validateTags = validateTags;
-    globalThis.openItemModal = openItemModal;
-    globalThis.generateTodoId = generateTodoId;
-    globalThis.getTodoStatus = getTodoStatus;
-    globalThis.filterTodos = filterTodos;
-    globalThis.renderTodoView = renderTodoView;
-    globalThis.openTodoModal = openTodoModal;
-    globalThis.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
-    globalThis.generateLogId = generateLogId;
-    globalThis.filterLogs = filterLogs;
-    globalThis.renderLogView = renderLogView;
-    globalThis.openLogModal = openLogModal;
-    globalThis.showDeleteLogConfirmation = showDeleteLogConfirmation;
-    globalThis.exportDataAsJson = exportDataAsJson;
-    globalThis.validateImportedData = validateImportedData;
-    globalThis.openImportFilePicker = openImportFilePicker;
-    globalThis.detectStorageMode = detectStorageMode;
-    globalThis.renderAllViews = renderAllViews;
-    globalThis.renderIndeksView = renderIndeksView;
-    globalThis.openLocalPathViaBackend = openLocalPathViaBackend;
+     Satu daftar simbol, tiga permukaan mengikuti: window (dipakai browser),
+     globalThis (sandbox test), dan module.exports (test Node). Menambah simbol
+     cukup satu baris di MODULE_INTERFACE, bukan tiga.
+
+     window dan globalThis adalah objek yang sama, jadi cukup ditulis sekali.
+     state dan isLocalPath sengaja tidak masuk daftar ini: keduanya hanya
+     dibutuhkan test, dan membocorkan state ke window memungkinkan aplikasi
+     lain memutasinya dari luar (kebijakan sejak tiket 02).
+     -------------------------------------------------------------------------- */
+  const MODULE_INTERFACE = {
+    saveData,
+    loadData,
+    switchTab,
+    generateItemId,
+    validateTags,
+    openItemModal,
+    generateTodoId,
+    getTodoStatus,
+    filterTodos,
+    renderTodoView,
+    openTodoModal,
+    showDeleteTodoConfirmation,
+    confirmDestructive,
+    filterLinkedRows,
+    normalizeRowQuery,
+    generateLogId,
+    filterLogs,
+    renderLogView,
+    openLogModal,
+    showDeleteLogConfirmation,
+    exportDataAsJson,
+    validateImportedData,
+    openImportFilePicker,
+    detectStorageMode,
+    renderAllViews,
+    renderIndeksView,
+    openLocalPathViaBackend
+  };
+
+  if (typeof window !== 'undefined') {
+    Object.assign(window, MODULE_INTERFACE);
   }
 
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-      state,
-      loadData,
-      saveData,
-      switchTab,
+    module.exports = Object.assign({}, MODULE_INTERFACE, {
       isLocalPath,
-      generateItemId,
-      validateTags,
-      openItemModal,
-      generateTodoId,
-      getTodoStatus,
-      filterTodos,
-      renderTodoView,
-      openTodoModal,
-      showDeleteTodoConfirmation,
-      generateLogId,
-      filterLogs,
-      renderLogView,
-      openLogModal,
-      showDeleteLogConfirmation,
-      exportDataAsJson,
-      validateImportedData,
-      openImportFilePicker,
-      detectStorageMode,
-      renderAllViews,
-      renderIndeksView,
-      openLocalPathViaBackend,
-      // state diekspor ke module.exports saja, bukan ke window, supaya test
-      // bisa memeriksa jalur aktif tanpa membuat state mutable yang bisa
-      // diubah dari luar di browser (kebijakan sejak tiket 02).
       state
-    };
+    });
+  }
+
+  if (typeof globalThis !== 'undefined') {
+    globalThis.MODULE_INTERFACE = MODULE_INTERFACE;
   }
 })();
