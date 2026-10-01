@@ -842,6 +842,154 @@ body {
 }
 
 /* ==========================================================================
+   Tab Todo (Tiket 07)
+   ========================================================================== */
+
+.todo-view-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.todo-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.todo-search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-filter-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-todo-filter {
+  padding: 6px 12px;
+  font-size: var(--font-small);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--body);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-todo-filter.active {
+  background: var(--action-soft);
+  color: var(--action);
+  border-color: var(--action);
+  font-weight: 500;
+}
+
+.todo-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.todo-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--action);
+  flex-shrink: 0;
+}
+
+.todo-text {
+  font-size: var(--font-body);
+  color: var(--ink);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.todo-text.is-done {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.todo-linked-item {
+  font-size: var(--font-small);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.todo-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.badge-status {
+  display: inline-block;
+  font-size: var(--font-micro);
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.badge-ok {
+  background-color: var(--ok-bg);
+  color: var(--ok);
+}
+
+.badge-warn {
+  background-color: var(--warn-bg);
+  color: var(--warn);
+}
+
+.badge-bad {
+  background-color: var(--bad-bg);
+  color: var(--bad);
+}
+
+.form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  color: var(--ink);
+  background-color: var(--surface);
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--action);
+}
+
+/* ==========================================================================
    Aturan Bentuk: Max Radius 6px, Tanpa Shadow (Hanya Focus Ring), Tanpa Gradien
    ========================================================================== */
 

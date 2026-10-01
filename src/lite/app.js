@@ -33,6 +33,8 @@
     activeTab: 'indeks',
     activeTag: null,
     focusedItemId: null,
+    todoFilterStatus: 'semua',
+    todoSearchQuery: '',
     data: createEmptyData(),
     savedAt: null,
     storageBlocked: false
@@ -998,6 +1000,424 @@
     }
   }
 
+  /* ==========================================================================
+     Modul Tab Todo (Tiket 07)
+     ========================================================================== */
+
+  function generateTodoId(existingTodos) {
+    const todos = Array.isArray(existingTodos) ? existingTodos : [];
+    const existingIds = new Set(todos.map(todo => todo.id).filter(Boolean));
+    let counter = 1;
+    while (existingIds.has(`t${counter}`)) {
+      counter++;
+    }
+    return `t${counter}`;
+  }
+
+  function getTodoStatus(todo, todayString = getTodayDateString()) {
+    if (!todo) return { type: 'none', label: '' };
+    if (todo.done) {
+      return { type: 'selesai', label: 'selesai' };
+    }
+    if (!todo.deadline) {
+      return { type: 'none', label: '' };
+    }
+    const deadlineParts = String(todo.deadline).split('-').map(Number);
+    const todayParts = String(todayString).split('-').map(Number);
+    if (deadlineParts.length !== 3 || todayParts.length !== 3 || deadlineParts.some(isNaN) || todayParts.some(isNaN)) {
+      return { type: 'none', label: '' };
+    }
+    const deadlineUtc = Date.UTC(deadlineParts[0], deadlineParts[1] - 1, deadlineParts[2]);
+    const todayUtc = Date.UTC(todayParts[0], todayParts[1] - 1, todayParts[2]);
+    const diffDays = Math.round((deadlineUtc - todayUtc) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return { type: 'lewat', label: 'lewat' };
+    } else if (diffDays >= 0 && diffDays <= 3) {
+      return { type: 'mepet', label: 'mepet' };
+    } else {
+      return { type: 'none', label: '' };
+    }
+  }
+
+  function renderTodoStatusBadge(status) {
+    if (!status || status.type === 'none' || !status.label) return '';
+    let badgeClass = 'badge-status';
+    if (status.type === 'selesai') badgeClass += ' badge-ok';
+    else if (status.type === 'mepet') badgeClass += ' badge-warn';
+    else if (status.type === 'lewat') badgeClass += ' badge-bad';
+    return `<span class="${badgeClass}">${escapeHtml(status.label)}</span>`;
+  }
+
+  function normalizeTodoQuery(queryString) {
+    return String(queryString || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function filterTodos(todos, items, query, filterStatus) {
+    const normalizedQuery = normalizeTodoQuery(query);
+    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
+
+    const filtered = (Array.isArray(todos) ? todos : []).filter(todo => {
+      if (filterStatus === 'belum' && todo.done) return false;
+      if (filterStatus === 'selesai' && !todo.done) return false;
+
+      if (!normalizedQuery) return true;
+
+      const todoText = normalizeTodoQuery(todo.teks);
+      const linkedItem = todo.item_id ? itemsMap.get(todo.item_id) : null;
+      const linkedItemTitle = linkedItem ? normalizeTodoQuery(linkedItem.title) : '';
+
+      return todoText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
+    });
+
+    return filtered.sort((todoA, todoB) => {
+      if (todoA.done !== todoB.done) {
+        return todoA.done ? 1 : -1;
+      }
+      const dateA = todoA.updated_at || '';
+      const dateB = todoB.updated_at || '';
+      return dateB.localeCompare(dateA);
+    });
+  }
+
+  function renderTodoView() {
+    const todoListContainer = document.getElementById('todo-list');
+    if (!todoListContainer) return;
+
+    const allTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+    const allItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+    const itemsMap = new Map(allItems.map(item => [item.id, item]));
+
+    const filteredTodos = filterTodos(allTodos, allItems, state.todoSearchQuery, state.todoFilterStatus);
+
+    if (filteredTodos.length === 0) {
+      let emptyMessage = 'Belum ada todo. Tambahkan todo baru.';
+      if (state.todoSearchQuery || state.todoFilterStatus !== 'semua') {
+        emptyMessage = 'Tidak ada todo cocok. Coba kata lain atau tambahkan todo baru.';
+      }
+      todoListContainer.innerHTML = `
+        <div class="result-empty" style="padding: 24px 0; text-align: center; color: var(--muted); font-size: var(--font-small);">
+          ${emptyMessage}
+        </div>
+      `;
+    } else {
+      todoListContainer.innerHTML = filteredTodos.map(todo => {
+        const status = getTodoStatus(todo);
+        const statusBadgeHtml = renderTodoStatusBadge(status);
+        const linkedItem = todo.item_id ? itemsMap.get(todo.item_id) : null;
+        let linkedItemText = '';
+        if (linkedItem) {
+          linkedItemText = escapeHtml(linkedItem.title);
+        } else {
+          linkedItemText = 'tanpa tautan';
+        }
+
+        return `
+          <div class="todo-item ${todo.done ? 'is-done' : ''}" data-id="${escapeHtml(todo.id)}">
+            <div class="todo-item-left">
+              <input type="checkbox" class="todo-checkbox" data-id="${escapeHtml(todo.id)}" ${todo.done ? 'checked' : ''} aria-label="Tandai selesai">
+              <span class="todo-text ${todo.done ? 'is-done' : ''}">${escapeHtml(todo.teks)}</span>
+              ${statusBadgeHtml}
+              ${linkedItemText ? `<span class="todo-linked-item">${linkedItemText}</span>` : ''}
+            </div>
+            <div class="todo-item-actions">
+              <button type="button" class="btn btn-secondary btn-sm btn-ubah-todo" data-id="${escapeHtml(todo.id)}">Ubah</button>
+              <button type="button" class="btn-text-danger btn-hapus-todo" data-id="${escapeHtml(todo.id)}">Hapus</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    if (!todoListContainer.dataset.boundClick) {
+      todoListContainer.dataset.boundClick = 'true';
+      todoListContainer.addEventListener('click', (e) => {
+        const checkbox = e.target.closest('.todo-checkbox');
+        if (checkbox) {
+          const id = checkbox.getAttribute('data-id');
+          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+          const targetTodo = currentTodos.find(candidate => candidate.id === id);
+          if (targetTodo) {
+            targetTodo.done = !targetTodo.done;
+            targetTodo.updated_at = getTodayDateString();
+            saveData(state.data);
+            renderTodoView();
+          }
+          return;
+        }
+
+        const ubahBtn = e.target.closest('.btn-ubah-todo');
+        if (ubahBtn) {
+          const id = ubahBtn.getAttribute('data-id');
+          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+          const targetTodo = currentTodos.find(candidate => candidate.id === id);
+          if (targetTodo) {
+            openTodoModal(targetTodo);
+          }
+          return;
+        }
+
+        const hapusBtn = e.target.closest('.btn-hapus-todo');
+        if (hapusBtn) {
+          const id = hapusBtn.getAttribute('data-id');
+          const currentTodos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+          const targetTodo = currentTodos.find(candidate => candidate.id === id);
+          if (targetTodo) {
+            showDeleteTodoConfirmation(targetTodo);
+          }
+          return;
+        }
+      });
+    }
+  }
+
+  function initTodoListeners() {
+    const todoSearchInput = document.getElementById('todo-search-input');
+    if (todoSearchInput && !todoSearchInput.dataset.boundInput) {
+      todoSearchInput.dataset.boundInput = 'true';
+      todoSearchInput.addEventListener('input', (e) => {
+        state.todoSearchQuery = e.target.value;
+        renderTodoView();
+      });
+    }
+
+    const filterBtns = document.querySelectorAll('.btn-todo-filter');
+    filterBtns.forEach(btn => {
+      if (!btn.dataset.boundClick) {
+        btn.dataset.boundClick = 'true';
+        btn.addEventListener('click', () => {
+          const filter = btn.getAttribute('data-filter') || 'semua';
+          state.todoFilterStatus = filter;
+          filterBtns.forEach(otherBtn => otherBtn.classList.toggle('active', otherBtn === btn));
+          renderTodoView();
+        });
+      }
+    });
+
+    const addBtn = document.getElementById('btn-tambah-todo');
+    if (addBtn && !addBtn.dataset.boundClick) {
+      addBtn.dataset.boundClick = 'true';
+      addBtn.addEventListener('click', () => {
+        openTodoModal(null);
+      });
+    }
+  }
+
+  function openTodoModal(todoToEdit = null) {
+    closeActiveModal();
+
+    const isEdit = Boolean(todoToEdit && todoToEdit.id);
+    const initialText = isEdit ? (todoToEdit.teks || '') : '';
+    const initialDeadline = isEdit ? (todoToEdit.deadline || '') : '';
+    const initialItemId = isEdit ? (todoToEdit.item_id || '') : '';
+
+    const allItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+
+    const itemOptionsHtml = allItems.map(item => {
+      const isSelected = item.id === initialItemId ? 'selected' : '';
+      return `<option value="${escapeHtml(item.id)}" ${isSelected}>${escapeHtml(item.title)}</option>`;
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-todo-box">
+        <div class="modal-header">
+          <div class="modal-title">${isEdit ? 'Ubah Todo' : 'Tambah Todo'}</div>
+          <button type="button" class="btn-close" id="btn-close-todo-modal" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="todo-text">Teks Todo <span class="req">*</span></label>
+            <textarea id="todo-text" class="form-textarea" maxlength="200" placeholder="Teks todo (1-200 karakter)">${escapeHtml(initialText)}</textarea>
+            <div id="todo-text-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="todo-deadline">Deadline</label>
+            <input type="date" id="todo-deadline" class="form-input" value="${escapeHtml(initialDeadline)}">
+            <div class="form-hint">Format YYYY-MM-DD (opsional)</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="todo-item-id">Item Tertaut</label>
+            <select id="todo-item-id" class="form-select">
+              <option value="">Tanpa tautan</option>
+              ${itemOptionsHtml}
+            </select>
+            <div class="form-hint">Hubungkan dengan item di Indeks (opsional)</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div></div>
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-todo-modal">Batal</button>
+            <button type="button" id="btn-todo-save" class="btn btn-primary" disabled>Simpan</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const textArea = document.getElementById('todo-text');
+    if (textArea && initialText) {
+      textArea.value = initialText;
+    }
+    const deadlineInput = document.getElementById('todo-deadline');
+    const itemSelect = document.getElementById('todo-item-id');
+    const saveBtn = document.getElementById('btn-todo-save');
+    const closeBtn = document.getElementById('btn-close-todo-modal');
+    const cancelBtn = overlay.querySelector('.btn-cancel-todo-modal');
+
+    function validateTodoForm() {
+      const textVal = textArea ? textArea.value.trim() : '';
+      const isValid = textVal.length >= 1 && textVal.length <= 200;
+      if (saveBtn) {
+        saveBtn.disabled = !isValid;
+      }
+      const errorEl = document.getElementById('todo-text-error');
+      if (errorEl) {
+        if (textArea && textArea.value.length > 200) {
+          errorEl.textContent = 'Teks todo maksimal 200 karakter';
+          errorEl.style.display = 'block';
+        } else {
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
+        }
+      }
+      return isValid;
+    }
+
+    validateTodoForm();
+
+    if (textArea) {
+      textArea.addEventListener('input', validateTodoForm);
+      textArea.focus();
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (!validateTodoForm()) return;
+
+        const teks = textArea.value.trim();
+        const deadline = deadlineInput && deadlineInput.value ? deadlineInput.value : null;
+        const itemId = itemSelect && itemSelect.value ? itemSelect.value : null;
+        const today = getTodayDateString();
+
+        const todos = (state.data && Array.isArray(state.data.todo)) ? state.data.todo : [];
+
+        if (isEdit) {
+          const todoIdx = todos.findIndex(item => item.id === todoToEdit.id);
+          if (todoIdx >= 0) {
+            todos[todoIdx].teks = teks;
+            todos[todoIdx].deadline = deadline;
+            todos[todoIdx].item_id = itemId;
+            todos[todoIdx].updated_at = today;
+          }
+        } else {
+          const newId = generateTodoId(todos);
+          todos.unshift({
+            id: newId,
+            teks,
+            item_id: itemId,
+            deadline,
+            done: false,
+            updated_at: today
+          });
+        }
+
+        state.data.todo = todos;
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
+        closeActiveModal();
+        renderTodoView();
+      });
+    }
+  }
+
+  function showDeleteTodoConfirmation(todo) {
+    closeActiveModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-delete-todo-box">
+        <div class="modal-header">
+          <div class="modal-title">Hapus Todo</div>
+          <button type="button" class="btn-close" id="btn-close-delete-todo-modal" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body delete-confirm-box">
+          <div class="delete-warning">
+            Menghapus todo ini tidak akan menghapus item dokumen yang ditautkan.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-confirm-delete-todo">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
+            <input type="text" id="input-confirm-delete-todo" class="form-input" placeholder="hapus" autocomplete="off">
+            <div class="form-hint">Huruf besar-kecil diabaikan</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-delete-todo">Batal</button>
+            <button type="button" id="btn-confirm-delete-todo" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const inputConfirm = document.getElementById('input-confirm-delete-todo');
+    const confirmBtn = document.getElementById('btn-confirm-delete-todo');
+    const cancelBtn = overlay.querySelector('.btn-cancel-delete-todo');
+    const closeBtn = document.getElementById('btn-close-delete-todo-modal');
+
+    if (inputConfirm && confirmBtn) {
+      inputConfirm.addEventListener('input', (e) => {
+        const typed = e.target.value.trim().toLowerCase();
+        confirmBtn.disabled = (typed !== 'hapus');
+      });
+      inputConfirm.focus();
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeActiveModal);
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
+        if (typed !== 'hapus') return;
+
+        if (state.data && Array.isArray(state.data.todo)) {
+          state.data.todo = state.data.todo.filter(t => t.id !== todo.id);
+        }
+
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
+        closeActiveModal();
+        renderTodoView();
+      });
+    }
+  }
+
   function loadData() {
     let raw = null;
     try {
@@ -1046,6 +1466,7 @@
 
       updateStatusBar();
       renderIndeksView();
+      renderTodoView();
       return true;
     } catch (err) {
       state.storageBlocked = true;
@@ -1082,6 +1503,12 @@
       const searchInput = document.getElementById('search-input');
       if (searchInput && typeof searchInput.focus === 'function') {
         searchInput.focus();
+      }
+    } else if (tabName === 'todo') {
+      renderTodoView();
+      const todoInput = document.getElementById('todo-search-input');
+      if (todoInput && typeof todoInput.focus === 'function') {
+        todoInput.focus();
       }
     }
   }
@@ -1125,6 +1552,7 @@
       });
     }
 
+    initTodoListeners();
     loadData();
     switchTab(state.activeTab);
   }
@@ -1140,17 +1568,31 @@
   if (typeof window !== 'undefined') {
     window.saveData = saveData;
     window.loadData = loadData;
+    window.switchTab = switchTab;
     window.generateItemId = generateItemId;
     window.validateTags = validateTags;
     window.openItemModal = openItemModal;
+    window.generateTodoId = generateTodoId;
+    window.getTodoStatus = getTodoStatus;
+    window.filterTodos = filterTodos;
+    window.renderTodoView = renderTodoView;
+    window.openTodoModal = openTodoModal;
+    window.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
   }
 
   if (typeof globalThis !== 'undefined') {
     globalThis.saveData = saveData;
     globalThis.loadData = loadData;
+    globalThis.switchTab = switchTab;
     globalThis.generateItemId = generateItemId;
     globalThis.validateTags = validateTags;
     globalThis.openItemModal = openItemModal;
+    globalThis.generateTodoId = generateTodoId;
+    globalThis.getTodoStatus = getTodoStatus;
+    globalThis.filterTodos = filterTodos;
+    globalThis.renderTodoView = renderTodoView;
+    globalThis.openTodoModal = openTodoModal;
+    globalThis.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -1162,7 +1604,13 @@
       isLocalPath,
       generateItemId,
       validateTags,
-      openItemModal
+      openItemModal,
+      generateTodoId,
+      getTodoStatus,
+      filterTodos,
+      renderTodoView,
+      openTodoModal,
+      showDeleteTodoConfirmation
     };
   }
 })();

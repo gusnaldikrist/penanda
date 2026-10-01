@@ -35,9 +35,21 @@
 
     <!-- Panel Todo -->
     <section id="panel-todo" class="tab-panel" role="tabpanel" aria-labelledby="tab-todo" hidden>
-      <div class="placeholder-card">
-        <h2>Modul Todo</h2>
-        <p>Daftar tugas dengan deadline murah akan diimplementasikan pada Tiket 07.</p>
+      <div class="todo-view-container">
+        <div class="todo-header-row">
+          <div class="todo-search-box">
+            <input type="text" id="todo-search-input" class="search-input" placeholder="Cari todo" autocomplete="off">
+          </div>
+          <div class="todo-filter-group" role="group" aria-label="Saringan Status Todo">
+            <button type="button" class="btn btn-secondary btn-todo-filter active" data-filter="semua">Semua</button>
+            <button type="button" class="btn btn-secondary btn-todo-filter" data-filter="belum">Belum</button>
+            <button type="button" class="btn btn-secondary btn-todo-filter" data-filter="selesai">Selesai</button>
+          </div>
+          <button type="button" id="btn-tambah-todo" class="btn btn-primary btn-tambah">+ Tambah</button>
+        </div>
+        <div id="todo-list" class="todo-list">
+          <!-- Daftar item todo dirender secara dinamis oleh app.js -->
+        </div>
       </div>
     </section>
 

@@ -1,6 +1,6 @@
 # 07 - Tab Todo
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Type: task
 
@@ -20,8 +20,8 @@ Tab Todo bisa dipakai penuh: tambah, ubah, centang, hapus, dan saring. Entitas t
 
 ## Verifikasi
 
-- Tambah todo, centang, muat ulang halaman: keadaan selesai tetap tersimpan.
-- Deadline kemarin: berlabel `lewat`; deadline hari ini dan deadline dua hari lagi: berlabel `mepet`; deadline lima hari lagi dan tanpa deadline: tanpa label.
-- Hapus item tertaut: todo tetap ada dengan penanda tanpa tautan.
-- Ketik kata kunci di kotak cari tab Todo: hanya daftar todo yang menyempit, tab Indeks tidak berubah.
-- Ketik judul item tertaut (mis. `sheet admin`): todo yang menautkan item itu ikut tampil.
+- [x] Tambah todo, centang, muat ulang halaman: keadaan selesai tetap tersimpan.
+- [x] Deadline kemarin: berlabel `lewat`; deadline hari ini dan deadline dua hari lagi: berlabel `mepet`; deadline lima hari lagi dan tanpa deadline: tanpa label.
+- [x] Hapus item tertaut: todo tetap ada dengan penanda tanpa tautan.
+- [x] Ketik kata kunci di kotak cari tab Todo: hanya daftar todo yang menyempit, tab Indeks tidak berubah.
+- [x] Ketik judul item tertaut (mis. `sheet admin`): todo yang menautkan item itu ikut tampil.
