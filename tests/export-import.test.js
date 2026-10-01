@@ -590,7 +590,7 @@ test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array',
   assert.equal(validateImportedData(base).valid, true, 'Bentuk sah harus diterima');
 });
 
-test('Tiket 09 - Validasi import: version wajib berupa angka', () => {
+test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', () => {
   const env = createTestEnvironment(null);
   const { validateImportedData } = env.sandbox;
 
@@ -604,6 +604,13 @@ test('Tiket 09 - Validasi import: version wajib berupa angka', () => {
   const result = validateImportedData(stringVersion);
   assert.equal(result.valid, false, 'version string harus ditolak, bukan diterima diam-diam');
   assert.match(result.error, /version/, 'Pesan harus menyebut version');
+
+  // spec kontrak 5: Lite dan Pro harus menerima bentuk berkas yang sama,
+  // jadi Lite juga menolak version angka yang bukan 1.
+  const futureVersion = { ...base, version: 99 };
+  const futureResult = validateImportedData(futureVersion);
+  assert.equal(futureResult.valid, false, 'version 99 harus ditolak Lite, sama seperti ditolak Pro');
+  assert.match(futureResult.error, /version/, 'Pesan harus menyebut version');
 });
 
 test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', () => {

@@ -1813,6 +1813,11 @@
      Modul Export dan Import JSON (Tiket 09)
      ========================================================================== */
 
+  // Versi skema yang dikenali di V1 (prd-skema.md bagian pembuka). Nilainya
+  // harus sama dengan supportedVersion di src/pro/main.go supaya berkas hasil
+  // Export Lite dapat dipakai jalur Pro dan sebaliknya (spec kontrak 5).
+  const SUPPORTED_VERSION = 1;
+
   // Tanggal hari ini dalam bentuk YYYYMMDD untuk nama berkas unduhan
   function getTodayCompactString() {
     const todayString = getTodayDateString();
@@ -1847,8 +1852,11 @@
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { valid: false, error: 'Berkas ditolak: isinya bukan objek data Penanda' };
     }
-    if (typeof parsed.version !== 'number') {
-      return { valid: false, error: 'Berkas ditolak: "version" harus berupa angka' };
+    if (parsed.version !== SUPPORTED_VERSION) {
+      return {
+        valid: false,
+        error: `Berkas ditolak: version ${JSON.stringify(parsed.version)} tidak dikenal; hanya version ${SUPPORTED_VERSION} yang dipakai`
+      };
     }
     const requiredArrays = ['items', 'todo', 'logs', 'pinned_tags'];
     for (const fieldName of requiredArrays) {

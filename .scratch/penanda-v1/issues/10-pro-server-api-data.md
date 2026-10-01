@@ -1,6 +1,6 @@
 # 10 - Jalur Pro: server Go dan endpoint data
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 02
 Type: task
 
@@ -23,7 +23,7 @@ Go 1.22+ belum terpasang di mesin pengembang (periksa dengan `go version`). Inst
 
 ## Verifikasi
 
-- `go run ./src/pro`, buka `localhost:8080`: halaman frontend tampil.
-- Simpan satu perubahan: `data.json` dan `data-YYYYMMDD.json` terbentuk di folder yang sama.
-- Kirim `POST /api/data` berisi JSON rusak: jawaban 400 dan isi `data.json` tidak berubah.
-- Hentikan paksa proses saat menyimpan: `data.json` tetap utuh, tidak setengah tertulis.
+- [x] `go run ./src/pro`, buka `localhost:8080`: halaman frontend tampil.
+- [x] Simpan satu perubahan: `data.json` dan `data-YYYYMMDD.json` terbentuk di folder yang sama.
+- [x] Kirim `POST /api/data` berisi JSON rusak: jawaban 400 dan isi `data.json` tidak berubah.
+- [x] Hentikan paksa proses saat menyimpan: `data.json` tetap utuh, tidak setengah tertulis.
