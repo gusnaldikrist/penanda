@@ -4,7 +4,21 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'indeks_v1';
+  // Adapter penyimpanan (Tiket 11) dimuat sebelum app.js di index.html.
+  // Amino adapter yang menentukan jalur Lite atau Pro.
+  const storage = (typeof window !== 'undefined' && window.PenandaStorage)
+    ? window.PenandaStorage
+    : (typeof PenandaStorage !== 'undefined' ? PenandaStorage : null);
+
+  if (!storage) {
+    // app.js tidak boleh jalan tanpa adapter: tanpa itu tidak diketahui
+    // apakah aplikasi berada di jalur Lite atau Pro.
+    throw new Error('storage-adapter.js harus dimuat sebelum app.js');
+  }
+
+  // Satu pesan untuk dua tempat: localStorage diblokir saat membaca maupun
+// saat menulis (PRD 5.10).
+const STORAGE_BLOCKED_MESSAGE = 'Penyimpanan lokal diblokir browser — beralih ke jalur Pro untuk menyimpan';
 
   function createEmptyData() {
     return {
@@ -38,6 +52,14 @@
     logSearchQuery: '',
     logDateFrom: '',
     logDateTo: '',
+    // Jalur aplikasi: 'Lite' (localStorage) atau 'Pro' (API ke penanda.exe)
+    mode: storage.MODE_LITE,
+    isLoading: false,
+    // False sampai jalur terdeteksi dan data selesai dimuat. saveData
+    // menolak selama ini supaya tidak menimpa data dengan data kosong.
+    isModeReady: false,
+    // Alasan singkat kalau ada masalah; null kalau semua baik-baik saja
+    statusMessage: null,
     data: createEmptyData(),
     savedAt: null,
     storageBlocked: false
@@ -47,19 +69,16 @@
     const statusBar = document.getElementById('status-bar');
     if (!statusBar) return;
 
-    if (state.storageBlocked) {
+    const count = (state.data && Array.isArray(state.data.items)) ? state.data.items.length : 0;
+
+    if (state.statusMessage) {
       statusBar.className = 'status-bar error';
-      statusBar.textContent = 'Penyimpanan lokal diblokir browser — beralih ke jalur Pro untuk menyimpan';
+      statusBar.textContent = state.statusMessage;
       return;
     }
 
     statusBar.className = 'status-bar';
-    const count = (state.data && Array.isArray(state.data.items)) ? state.data.items.length : 0;
-    if (state.savedAt) {
-      statusBar.textContent = `Lite - ${count} item - tersimpan ${state.savedAt}`;
-    } else {
-      statusBar.textContent = `Lite - ${count} item`;
-    }
+    statusBar.textContent = storage.formatStatus(state.mode, count, state.savedAt, state.isLoading);
   }
 
   function escapeHtml(str) {
@@ -73,9 +92,7 @@
   }
 
   function isLocalPath(url) {
-    if (!url || typeof url !== 'string') return false;
-    const trimmed = url.trim();
-    return /^[a-zA-Z]:[\\/]/.test(trimmed) || trimmed.startsWith('\\\\') || trimmed.toLowerCase().startsWith('file:');
+    return storage.isLocalPath(url);
   }
 
   function buildRekapText(results) {
@@ -145,6 +162,27 @@
       closeBtn.addEventListener('click', () => {
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
       });
+    }
+  }
+
+  /**
+   * Membuka path lokal Windows lewat backend. Hanya dipakai di jalur Pro,
+   * karena browser memblokir halaman biasa membuka skema berkas
+   * (arsitektur bagian 5).
+   */
+  async function openLocalPathViaBackend(localPath) {
+    try {
+      await storage.openRemotePath(localPath);
+      state.statusMessage = null;
+      updateStatusBar();
+    } catch (err) {
+      // Tiket 11 langkah 7: tampilkan alasan singkat di area status dan
+      // sisakan tombol Copy sebagai jalan keluar. Alasan dari backend ikut
+      // ditampilkan supaya user tahu itu alamat yang ditolak, bukan server
+      // yang mati.
+      const reason = (err && err.message) ? ' (' + err.message + ')' : '';
+      state.statusMessage = 'Gagal membuka path lokal. Gunakan tombol Copy' + reason;
+      updateStatusBar();
     }
   }
 
@@ -326,7 +364,7 @@
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
+      confirmBtn.addEventListener('click', async () => {
         const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
         const target = String(item.title || '').trim().toLowerCase();
         if (typed !== target) return;
@@ -355,7 +393,7 @@
           state.focusedItemId = null;
         }
 
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -579,7 +617,7 @@
     }
 
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         if (!validateForm()) return;
 
         const title = titleInput.value.trim();
@@ -612,7 +650,7 @@
         }
 
         state.data.items = items;
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -828,8 +866,15 @@
 
       const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
 
+      // Jalur Pro bisa membuka path lokal lewat backend, jadi tombol Buka
+      // tetap ada dan Copy menjadi jalan keluar. Jalur Lite tidak bisa, jadi
+      // hanya Copy dengan pesan arahan (PRD 5.2).
+      const localActions = state.mode === 'Pro'
+        ? `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`
+        : `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
+
       const actionsHtml = local
-        ? `<button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
+        ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
         : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false">Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`;
 
       const isFocused = state.focusedItemId === item.id;
@@ -852,6 +897,16 @@
     renderTerkaitZone(items);
   }
 
+  /**
+ * Kalimat konsekuensi jalur di keadaan kosong (PRD 5.8). Hanya ditampilkan
+ * di jalur Lite, karena di jalur Pro path lokal justru bisa dibuka dengan
+ * satu klik sehingga kalimatnya akan menyesatkan.
+ */
+function pathNoticeHtml() {
+    if (state.mode !== 'Lite') return '';
+    return '<p class="path-notice">Path lokal hanya bisa dibuka di jalur Pro</p>';
+  }
+
   function renderIndeksView() {
     const container = document.getElementById('panel-indeks');
     if (!container) return;
@@ -867,7 +922,7 @@
             <button id="btn-empty-add" class="btn btn-primary">+ Tambah Item</button>
             <button id="btn-empty-import" class="btn btn-secondary">Import JSON</button>
           </div>
-          <p class="path-notice">Path lokal hanya bisa dibuka di jalur Pro</p>
+          ${pathNoticeHtml()}
         </div>
       `;
       const btnEmptyAdd = document.getElementById('btn-empty-add');
@@ -955,6 +1010,17 @@
             const url = copyBtn.getAttribute('data-url');
             const isLocal = copyBtn.getAttribute('data-local') === 'true';
             copyToClipboard(url, isLocal);
+            return;
+          }
+
+          // Path lokal di jalur Pro: backend yang menjalankan startfile. Bila
+          // gagal, area status memberi alasan dan tombol Copy tetap ada
+          // sebagai jalan keluar (tiket 11 langkah 7).
+          const bukaLocalBtn = e.target.closest('.btn-buka-local');
+          if (bukaLocalBtn) {
+            e.preventDefault();
+            const localPath = bukaLocalBtn.getAttribute('data-url');
+            openLocalPathViaBackend(localPath);
             return;
           }
 
@@ -1143,7 +1209,7 @@
 
     if (!todoListContainer.dataset.boundClick) {
       todoListContainer.dataset.boundClick = 'true';
-      todoListContainer.addEventListener('click', (e) => {
+      todoListContainer.addEventListener('click', async (e) => {
         const checkbox = e.target.closest('.todo-checkbox');
         const ubahBtn = e.target.closest('.btn-ubah-todo');
         const hapusBtn = e.target.closest('.btn-hapus-todo');
@@ -1158,7 +1224,7 @@
         if (checkbox) {
           targetTodo.done = !targetTodo.done;
           targetTodo.updated_at = getTodayDateString();
-          saveData(state.data);
+          await saveData(state.data);
           return;
         }
 
@@ -1310,7 +1376,7 @@
     }
 
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         if (!validateTodoForm()) return;
 
         const textValue = textArea.value.trim();
@@ -1341,7 +1407,7 @@
         }
 
         state.data.todo = todos;
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -1406,7 +1472,7 @@
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
+      confirmBtn.addEventListener('click', async () => {
         const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
         if (typed !== 'hapus') return;
 
@@ -1414,7 +1480,7 @@
           state.data.todo = state.data.todo.filter(todoItem => todoItem.id !== todo.id);
         }
 
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -1701,7 +1767,7 @@
     }
 
     if (saveBtn) {
-      saveBtn.addEventListener('click', () => {
+      saveBtn.addEventListener('click', async () => {
         if (!validateLogForm()) return;
 
         const textValue = textArea.value.trim();
@@ -1727,7 +1793,7 @@
         }
 
         state.data.logs = logs;
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -1791,7 +1857,7 @@
     }
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
+      confirmBtn.addEventListener('click', async () => {
         const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
         if (typed !== 'hapus') return;
 
@@ -1799,7 +1865,7 @@
           state.data.logs = state.data.logs.filter(candidate => candidate.id !== logEntry.id);
         }
 
-        const saveSuccess = saveData(state.data);
+        const saveSuccess = await saveData(state.data);
         if (!saveSuccess) {
           return;
         }
@@ -1944,13 +2010,13 @@
     if (cancelBtn) cancelBtn.addEventListener('click', closeActiveModal);
 
     if (confirmBtn) {
-      confirmBtn.addEventListener('click', () => {
+      confirmBtn.addEventListener('click', async () => {
         closeActiveModal();
         state.data = importedData;
         // Saringan lama bisa menunjuk data yang tidak ada lagi di berkas baru
         state.activeTag = null;
         state.focusedItemId = null;
-        saveData(state.data);
+        await saveData(state.data);
       });
     }
   }
@@ -2015,16 +2081,46 @@
     }
   }
 
-  function loadData() {
-    let raw = null;
-    try {
-      raw = localStorage.getItem(STORAGE_KEY);
-      state.storageBlocked = false;
-    } catch (err) {
-      state.storageBlocked = true;
-      if (!state.data) {
+  /**
+   * Membaca seluruh isi berkas data dari jalur yang sedang aktif.
+   * Jalur ditentukan lebih dulu oleh detectStorageMode(); jalur Lite memakai
+   * localStorage, jalur Pro memakai API ke penanda.exe.
+   */
+  async function loadData() {
+    if (state.mode === 'Pro') {
+      // Wireframe bagian 6: jalur Pro menampilkan kata "memuat" selagi
+      // membaca berkas, lalu berubah menjadi jam simpan.
+      state.isLoading = true;
+      updateStatusBar();
+      try {
+        const remoteJson = await storage.readRemote();
+        state.data = normalizeData(JSON.parse(remoteJson));
+        state.storageBlocked = false;
+        state.statusMessage = '';
+      } catch (err) {
+        // Backend ada tapi gagal membaca: beri tahu, jangan diam-diam
+        // menampilkan data kosong karena itu bisa membuat user menimpa data.
+        state.storageBlocked = true;
+        state.statusMessage = 'Gagal membaca data dari server';
         state.data = createEmptyData();
       }
+      state.isLoading = false;
+      updateStatusBar();
+      renderAllViews();
+      return state.data;
+    }
+
+    let raw = null;
+    try {
+      raw = storage.readLocal();
+      state.storageBlocked = false;
+      state.statusMessage = null;
+    } catch (err) {
+      // localStorage diblokir browser: beri tahu user, jangan diam-diam
+      // menampilkan layar kosong seolah semua beres (PRD 5.10).
+      state.storageBlocked = true;
+      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
+      state.data = createEmptyData();
       updateStatusBar();
       renderIndeksView();
       return state.data;
@@ -2046,35 +2142,80 @@
     return state.data;
   }
 
-  function saveData(newData) {
+  /**
+   * Menyimpan seluruh isi berkas data ke jalur yang sedang aktif.
+   * Mengembalikan true bila berhasil. Bila gagal, modal yang memanggilnya
+   * tetap terbuka supaya isian pengguna tidak hilang (wireframe bagian 6).
+   */
+  async function saveData(newData) {
     if (!newData || typeof newData !== 'object') return false;
+
+    // Jalur belum diketahui: data di layar belum berasal dari mana pun, jadi
+    // simpan sekarang bisa menimpa data.json user dengan data kosong.
+    if (!state.isModeReady) {
+      state.statusMessage = 'Data belum selesai dimuat. Tunggu sebentar lalu coba lagi.';
+      updateStatusBar();
+      return false;
+    }
 
     const normalized = normalizeData(newData);
     state.data = normalized;
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-      state.storageBlocked = false;
+    if (state.mode === 'Pro') {
+      try {
+        await storage.writeRemote(JSON.stringify(normalized));
+        state.storageBlocked = false;
+        state.statusMessage = '';
+        state.savedAt = storage.formatSavedTime(new Date());
+      } catch (err) {
+        state.storageBlocked = true;
+        state.statusMessage = 'Gagal menyimpan ke server';
+      }
+      updateStatusBar();
+      // Re-render hanya bila simpan berhasil; kalau gagal, DOM dibiarkan
+      // agar isian atau form yang sedang aktif tidak hilang.
+      if (!state.storageBlocked) {
+        renderAllViews();
+      }
+      return !state.storageBlocked;
+    }
 
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      state.savedAt = `${hours}:${minutes}`;
+    try {
+      storage.writeLocal(JSON.stringify(normalized));
+      state.storageBlocked = false;
+      state.statusMessage = '';
+      state.savedAt = storage.formatSavedTime(new Date());
 
       updateStatusBar();
-      renderIndeksView();
-      renderTodoView();
-      renderLogView();
+      renderAllViews();
       return true;
     } catch (err) {
       state.storageBlocked = true;
+      state.statusMessage = STORAGE_BLOCKED_MESSAGE;
       updateStatusBar();
       // Jangan re-render DOM agar isian atau form yang sedang aktif tidak hilang
       return false;
     }
   }
 
-  function switchTab(tabName) {
+  function renderAllViews() {
+    renderIndeksView();
+    renderTodoView();
+    renderLogView();
+  }
+
+  /**
+   * Menentukan jalur aplikasi dengan satu percobaan GET /api/data.
+   * Sukses berarti Pro; apa pun selain itu berarti Lite, termasuk halaman
+   * yang dibuka langsung dari Explorer (arsitektur bagian 2).
+   */
+  async function detectStorageMode() {
+    const mode = await storage.detectMode();
+    state.mode = mode;
+    return mode;
+  }
+
+  function switchTab(tabName, options = {}) {
     if (!['indeks', 'todo', 'log'].includes(tabName)) return;
 
     state.activeTab = tabName;
@@ -2098,9 +2239,8 @@
     });
 
     if (tabName === 'indeks') {
-      const searchInput = document.getElementById('search-input');
-      if (searchInput && typeof searchInput.focus === 'function') {
-        searchInput.focus();
+      if (options.focusSearch !== false) {
+        focusSearchInput();
       }
     } else if (tabName === 'todo') {
       renderTodoView();
@@ -2159,8 +2299,46 @@
     initTodoListeners();
     initLogListeners();
     initBackupListeners();
-    loadData();
-    switchTab(state.activeTab);
+
+    // Tab diganti lebih dulu supaya panel yang benar terlihat, tapi kotak
+    // cari tab Indeks baru bisa difokus setelah loadData selesai merender
+    // (input itu baru ada setelah panel diisi).
+    switchTab(state.activeTab, { focusSearch: false });
+
+    // Jalur harus diketahui sebelum data dibaca: Lite memakai localStorage,
+    // Pro memakai API. Selama pendeteksian, area status menampilkan "memuat".
+    // isModeReady menahan saveData sampai jalur diketahui dan data termuat;
+    // tanpa itu, simpan yang keburu bisa menimpa data.json dengan data kosong.
+    state.isLoading = true;
+    updateStatusBar();
+    detectStorageMode()
+      .then(() => loadData())
+      .then(() => {
+        // Semua selesai: baru sekarang simpan diizinkan. Pesan "memuat"
+        // dibersihkan di sini karena hanya berlaku selama proses awal.
+        // statusMessage tidak disentuh bila ada masalah nyata seperti
+        // localStorage diblokir, supaya pesan itu tidak hilang.
+        state.isModeReady = true;
+        state.isLoading = false;
+        if (!state.statusMessage) {
+          state.storageBlocked = false;
+        }
+        updateStatusBar();
+        renderAllViews();
+        if (state.activeTab === 'indeks') focusSearchInput();
+      })
+      .catch((err) => {
+        state.statusMessage = 'Gagal menjalankan aplikasi';
+        state.isLoading = false;
+        updateStatusBar();
+      });
+  }
+
+  function focusSearchInput() {
+    const searchInput = document.getElementById('search-input');
+    if (searchInput && typeof searchInput.focus === 'function') {
+      searchInput.focus();
+    }
   }
 
   if (typeof document !== 'undefined') {
@@ -2192,6 +2370,10 @@
     window.exportDataAsJson = exportDataAsJson;
     window.validateImportedData = validateImportedData;
     window.openImportFilePicker = openImportFilePicker;
+    window.detectStorageMode = detectStorageMode;
+    window.renderAllViews = renderAllViews;
+    window.renderIndeksView = renderIndeksView;
+    window.openLocalPathViaBackend = openLocalPathViaBackend;
   }
 
   if (typeof globalThis !== 'undefined') {
@@ -2215,6 +2397,10 @@
     globalThis.exportDataAsJson = exportDataAsJson;
     globalThis.validateImportedData = validateImportedData;
     globalThis.openImportFilePicker = openImportFilePicker;
+    globalThis.detectStorageMode = detectStorageMode;
+    globalThis.renderAllViews = renderAllViews;
+    globalThis.renderIndeksView = renderIndeksView;
+    globalThis.openLocalPathViaBackend = openLocalPathViaBackend;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -2240,7 +2426,15 @@
       showDeleteLogConfirmation,
       exportDataAsJson,
       validateImportedData,
-      openImportFilePicker
+      openImportFilePicker,
+      detectStorageMode,
+      renderAllViews,
+      renderIndeksView,
+      openLocalPathViaBackend,
+      // state diekspor ke module.exports saja, bukan ke window, supaya test
+      // bisa memeriksa jalur aktif tanpa membuat state mutable yang bisa
+      // diubah dari luar di browser (kebijakan sejak tiket 02).
+      state
     };
   }
 })();

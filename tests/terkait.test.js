@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 
 function createTestEnvironment(initialData = null, options = {}) {
@@ -237,6 +238,8 @@ function createTestEnvironment(initialData = null, options = {}) {
   vm.runInContext(searchJs, sandbox);
 
   const appJs = fs.readFileSync(appJsPath, 'utf8');
+  const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
+  vm.runInContext(adapterJs, sandbox);
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -251,9 +254,12 @@ function createTestEnvironment(initialData = null, options = {}) {
   };
 }
 
-test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, Sheet Admin TA)', () => {
+test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, Sheet Admin TA)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const zoneHarian = env.getOrCreateElement('zone-harian');
   assert.ok(zoneHarian, 'Elemen #zone-harian harus ada di layar Indeks');
@@ -263,9 +269,12 @@ test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, 
   assert.doesNotMatch(zoneHarian.innerHTML, /Repository UNIGA/, 'Repository UNIGA bukan tag harian');
 });
 
-test('Tiket 05 - Zona 3 (Kartu Pinned Tags): menampilkan TA 2, Wisuda 2, Magang 1 dan klik menyaring hasil', () => {
+test('Tiket 05 - Zona 3 (Kartu Pinned Tags): menampilkan TA 2, Wisuda 2, Magang 1 dan klik menyaring hasil', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const zoneKartu = env.getOrCreateElement('zone-kartu');
   assert.ok(zoneKartu, 'Elemen #zone-kartu harus ada');
@@ -319,9 +328,12 @@ test('Tiket 05 - Zona 3 (Kartu Pinned Tags): menampilkan TA 2, Wisuda 2, Magang 
   assert.match(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian kembali tampil setelah filter kartu dilepas');
 });
 
-test('Tiket 05 - Filter bertumpuk: ketik "ta" lalu klik kartu Magang menyaring ke irisan keduanya', () => {
+test('Tiket 05 - Filter bertumpuk: ketik "ta" lalu klik kartu Magang menyaring ke irisan keduanya', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const searchInput = env.getOrCreateElement('search-input');
   const zoneKartu = env.getOrCreateElement('zone-kartu');
@@ -350,9 +362,12 @@ test('Tiket 05 - Filter bertumpuk: ketik "ta" lalu klik kartu Magang menyaring k
   assert.doesNotMatch(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian tidak memiliki tag magang');
 });
 
-test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan Terkait tanpa dirinya sendiri', () => {
+test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan Terkait tanpa dirinya sendiri', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
   const zoneTerkait = env.getOrCreateElement('zone-terkait');
@@ -395,9 +410,12 @@ test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan T
   );
 });
 
-test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', () => {
+test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
   const zoneTerkait = env.getOrCreateElement('zone-terkait');
@@ -448,9 +466,12 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', () =
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused setelah klik Ubah');
 });
 
-test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona Terkait', () => {
+test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona Terkait', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
   const zoneTerkait = env.getOrCreateElement('zone-terkait');
@@ -513,7 +534,7 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh klik luar');
 });
 
-test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa terpotong 10 item', () => {
+test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa terpotong 10 item', async () => {
   // Buat 15 item dengan tag "projek"
   const fifteenItems = [];
   for (let i = 1; i <= 15; i++) {
@@ -536,6 +557,9 @@ test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa 
   };
 
   const env = createTestEnvironment(customData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const zoneKartu = env.getOrCreateElement('zone-kartu');
   const resultList = env.getOrCreateElement('result-list');
 

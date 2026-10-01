@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 
 function createTestEnvironment(initialData = null) {
@@ -282,6 +283,11 @@ function createTestEnvironment(initialData = null) {
         writeText: async () => Promise.resolve()
       }
     },
+    // Environment minimal untuk storage-adapter.js (Tiket 11).
+    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    AbortController,
+    setTimeout, clearTimeout,
     console,
     Date
   };
@@ -295,6 +301,8 @@ function createTestEnvironment(initialData = null) {
   vm.runInContext(searchJs, sandbox);
 
   const appJs = fs.readFileSync(appJsPath, 'utf8');
+  const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
+  vm.runInContext(adapterJs, sandbox);
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -308,8 +316,11 @@ function createTestEnvironment(initialData = null) {
   };
 }
 
-test('Tiket 07 - Status Label otomatis: lewat, mepet, none, dan selesai', () => {
+test('Tiket 07 - Status Label otomatis: lewat, mepet, none, dan selesai', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { getTodoStatus } = env.sandbox;
   assert.equal(typeof getTodoStatus, 'function', 'getTodoStatus harus berupa fungsi');
 
@@ -354,9 +365,12 @@ test('Tiket 07 - Status Label otomatis: lewat, mepet, none, dan selesai', () => 
   assert.equal(statusDone.label, 'selesai');
 });
 
-test('Tiket 07 - Render awal tab Todo dari data.example.json', () => {
+test('Tiket 07 - Render awal tab Todo dari data.example.json', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
   switchTab('todo');
@@ -367,9 +381,12 @@ test('Tiket 07 - Render awal tab Todo dari data.example.json', () => {
   assert.match(todoList.innerHTML, /badge-status/, 'Badge status harus muncul');
 });
 
-test('Tiket 07 - Centang todo: klik checkbox mengubah status selesai & tersimpan di storage', () => {
+test('Tiket 07 - Centang todo: klik checkbox mengubah status selesai & tersimpan di storage', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
   switchTab('todo');
@@ -399,8 +416,11 @@ test('Tiket 07 - Centang todo: klik checkbox mengubah status selesai & tersimpan
   assert.match(todoList.innerHTML, /selesai/, 'Badge status harus berubah menjadi selesai');
 });
 
-test('Tiket 07 - Pengurutan: belum selesai di atas, urut updated_at menurun', () => {
+test('Tiket 07 - Pengurutan: belum selesai di atas, urut updated_at menurun', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { filterTodos } = env.sandbox;
 
   const testTodos = [
@@ -418,8 +438,11 @@ test('Tiket 07 - Pengurutan: belum selesai di atas, urut updated_at menurun', ()
   );
 });
 
-test('Tiket 07 - Saringan Status: Semua, Belum, Selesai', () => {
+test('Tiket 07 - Saringan Status: Semua, Belum, Selesai', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { filterTodos } = env.sandbox;
 
   const testTodos = [
@@ -439,9 +462,12 @@ test('Tiket 07 - Saringan Status: Semua, Belum, Selesai', () => {
   assert.equal(resSelesai[0].id, 't2');
 });
 
-test('Tiket 07 - Pencarian Tab Todo: teks todo dan judul item tertaut (aturan PRD 5.1)', () => {
+test('Tiket 07 - Pencarian Tab Todo: teks todo dan judul item tertaut (aturan PRD 5.1)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { filterTodos } = env.sandbox;
   const items = exampleData.items;
@@ -461,9 +487,12 @@ test('Tiket 07 - Pencarian Tab Todo: teks todo dan judul item tertaut (aturan PR
   assert.equal(resInverse.length, 0, 'Frasa terbalik tidak boleh cocok sesuai aturan PRD 5.1');
 });
 
-test('Tiket 07 - Tambah Todo: mengisi form, simpan, tersimpan di localStorage', () => {
+test('Tiket 07 - Tambah Todo: mengisi form, simpan, tersimpan di localStorage', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openTodoModal } = env.sandbox;
   switchTab('todo');
@@ -486,6 +515,9 @@ test('Tiket 07 - Tambah Todo: mengisi form, simpan, tersimpan di localStorage', 
   itemSelect.value = 'repo-uniga';
 
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah simpan sukses');
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -497,9 +529,12 @@ test('Tiket 07 - Tambah Todo: mengisi form, simpan, tersimpan di localStorage', 
   assert.equal(addedTodo.done, false);
 });
 
-test('Tiket 07 - Ubah Todo: edit teks dan deadline', () => {
+test('Tiket 07 - Ubah Todo: edit teks dan deadline', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openTodoModal } = env.sandbox;
   switchTab('todo');
@@ -515,6 +550,9 @@ test('Tiket 07 - Ubah Todo: edit teks dan deadline', () => {
 
   const saveBtn = env.getOrCreateElement('btn-todo-save');
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0);
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -522,9 +560,12 @@ test('Tiket 07 - Ubah Todo: edit teks dan deadline', () => {
   assert.equal(updatedTodo.teks, 'Validasi 25 draft TA - kumpul Senin');
 });
 
-test('Tiket 07 - Hapus Todo: friksi ketik "hapus" menghapus todo tanpa menghapus item tertaut', () => {
+test('Tiket 07 - Hapus Todo: friksi ketik "hapus" menghapus todo tanpa menghapus item tertaut', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, showDeleteTodoConfirmation } = env.sandbox;
   switchTab('todo');
@@ -549,6 +590,9 @@ test('Tiket 07 - Hapus Todo: friksi ketik "hapus" menghapus todo tanpa menghapus
   assert.equal(confirmBtn.disabled, false);
 
   confirmBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0);
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -556,11 +600,14 @@ test('Tiket 07 - Hapus Todo: friksi ketik "hapus" menghapus todo tanpa menghapus
   assert.ok(savedData.items.some(it => it.id === 'sheet-ta-admin'), 'Item tertaut Sheet Admin TA TIDAK boleh terhapus');
 });
 
-test('Tiket 07 - Item tertaut terhapus: todo tetap ada dengan label "tanpa tautan"', () => {
+test('Tiket 07 - Item tertaut terhapus: todo tetap ada dengan label "tanpa tautan"', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   // Ubah item_id menjadi null
   exampleData.todo[0].item_id = null;
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
   switchTab('todo');
@@ -569,9 +616,12 @@ test('Tiket 07 - Item tertaut terhapus: todo tetap ada dengan label "tanpa tauta
   assert.match(todoList.innerHTML, /tanpa tautan/, 'Todo dengan item_id null harus memuat teks "tanpa tautan"');
 });
 
-test('Tiket 07 - Retensi modal saat penyimpanan gagal (wireframe §5)', () => {
+test('Tiket 07 - Retensi modal saat penyimpanan gagal (wireframe §5)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.localStorage.setItem = () => {
     throw new Error('Quota exceeded');
@@ -587,15 +637,21 @@ test('Tiket 07 - Retensi modal saat penyimpanan gagal (wireframe §5)', () => {
 
   const saveBtn = env.getOrCreateElement('btn-todo-save');
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Modal harus tetap terbuka
   assert.equal(env.activeModals.length, 1, 'Modal Todo harus tetap terbuka jika penyimpanan gagal');
   assert.equal(textArea.value, 'Todo gagal disimpan', 'Isian form tidak boleh hilang');
 });
 
-test('Tiket 07 - Verifikasi Review: Atribut ARIA modal, validasi panjang teks 200 karakter, dan Escape tidak menutup modal', () => {
+test('Tiket 07 - Verifikasi Review: Atribut ARIA modal, validasi panjang teks 200 karakter, dan Escape tidak menutup modal', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openTodoModal, showDeleteTodoConfirmation } = env.sandbox;
   switchTab('todo');

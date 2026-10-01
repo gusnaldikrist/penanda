@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 
 function createTestEnvironment(initialData = null, options = {}) {
   const elements = new Map();
@@ -246,6 +247,8 @@ function createTestEnvironment(initialData = null, options = {}) {
   vm.runInContext(searchJs, sandbox);
 
   const appJs = fs.readFileSync(appJsPath, 'utf8');
+  const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
+  vm.runInContext(adapterJs, sandbox);
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -260,9 +263,12 @@ function createTestEnvironment(initialData = null, options = {}) {
   };
 }
 
-test('Tiket 04: Zona pencarian dan daftar hasil awal saat ada data', () => {
+test('Tiket 04: Zona pencarian dan daftar hasil awal saat ada data', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Panel indeks harus memuat input pencarian dan daftar hasil
   assert.match(env.panelIndeks.innerHTML, /id="search-input"/, 'Harus ada input pencarian #search-input');
@@ -283,9 +289,12 @@ test('Tiket 04: Zona pencarian dan daftar hasil awal saat ada data', () => {
   assert.equal(searchRekap.style.display, 'none', 'Baris rekap harus tersembunyi saat pencarian kosong');
 });
 
-test('Tiket 04: Pencarian real-time dengan query "wisuda"', () => {
+test('Tiket 04: Pencarian real-time dengan query "wisuda"', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const searchInput = env.getOrCreateElement('search-input');
   const searchRekap = env.getOrCreateElement('search-rekap');
@@ -305,9 +314,12 @@ test('Tiket 04: Pencarian real-time dengan query "wisuda"', () => {
   assert.match(resultList.innerHTML, /Sheet Job Training/, 'Sheet Job Training masuk lapis 2');
 });
 
-test('Tiket 04: Pencarian tanpa hasil menampilkan pesan ramah pengguna', () => {
+test('Tiket 04: Pencarian tanpa hasil menampilkan pesan ramah pengguna', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const searchInput = env.getOrCreateElement('search-input');
   const searchRekap = env.getOrCreateElement('search-rekap');
@@ -368,8 +380,11 @@ function triggerCopyClick(resultList, dataUrl, isLocal) {
   });
 }
 
-test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', () => {
+test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', async () => {
   const env = createTestEnvironment(twoItemsFixture);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const resultList = env.getOrCreateElement('result-list');
 
   // Dokumen Web harus punya tombol Buka (dengan target _blank) dan Copy
@@ -381,9 +396,12 @@ test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', () => 
   assert.match(resultList.innerHTML, /data-local="true"/, 'Item lokal ditandai data-local="true"');
 });
 
-test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa toast pada URL web', () => {
+test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa toast pada URL web', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const resultList = env.getOrCreateElement('result-list');
 
   // Simulasikan klik tombol Copy pada URL web
@@ -394,8 +412,11 @@ test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa 
   assert.equal(env.toasts.length, 0, 'URL web tidak memunculkan toast notifikasi (bebas scope-creep)');
 });
 
-test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', () => {
+test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', async () => {
   const env = createTestEnvironment(twoItemsFixture);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const resultList = env.getOrCreateElement('result-list');
 
   triggerCopyClick(resultList, 'D:\\Skripsi\\draft.docx', true);
@@ -425,6 +446,9 @@ test('Tiket 04: Jaring pengaman Copy: Cara 2 (navigator.clipboard) aktif saat Ca
     execCommand: () => false, // execCommand gagal
     navigator: mockNavigator
   });
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const resultList = env.getOrCreateElement('result-list');
 
   triggerCopyClick(resultList, 'https://lib.fkominfo.uniga.ac.id/login', false);
@@ -450,6 +474,9 @@ test('Tiket 04: Jaring pengaman Copy: Cara 3 (modal manual fallback) muncul saat
     execCommand: () => false, // execCommand gagal
     navigator: mockNavigator
   });
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
 

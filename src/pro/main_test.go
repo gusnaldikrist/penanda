@@ -294,6 +294,85 @@ func TestNoDataFiles_MenolakBerkasDataPengguna(t *testing.T) {
 	}
 }
 
+// Arsitektur bagian 5: POST /open menerima path lokal Windows dan skema file.
+func TestIsAllowedLocalPath_MenerimaPathLokalWindows(t *testing.T) {
+	for _, candidate := range []string{
+		`D:\`,
+		`C:\Users\pustakawan\Data`,
+		`d:/Data`,
+		`\\server\share\data.json`,
+		`\\server\share`,
+		`file:///D:/Data`,
+		`FILE:///D:/Data`,
+	} {
+		if !isAllowedLocalPath(candidate) {
+			t.Fatalf("%q harus diterima sebagai path lokal", candidate)
+		}
+	}
+}
+
+// Hanya tiga awalan itu yang boleh; alamat lain di luar cakupan.
+func TestIsAllowedLocalPath_MenolakLainnya(t *testing.T) {
+	for _, candidate := range []string{
+		"",
+		"   ",
+		`D`,
+		`http://localhost:8080`,
+		`https://lib.uniga.ac.id`,
+		`\\`,
+		`file:`,
+		`ms-settings:`,
+		`javascript:alert(1)`,
+		`1:\Data`,
+	} {
+		if isAllowedLocalPath(candidate) {
+			t.Fatalf("%q harus ditolak", candidate)
+		}
+	}
+}
+
+func TestHandleOpenPath_MenolakMetodeLainPOST(t *testing.T) {
+	dir := newTestDir(t)
+	handler := newHandler(dir)
+
+	req := httptest.NewRequest(http.MethodGet, "/open", nil)
+	resp := httptest.NewRecorder()
+	handler.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("GET /open harus 405, dapat %d", resp.Code)
+	}
+}
+
+func TestHandleOpenPath_MenolakJSONRusak(t *testing.T) {
+	dir := newTestDir(t)
+	handler := newHandler(dir)
+
+	req := httptest.NewRequest(http.MethodPost, "/open", strings.NewReader("{ bukan json"))
+	resp := httptest.NewRecorder()
+	handler.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusBadRequest {
+		t.Fatalf("JSON rusak harus 400, dapat %d", resp.Code)
+	}
+}
+
+func TestHandleOpenPath_MenolakAlamatDiLuarCakupan(t *testing.T) {
+	dir := newTestDir(t)
+	handler := newHandler(dir)
+
+	for _, address := range []string{"https://lib.uniga.ac.id", `D`, "javascript:alert(1)", `\\`, `file:`} {
+		body, _ := json.Marshal(openRequest{Path: address})
+		req := httptest.NewRequest(http.MethodPost, "/open", strings.NewReader(string(body)))
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+
+		if resp.Code != http.StatusBadRequest {
+			t.Fatalf("alamat %q harus 400, dapat %d", address, resp.Code)
+		}
+	}
+}
+
 func containsField(msg, field string) bool {
 	return strings.Contains(msg, field)
 }

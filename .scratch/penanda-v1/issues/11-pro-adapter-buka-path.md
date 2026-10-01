@@ -1,6 +1,6 @@
 # 11 - Jalur Pro: adapter penyimpanan dan buka path lokal
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 10
 Type: task
 
@@ -21,7 +21,7 @@ Frontend yang sama jalan di dua jalur: mendeteksi sendiri apakah ada backend, la
 
 ## Verifikasi
 
-- Buka `src/lite/index.html` langsung dari Explorer tanpa server: aplikasi tetap jalan penuh di mode Lite.
-- Mode Pro: klik Buka pada path `D:\` membuka Explorer, klik Buka pada URL membuka tab baru.
-- Mode Lite: item berpath lokal menampilkan tombol Copy dengan pesan arahan, bukan tombol yang gagal senyap.
-- Matikan server saat halaman Pro terbuka lalu simpan: pesan gagal muncul dan isian tidak hilang.
+- [x] Buka `src/lite/index.html` langsung dari Explorer tanpa server: aplikasi tetap jalan penuh di mode Lite.
+- [x] Mode Pro: klik Buka pada path `D:\` membuka Explorer, klik Buka pada URL membuka tab baru.
+- [x] Mode Lite: item berpath lokal menampilkan tombol Copy dengan pesan arahan, bukan tombol yang gagal senyap.
+- [x] Matikan server saat halaman Pro terbuka lalu simpan: pesan gagal muncul dan isian tidak hilang.

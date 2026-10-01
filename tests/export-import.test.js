@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 const indexHtmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
 
@@ -242,7 +243,11 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
     console,
     Date,
     setTimeout,
-    clearTimeout
+    clearTimeout,
+    // Environment minimal untuk storage-adapter.js (Tiket 11).
+    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    AbortController
   };
 
   sandbox.window = sandbox;
@@ -253,6 +258,7 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
   sandbox.module = { exports: {} };
 
   vm.runInContext(fs.readFileSync(searchJsPath, 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync(adapterJsPath, 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync(appJsPath, 'utf8'), sandbox);
 
   const appExports = sandbox.module.exports;
@@ -291,6 +297,9 @@ const tagRegex = /<([a-zA-Z0-9]+)([^>]*\bid="([^"]+)"[^>]*)>([\s\S]*?)<\/\1>|<([
 test('Tiket 09 - Export: nama berkas memuat tanggal hari ini dan isi berkas utuh', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.exportDataAsJson();
 
@@ -314,17 +323,29 @@ test('Tiket 09 - Export lalu Import: data pulih utuh (simulasi profil browser la
 
   // Profil A: ekspor
   const envA = createTestEnvironment(exampleData);
+  // init() memuat data secara async; tunggu supaya selesai sebelum ekspor,
+  // kalau tidak state.data masih kosong saat diekspor.
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   envA.sandbox.exportDataAsJson();
   const exportedJson = await envA.downloads[0].blob.text();
 
-  // Profil B: localStorage kosong, lalu import berkas hasil ekspor
+  // Profil B: localStorage kosong, lalu import berkas hasil ekspor.
+  // init() membaca localStorage secara async; tanpa menunggu, pembacaan
+  // awal bisa menimpa data yang baru saja diimpor.
   const envB = createTestEnvironment(null);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   envB.sandbox.switchTab('indeks');
   await envB.pickFile(exportedJson);
 
   // Konfirmasi import
   assert.equal(envB.activeModals.length, 1, 'Harus muncul modal konfirmasi import');
   envB.getOrCreateElement('btn-confirm-import').trigger('click');
+
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   assert.equal(envB.activeModals.length, 0, 'Modal tertutup setelah import');
 
@@ -340,6 +361,9 @@ test('Tiket 09 - Export lalu Import: data pulih utuh (simulasi profil browser la
 test('Tiket 09 - Import berkas tidak sah: items bukan array ditolak dan data lama utuh', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [], pinned_tags: [] });
@@ -374,6 +398,9 @@ test('Tiket 09 - Import berkas tidak sah: items bukan array ditolak dan data lam
 test('Tiket 09 - Import berkas rusak (bukan JSON) ditolak tanpa mengubah data', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile('{ ini bukan json');
@@ -393,6 +420,9 @@ test('Tiket 09 - Import berkas rusak (bukan JSON) ditolak tanpa mengubah data', 
 test('Tiket 09 - Import berkas JSON bukan objek (mis. array) ditolak', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile([1, 2, 3]);
@@ -411,6 +441,9 @@ test('Tiket 09 - Import berkas JSON bukan objek (mis. array) ditolak', async () 
 test('Tiket 09 - Import: pembatalan konfirmasi tidak mengubah data', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Berkas import sengaja BERBEDA dari data yang sekarang ada,
   // sehingga overwrite pasti terdeteksi kalau tombol Batal salah sambung.
@@ -446,6 +479,9 @@ test('Tiket 09 - Import: pembatalan konfirmasi tidak mengubah data', async () =>
 test('Tiket 09 - Import dari keadaan kosong: tombol Import JSON benar-benar membuka pemilih berkas', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(null);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   const panelHtml = env.getOrCreateElement('panel-indeks').innerHTML;
@@ -468,8 +504,11 @@ test('Tiket 09 - Import dari keadaan kosong: tombol Import JSON benar-benar memb
   assert.equal(stored.items.length, 4, 'Data hasil import tersimpan');
 });
 
-test('Tiket 09 - Tombol Import di top-bar juga membuka pemilih berkas', () => {
+test('Tiket 09 - Tombol Import di top-bar juga membuka pemilih berkas', async () => {
   const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [], pinned_tags: [] });
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   let opened = false;
   env.getOrCreateElement('import-file-input').click = () => { opened = true; };
@@ -481,6 +520,9 @@ test('Tiket 09 - Tombol Import di top-bar juga membuka pemilih berkas', () => {
 test('Tiket 09 - Tombol Export di top-bar memang mengunduh berkas', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.getOrCreateElement('btn-export-json').trigger('click');
 
@@ -491,6 +533,9 @@ test('Tiket 09 - Tombol Export di top-bar memang mengunduh berkas', async () => 
 test('Tiket 09 - Konfirmasi import warns bahwa seluruh data ditimpa', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile(exampleData);
@@ -504,6 +549,9 @@ test('Tiket 09 - Konfirmasi import warns bahwa seluruh data ditimpa', async () =
 test('Tiket 09 - Escape tidak menutup modal konfirmasi import', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile(exampleData);
@@ -516,6 +564,9 @@ test('Tiket 09 - Escape tidak menutup modal konfirmasi import', async () => {
 test('Tiket 09 - Import: nilai input file dikosongkan agar berkas sama bisa dipilih ulang', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
   await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [], pinned_tags: [] });
@@ -552,6 +603,9 @@ test('Tiket 09 - CSS: tombol top-bar dan modal pesan memakai token resmi', () =>
 test('Tiket 09 - Bentuk data hasil Export sama persis dengan data.example.json', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.exportDataAsJson();
   const exported = await readDownloadJson(env.downloads[0]);
@@ -565,8 +619,11 @@ test('Tiket 09 - Bentuk data hasil Export sama persis dengan data.example.json',
 
 // Cakupan validasi: setiap field tingkat atas wajib diperiksa satu per satu.
 // Kalau hanya `items` yang diuji, mutasi yang menghapus field lain lolos.
-test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array', () => {
+test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array', async () => {
   const env = createTestEnvironment(null);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { validateImportedData } = env.sandbox;
 
   const base = { version: 1, items: [], todo: [], logs: [], pinned_tags: [] };
@@ -590,8 +647,11 @@ test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array',
   assert.equal(validateImportedData(base).valid, true, 'Bentuk sah harus diterima');
 });
 
-test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', () => {
+test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', async () => {
   const env = createTestEnvironment(null);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { validateImportedData } = env.sandbox;
 
   const base = { version: 1, items: [], todo: [], logs: [], pinned_tags: [] };
@@ -613,8 +673,11 @@ test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', ()
   assert.match(futureResult.error, /version/, 'Pesan harus menyebut version');
 });
 
-test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', () => {
+test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', async () => {
   const env = createTestEnvironment(null);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   env.sandbox.switchTab('indeks');
 
   // Nama field dicek lebih dulu, jadi pesan memuat nama field apa adanya.
@@ -635,6 +698,9 @@ test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', (
 test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Berkas baru tidak punya tag 'ta' sama sekali
   const otherData = {
@@ -669,6 +735,9 @@ test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async 
 test('Tiket 09 - Export: revokeObjectURL ditunda agar unduhan tidak dibatalkan', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const revokedUrls = [];
   env.sandbox.URL.revokeObjectURL = (url) => { revokedUrls.push(url); };

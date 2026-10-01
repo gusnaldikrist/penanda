@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 
 function createTestEnvironment(initialData = null) {
@@ -266,6 +267,8 @@ function createTestEnvironment(initialData = null) {
   vm.runInContext(searchJs, sandbox);
 
   const appJs = fs.readFileSync(appJsPath, 'utf8');
+  const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
+  vm.runInContext(adapterJs, sandbox);
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -279,9 +282,12 @@ function createTestEnvironment(initialData = null) {
   };
 }
 
-test('Tiket 06 - Tombol + Tambah ada di sebelah kotak pencarian dan di empty state', () => {
+test('Tiket 06 - Tombol + Tambah ada di sebelah kotak pencarian dan di empty state', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const btnTambah = env.getOrCreateElement('btn-tambah-item');
   assert.ok(btnTambah, 'Tombol #btn-tambah-item harus ada di layar Indeks');
@@ -289,14 +295,20 @@ test('Tiket 06 - Tombol + Tambah ada di sebelah kotak pencarian dan di empty sta
 
   // Buka modal Tambah
   btnTambah.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 1, 'Modal harus terbuka setelah tombol Tambah diklik');
   const modal = env.activeModals[0];
   assert.match(modal.innerHTML, /Tambah Item|Tambah item/i, 'Judul modal harus Tambah Item');
 });
 
-test('Tiket 06 - Pembuatan ID slug unik dari judul (termasuk suffix angka urut)', () => {
+test('Tiket 06 - Pembuatan ID slug unik dari judul (termasuk suffix angka urut)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { generateItemId } = env.sandbox;
   assert.equal(typeof generateItemId, 'function', 'generateItemId harus didefinisikan');
@@ -312,9 +324,12 @@ test('Tiket 06 - Pembuatan ID slug unik dari judul (termasuk suffix angka urut)'
   assert.equal(idBaru, 'layanan-sirkulasi-baru', 'Karakter tanda seru dan spasi harus dinormalisasi');
 });
 
-test('Tiket 06 - Validasi Tag: menolak tag huruf besar atau berspasi dengan pesan jelas', () => {
+test('Tiket 06 - Validasi Tag: menolak tag huruf besar atau berspasi dengan pesan jelas', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { validateTags } = env.sandbox;
   assert.equal(typeof validateTags, 'function', 'validateTags harus didefinisikan');
@@ -339,12 +354,18 @@ test('Tiket 06 - Validasi Tag: menolak tag huruf besar atau berspasi dengan pesa
   assert.equal(resEmpty.valid, false, 'Tag kosong harus tidak valid');
 });
 
-test('Tiket 06 - Alur Tambah item: mengisi form, simpan, tersimpan di localStorage dengan updated_at hari ini', () => {
+test('Tiket 06 - Alur Tambah item: mengisi form, simpan, tersimpan di localStorage dengan updated_at hari ini', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const btnTambah = env.getOrCreateElement('btn-tambah-item');
   btnTambah.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const titleInput = env.getOrCreateElement('item-title');
   const tagsInput = env.getOrCreateElement('item-tags');
@@ -371,6 +392,9 @@ test('Tiket 06 - Alur Tambah item: mengisi form, simpan, tersimpan di localStora
   assert.equal(saveBtn.disabled, false, 'Tombol simpan harus aktif saat form valid');
 
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Verifikasi modal tertutup
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah simpan sukses');
@@ -389,9 +413,12 @@ test('Tiket 06 - Alur Tambah item: mengisi form, simpan, tersimpan di localStora
   assert.match(addedItem.updated_at, /^\d{4}-\d{2}-\d{2}$/, 'updated_at harus berupa YYYY-MM-DD');
 });
 
-test('Tiket 06 - Alur Ubah item: klik Ubah pada baris hasil, edit judul/catatan, simpan', () => {
+test('Tiket 06 - Alur Ubah item: klik Ubah pada baris hasil, edit judul/catatan, simpan', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
 
@@ -421,6 +448,9 @@ test('Tiket 06 - Alur Ubah item: klik Ubah pada baris hasil, edit judul/catatan,
 
   const saveBtn = env.getOrCreateElement('btn-item-save');
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah simpan');
 
@@ -429,9 +459,12 @@ test('Tiket 06 - Alur Ubah item: klik Ubah pada baris hasil, edit judul/catatan,
   assert.equal(updatedItem.catatan, 'Minta mahasiswa upload mandiri sebelum sidang');
 });
 
-test('Tiket 06 - Alur Hapus item: konfirmasi judul teks salah ditolak, judul benar menghapus item & melepas tautan todo/log', () => {
+test('Tiket 06 - Alur Hapus item: konfirmasi judul teks salah ditolak, judul benar menghapus item & melepas tautan todo/log', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
 
@@ -453,6 +486,9 @@ test('Tiket 06 - Alur Hapus item: konfirmasi judul teks salah ditolak, judul ben
   const deleteBtn = env.getOrCreateElement('btn-item-delete');
   assert.ok(deleteBtn, 'Tombol Hapus item harus ada di modal Ubah');
   deleteBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Tampil form konfirmasi hapus
   const confirmInput = env.getOrCreateElement('input-confirm-delete');
@@ -473,6 +509,9 @@ test('Tiket 06 - Alur Hapus item: konfirmasi judul teks salah ditolak, judul ben
 
   // Klik konfirmasi hapus
   confirmBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Modal tertutup
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah hapus');
@@ -503,13 +542,19 @@ test('Tiket 06 - Validasi CSS: modal lebar 640px, baris search dan tambah, tombo
   assert.doesNotMatch(css, /\.btn-danger\s*\{/, 'Tidak boleh ada class .btn-danger kotak solid');
 });
 
-test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah membuka modal (bebas stale closure)', () => {
+test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah membuka modal (bebas stale closure)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Tambah item baru
   const btnTambah = env.getOrCreateElement('btn-tambah-item');
   btnTambah.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const titleInput = env.getOrCreateElement('item-title');
   const tagsInput = env.getOrCreateElement('item-tags');
@@ -527,6 +572,9 @@ test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah
   linkUrlInput.trigger('input');
 
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0, 'Modal tambah tertutup');
 
   // Sekarang coba klik Ubah pada item yang baru ditambahkan
@@ -550,9 +598,12 @@ test('Tiket 06 - Verifikasi Fix Review: Tombol Ubah pada item yang baru ditambah
   assert.equal(editTitleInput.value, 'Item Dinamis Baru', 'Modal Ubah harus memuat judul item baru yang baru ditambahkan');
 });
 
-test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gagal (wireframe §5 & prd §5.10)', () => {
+test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gagal (wireframe §5 & prd §5.10)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Buat setItem melempar error (simulasikan QuotaExceededError / SecurityError)
   env.sandbox.localStorage.setItem = () => {
@@ -561,6 +612,9 @@ test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gag
 
   const btnTambah = env.getOrCreateElement('btn-tambah-item');
   btnTambah.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const titleInput = env.getOrCreateElement('item-title');
   const tagsInput = env.getOrCreateElement('item-tags');
@@ -578,18 +632,27 @@ test('Tiket 06 - Verifikasi Fix Review: Modal tetap terbuka saat penyimpanan gag
   linkUrlInput.trigger('input');
 
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   // Modal harus TETAP TERBUKA agar isian form tidak hilang
   assert.equal(env.activeModals.length, 1, 'Modal harus tetap terbuka saat penyimpanan gagal');
   assert.equal(titleInput.value, 'Item Gagal Simpan', 'Isian form tidak boleh hilang');
 });
 
-test('Tiket 06 - Verifikasi Fix Review: Tombol Escape saat modal terbuka tidak menutup modal (wireframe §8)', () => {
+test('Tiket 06 - Verifikasi Fix Review: Tombol Escape saat modal terbuka tidak menutup modal (wireframe §8)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const btnTambah = env.getOrCreateElement('btn-tambah-item');
   btnTambah.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 1, 'Modal terbuka');
 
   // Tekan Escape di document

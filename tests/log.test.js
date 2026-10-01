@@ -8,6 +8,7 @@ const repoRoot = path.resolve('.');
 const exampleJsonPath = path.join(repoRoot, 'src', 'shared', 'data.example.json');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 const styleCssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 const indexHtmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
 
@@ -262,6 +263,11 @@ function createTestEnvironment(initialData = null) {
         writeText: async () => Promise.resolve()
       }
     },
+    // Environment minimal untuk storage-adapter.js (Tiket 11).
+    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    AbortController,
+    setTimeout, clearTimeout,
     console,
     Date
   };
@@ -275,6 +281,8 @@ function createTestEnvironment(initialData = null) {
   vm.runInContext(searchJs, sandbox);
 
   const appJs = fs.readFileSync(appJsPath, 'utf8');
+  const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
+  vm.runInContext(adapterJs, sandbox);
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -305,9 +313,12 @@ function getRenderedLogIds(logListElement) {
     .map(match => match[1]);
 }
 
-test('Tiket 08 - Render awal tab Log dari data.example.json', () => {
+test('Tiket 08 - Render awal tab Log dari data.example.json', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('log');
 
@@ -320,9 +331,12 @@ test('Tiket 08 - Render awal tab Log dari data.example.json', () => {
   assert.match(logList.innerHTML, /btn-hapus-log/, 'Tombol Hapus harus ada');
 });
 
-test('Tiket 08 - Tab Log dibuka pertama kali: kedua kotak tanggal kosong dan seluruh entri tampil', () => {
+test('Tiket 08 - Tab Log dibuka pertama kali: kedua kotak tanggal kosong dan seluruh entri tampil', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('log');
 
@@ -336,8 +350,11 @@ test('Tiket 08 - Tab Log dibuka pertama kali: kedua kotak tanggal kosong dan sel
   assert.match(logList.innerHTML, /Input 20 data/, 'Seluruh entri harus tampil tanpa saringan tanggal');
 });
 
-test('Tiket 08 - Urutan tanggal menurun; tanggal sama diurutkan masukan terbaru', () => {
+test('Tiket 08 - Urutan tanggal menurun; tanggal sama diurutkan masukan terbaru', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { filterLogs } = env.sandbox;
 
   // Susunan array meniru app.js: entri masukan terbaru di-unshift ke depan
@@ -355,8 +372,11 @@ test('Tiket 08 - Urutan tanggal menurun; tanggal sama diurutkan masukan terbaru'
   );
 });
 
-test('Tiket 08 - Saringan rentang tanggal Dari dan Sampai', () => {
+test('Tiket 08 - Saringan rentang tanggal Dari dan Sampai', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { filterLogs } = env.sandbox;
 
   const logs = [
@@ -377,8 +397,11 @@ test('Tiket 08 - Saringan rentang tanggal Dari dan Sampai', () => {
   assert.equal(filterLogs(logs, [], '', '', '').length, 3, 'Kedua kotak kosong menampilkan seluruh entri');
 });
 
-test('Tiket 08 - Saringan teks log: frasa berurutan dan case-insensitive (PRD 5.1)', () => {
+test('Tiket 08 - Saringan teks log: frasa berurutan dan case-insensitive (PRD 5.1)', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { filterLogs } = env.sandbox;
 
   const logs = [
@@ -400,9 +423,12 @@ test('Tiket 08 - Saringan teks log: frasa berurutan dan case-insensitive (PRD 5.
   assert.equal(hasilKosong.length, 2, 'Kata kunci kosong tidak menyaring apa pun');
 });
 
-test('Tiket 08 - Saringan judul item tertaut', () => {
+test('Tiket 08 - Saringan judul item tertaut', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { filterLogs } = env.sandbox;
   const logs = exampleData.logs;
@@ -416,11 +442,14 @@ test('Tiket 08 - Saringan judul item tertaut', () => {
   assert.equal(hasilTanpaTautan.length, 0, 'Log l1 tidak menautkan SLiMS Bulian');
 });
 
-test('Tiket 08 - Verifikasi tiket #6: mengetik judul item tertaut di kotak cari memunculkan lognya', () => {
+test('Tiket 08 - Verifikasi tiket #6: mengetik judul item tertaut di kotak cari memunculkan lognya', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   // Tambah satu log tanpa tautan sebagai kontrol: tidak boleh ikut tampil
   exampleData.logs.push({ id: 'l2', date: '2026-09-28', item_id: null, teks: 'Validasi draft tanpa tautan' });
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
   switchTab('log');
@@ -442,9 +471,12 @@ test('Tiket 08 - Verifikasi tiket #6: mengetik judul item tertaut di kotak cari 
   );
 });
 
-test('Tiket 08 - Saringan log bertahan saat pindah tab (prd.md 5.6: kosong saat tab dibuka pertama kali)', () => {
+test('Tiket 08 - Saringan log bertahan saat pindah tab (prd.md 5.6: kosong saat tab dibuka pertama kali)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
 
@@ -466,8 +498,11 @@ test('Tiket 08 - Saringan log bertahan saat pindah tab (prd.md 5.6: kosong saat 
     'Saringan harus bertahan saat pindah tab'
   );
 
-  // Membuka ulang panel dalam sesi baru (state awal) kembali kosong
+  // Membuka ulang panel dalam sesi baru (state awal) kembali kosong.
+  // init() memuat data secara async, jadi tunggu dulu.
   const envBaru = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   envBaru.sandbox.switchTab('log');
   assert.equal(
     envBaru.getOrCreateElement('log-date-from').value,
@@ -481,9 +516,12 @@ test('Tiket 08 - Saringan log bertahan saat pindah tab (prd.md 5.6: kosong saat 
   );
 });
 
-test('Tiket 08 - Isolasi modul: saringan log tidak mengubah Indeks maupun Todo', () => {
+test('Tiket 08 - Isolasi modul: saringan log tidak mengubah Indeks maupun Todo', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('todo');
   env.sandbox.switchTab('log');
@@ -502,9 +540,12 @@ test('Tiket 08 - Isolasi modul: saringan log tidak mengubah Indeks maupun Todo',
   assert.equal(env.getOrCreateElement('result-list').innerHTML, resultListBefore, 'Daftar Indeks tidak boleh berubah');
 });
 
-test('Tiket 08 - Area status tetap tiga bagian, tidak menambah penghitung entri (PRD 5.9)', () => {
+test('Tiket 08 - Area status tetap tiga bagian, tidak menambah penghitung entri (PRD 5.9)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('log');
 
@@ -517,8 +558,11 @@ test('Tiket 08 - Area status tetap tiga bagian, tidak menambah penghitung entri 
   assert.ok(!/entri/i.test(statusBar.textContent), 'Area status tidak boleh memuat kata "entri"');
 });
 
-test('Tiket 08 - generateLogId membuat id unik urut l1, l2, ...', () => {
+test('Tiket 08 - generateLogId membuat id unik urut l1, l2, ...', async () => {
   const env = createTestEnvironment();
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   const { generateLogId } = env.sandbox;
 
   assert.equal(generateLogId([]), 'l1');
@@ -527,9 +571,12 @@ test('Tiket 08 - generateLogId membuat id unik urut l1, l2, ...', () => {
   assert.equal(generateLogId([{ id: 'l1' }, { id: 'l2' }]), 'l3');
 });
 
-test('Tiket 08 - Catat entri baru: tanggal default hari ini dan muncul di baris teratas', () => {
+test('Tiket 08 - Catat entri baru: tanggal default hari ini dan muncul di baris teratas', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openLogModal } = env.sandbox;
   switchTab('log');
@@ -551,6 +598,9 @@ test('Tiket 08 - Catat entri baru: tanggal default hari ini dan muncul di baris 
 
   itemSelect.value = 'repo-uniga';
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah simpan sukses');
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -569,10 +619,13 @@ test('Tiket 08 - Catat entri baru: tanggal default hari ini dan muncul di baris 
   );
 });
 
-test('Tiket 08 - Ubah tanggal entri menjadi bulan lalu ikut mengubah urutan daftar', () => {
+test('Tiket 08 - Ubah tanggal entri menjadi bulan lalu ikut mengubah urutan daftar', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   exampleData.logs.push({ id: 'l2', date: '2026-09-20', item_id: null, teks: 'Entri September' });
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openLogModal } = env.sandbox;
   switchTab('log');
@@ -593,6 +646,9 @@ test('Tiket 08 - Ubah tanggal entri menjadi bulan lalu ikut mengubah urutan daft
 
   const saveBtn = env.getOrCreateElement('btn-log-save');
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah simpan sukses');
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -609,9 +665,12 @@ test('Tiket 08 - Ubah tanggal entri menjadi bulan lalu ikut mengubah urutan daft
   );
 });
 
-test('Tiket 08 - Hapus Log: friksi ketik "hapus" dan item tertaut tetap ada', () => {
+test('Tiket 08 - Hapus Log: friksi ketik "hapus" dan item tertaut tetap ada', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, showDeleteLogConfirmation } = env.sandbox;
   switchTab('log');
@@ -632,6 +691,9 @@ test('Tiket 08 - Hapus Log: friksi ketik "hapus" dan item tertaut tetap ada', ()
   assert.equal(confirmBtn.disabled, false, 'Kata "hapus" harus mengaktifkan tombol (case-insensitive)');
 
   confirmBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
   assert.equal(env.activeModals.length, 0, 'Modal harus tertutup setelah hapus');
 
   const savedData = JSON.parse(env.store['indeks_v1']);
@@ -646,12 +708,15 @@ test('Tiket 08 - Hapus Log: friksi ketik "hapus" dan item tertaut tetap ada', ()
   );
 });
 
-test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus', () => {
+test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   // l2 menunjuk item yang tidak ada (item sudah dihapus), l3 sengaja tanpa tautan
   exampleData.logs.push({ id: 'l2', date: '2026-09-28', item_id: 'item-yang-dihapus', teks: 'Item sudah dihapus' });
   exampleData.logs.push({ id: 'l3', date: '2026-09-27', item_id: null, teks: 'Sengaja tanpa tautan' });
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, saveData } = env.sandbox;
   switchTab('log');
@@ -684,9 +749,12 @@ test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus'
   assert.equal(savedData.logs.find(entry => entry.id === 'l1').item_id, null);
 });
 
-test('Tiket 08 - Retensi isian form saat penyimpanan gagal (wireframe §5)', () => {
+test('Tiket 08 - Retensi isian form saat penyimpanan gagal (wireframe §5)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.localStorage.setItem = () => {
     throw new Error('Quota exceeded');
@@ -702,14 +770,20 @@ test('Tiket 08 - Retensi isian form saat penyimpanan gagal (wireframe §5)', () 
 
   const saveBtn = env.getOrCreateElement('btn-log-save');
   saveBtn.trigger('click');
+  // saveData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   assert.equal(env.activeModals.length, 1, 'Modal Log harus tetap terbuka jika penyimpanan gagal');
   assert.equal(textArea.value, 'Entri gagal disimpan', 'Isian form tidak boleh hilang');
 });
 
-test('Tiket 08 - Tombol Ubah dan Hapus pada baris log', () => {
+test('Tiket 08 - Tombol Ubah dan Hapus pada baris log', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab } = env.sandbox;
   switchTab('log');
@@ -740,9 +814,12 @@ test('Tiket 08 - Tombol Ubah dan Hapus pada baris log', () => {
   assert.match(env.activeModals[0].innerHTML, /Hapus Log/, 'Modal harus berjudul Hapus Log');
 });
 
-test('Tiket 08 - Verifikasi Review: ARIA modal, batas 200 karakter, tanggal wajib, Escape tidak menutup', () => {
+test('Tiket 08 - Verifikasi Review: ARIA modal, batas 200 karakter, tanggal wajib, Escape tidak menutup', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
+  // detectStorageMode lalu loadData async sejak tiket 11
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
   const { switchTab, openLogModal, showDeleteLogConfirmation } = env.sandbox;
   switchTab('log');

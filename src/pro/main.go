@@ -180,12 +180,98 @@ func newHandler(baseDir string) http.Handler {
 		}
 	})
 
+	// Buka path lokal Windows (arsitektur bagian 5). Hanya menerima huruf
+	// drive, UNC, dan skema file; isAllowedLocalPath menyaring yang lain
+	// supaya endpoint ini tidak membuka apa pun di luar cakupan aplikasi.
+	mux.HandleFunc("/open", func(w http.ResponseWriter, r *http.Request) {
+		handleOpenPath(w, r)
+	})
+
 	// Frontend: seluruh berkas di folder binary, termasuk index.html.
 	// Berkas data dan salinan harian disaring supaya tidak bisa diunduh lewat
 	// peramban; isinya milik user dan tidak perlu dibuka dari HTTP.
 	mux.Handle("/", noDataFiles(http.FileServer(http.Dir(baseDir))))
 
 	return mux
+}
+
+// openRequest adalah badan permintaan POST /open.
+type openRequest struct {
+	Path string `json:"path"`
+}
+
+// isAllowedLocalPath menerima huruf drive Windows (D:\), UNC (\\server\share),
+// dan skema file:. Bentuk lain ditolak supaya endpoint ini tidak menjadi
+// cara membuka apa pun di luar cakupan aplikasi.
+func isAllowedLocalPath(candidate string) bool {
+	trimmed := strings.TrimSpace(candidate)
+	if trimmed == "" {
+		return false
+	}
+
+	// Skema file: harus punya isi setelah "file:"
+	if strings.HasPrefix(strings.ToLower(trimmed), "file:") {
+		return len(trimmed) > len("file:")
+	}
+
+	// UNC: \\server Minimal harus menyebut nama server
+	if strings.HasPrefix(trimmed, `\\`) {
+		return len(trimmed) > len(`\\`)
+	}
+
+	// Huruf drive: D: atau D:\Data
+	if len(trimmed) >= 2 && trimmed[1] == ':' {
+		drive := trimmed[0]
+		if (drive >= 'a' && drive <= 'z') || (drive >= 'A' && drive <= 'Z') {
+			rest := trimmed[2:]
+			return rest == "" || strings.HasPrefix(rest, `\`) || strings.HasPrefix(rest, "/")
+		}
+	}
+
+	return false
+}
+
+func handleOpenPath(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "metode tidak didukung", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := readAllLimited(r)
+	if err != nil {
+		http.Error(w, "gagal membaca badan permintaan", http.StatusBadRequest)
+		return
+	}
+
+	var request openRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		http.Error(w, "badan permintaan bukan JSON yang sah", http.StatusBadRequest)
+		return
+	}
+
+	target := strings.TrimSpace(request.Path)
+	if !isAllowedLocalPath(target) {
+		http.Error(w, "alamat di luar cakupan: hanya path lokal Windows dan skema file", http.StatusBadRequest)
+		return
+	}
+
+	if err := openInExplorer(target); err != nil {
+		http.Error(w, "gagal membuka path: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// openInExplorer menjalankan startfile lewat perintah bawaan Windows.
+func openInExplorer(target string) error {
+	launcher, err := exec.LookPath("rundll32.exe")
+	if err != nil {
+		return errors.New("tidak menemukan perintah pembuka Windows")
+	}
+	cmd := exec.Command(launcher, "url.dll,FileProtocolHandler", target)
+	return cmd.Start()
 }
 
 // noDataFiles membungkus handler berkas sehingga data.json dan

@@ -9,6 +9,7 @@ const htmlPath = path.join(repoRoot, 'src', 'lite', 'index.html');
 const cssPath = path.join(repoRoot, 'src', 'lite', 'style.css');
 const appJsPath = path.join(repoRoot, 'src', 'lite', 'app.js');
 const searchJsPath = path.join(repoRoot, 'src', 'lite', 'search.js');
+const adapterJsPath = path.join(repoRoot, 'src', 'lite', 'storage-adapter.js');
 
 test('File dasar tiket 01 harus ada', () => {
   assert.ok(fs.existsSync(htmlPath), 'index.html harus ada');
@@ -152,10 +153,22 @@ test('app.js: inisialisasi state dan logika pergantian tab di memori', () => {
         return null;
       }
     },
-    window: {}
+    window: {},
+    localStorage: { getItem: () => null, setItem() {}, removeItem() {}, clear() {} },
+    // Environment minimal untuk storage-adapter.js (Tiket 11).
+    // Fetch selalu gagal supaya jalur Lite yang disimulasikan.
+    fetch: async () => { throw new TypeError('Failed to fetch'); },
+    AbortController,
+    setTimeout, clearTimeout,
+    console, Date
   };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  sandbox.module = { exports: {} };
 
   vm.createContext(sandbox);
+  // Adapter harus lebih dulu: app.js berhenti kalau adapter belum ada
+  vm.runInContext(fs.readFileSync(adapterJsPath, 'utf8'), sandbox);
   vm.runInContext(appJs, sandbox);
 
   // Verifikasi tab awal: Indeks aktif, Todo & Log tersembunyi
