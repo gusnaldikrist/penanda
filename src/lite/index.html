@@ -55,9 +55,24 @@
 
     <!-- Panel Log -->
     <section id="panel-log" class="tab-panel" role="tabpanel" aria-labelledby="tab-log" hidden>
-      <div class="placeholder-card">
-        <h2>Modul Logbook</h2>
-        <p>Catatan riwayat kerja harian akan diimplementasikan pada Tiket 08.</p>
+      <div class="log-view-container">
+        <div class="log-header-row">
+          <div class="log-search-box">
+            <input type="text" id="log-search-input" class="search-input" placeholder="Cari log" autocomplete="off">
+          </div>
+          <div class="log-date-filter-group" role="group" aria-label="Saringan Rentang Tanggal Log">
+            <label class="log-date-filter" for="log-date-from">
+              Dari<input type="date" id="log-date-from" class="form-input">
+            </label>
+            <label class="log-date-filter" for="log-date-sampai">
+              Sampai<input type="date" id="log-date-sampai" class="form-input">
+            </label>
+          </div>
+          <button type="button" id="btn-catat-log" class="btn btn-primary btn-tambah">+ Catat</button>
+        </div>
+        <div id="log-list" class="log-list">
+          <!-- Daftar entri log dirender secara dinamis oleh app.js -->
+        </div>
       </div>
     </section>
   </main>

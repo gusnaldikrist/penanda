@@ -35,6 +35,9 @@
     focusedItemId: null,
     todoFilterStatus: 'semua',
     todoSearchQuery: '',
+    logSearchQuery: '',
+    logDateFrom: '',
+    logDateTo: '',
     data: createEmptyData(),
     savedAt: null,
     storageBlocked: false
@@ -1415,6 +1418,391 @@
     }
   }
 
+  /* ==========================================================================
+     Modul Tab Log (Tiket 08)
+     ========================================================================== */
+
+  const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+  function generateLogId(existingLogs) {
+    const logs = Array.isArray(existingLogs) ? existingLogs : [];
+    const existingIds = new Set(logs.map(logEntry => logEntry.id).filter(Boolean));
+    let counter = 1;
+    while (existingIds.has(`l${counter}`)) {
+      counter++;
+    }
+    return `l${counter}`;
+  }
+
+  function normalizeLogQuery(queryString) {
+    if (typeof normalizeQuery === 'function') {
+      return normalizeQuery(queryString);
+    }
+    return String(queryString || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function filterLogs(logs, items, query, dateFrom, dateTo) {
+    const normalizedQuery = normalizeLogQuery(query);
+    const fromValue = DATE_PATTERN.test(String(dateFrom || '')) ? String(dateFrom) : '';
+    const toValue = DATE_PATTERN.test(String(dateTo || '')) ? String(dateTo) : '';
+    const itemsMap = new Map((Array.isArray(items) ? items : []).map(item => [item.id, item]));
+
+    const filtered = (Array.isArray(logs) ? logs : []).filter(logEntry => {
+      const entryDate = String(logEntry.date || '');
+
+      if (fromValue && entryDate < fromValue) return false;
+      if (toValue && entryDate > toValue) return false;
+
+      if (!normalizedQuery) return true;
+
+      const logText = normalizeLogQuery(logEntry.teks);
+      const linkedItem = logEntry.item_id ? itemsMap.get(logEntry.item_id) : null;
+      const linkedItemTitle = linkedItem ? normalizeLogQuery(linkedItem.title) : '';
+
+      return logText.includes(normalizedQuery) || linkedItemTitle.includes(normalizedQuery);
+    });
+
+    // Urut tanggal menurun; sort stabil mempertahankan urutan array (masukan terbaru di atas)
+    return filtered.slice().sort((logA, logB) => {
+      return String(logB.date || '').localeCompare(String(logA.date || ''));
+    });
+  }
+
+  function renderLogView() {
+    const logListContainer = document.getElementById('log-list');
+    if (!logListContainer) return;
+
+    const allLogs = (state.data && Array.isArray(state.data.logs)) ? state.data.logs : [];
+    const allItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+    const itemsMap = new Map(allItems.map(item => [item.id, item]));
+
+    const filteredLogs = filterLogs(allLogs, allItems, state.logSearchQuery, state.logDateFrom, state.logDateTo);
+
+    if (filteredLogs.length === 0) {
+      const hasActiveFilter = state.logSearchQuery || state.logDateFrom || state.logDateTo;
+      const emptyMessage = hasActiveFilter
+        ? 'Tidak ada log cocok. Coba kata lain atau ubah rentang tanggal.'
+        : 'Belum ada log. Catat aktivitas kerja harian Anda.';
+      logListContainer.innerHTML = `
+        <div class="result-empty" style="padding: 24px 0; text-align: center; color: var(--muted); font-size: var(--font-small);">
+          ${emptyMessage}
+        </div>
+      `;
+      return;
+    }
+
+    logListContainer.innerHTML = filteredLogs.map(logEntry => {
+      const linkedItem = logEntry.item_id ? itemsMap.get(logEntry.item_id) : null;
+      const linkedItemText = linkedItem ? escapeHtml(linkedItem.title) : 'tanpa tautan';
+
+      return `
+        <div class="log-item" data-id="${escapeHtml(logEntry.id)}">
+          <div class="log-item-left">
+            <span class="log-date-cell">${escapeHtml(logEntry.date || '')}</span>
+            <span class="log-text">${escapeHtml(logEntry.teks)}</span>
+            <span class="log-linked-item">${linkedItemText}</span>
+          </div>
+          <div class="log-item-actions">
+            <button type="button" class="btn btn-secondary btn-sm btn-ubah-log" data-id="${escapeHtml(logEntry.id)}">Ubah</button>
+            <button type="button" class="btn-text-danger btn-hapus-log" data-id="${escapeHtml(logEntry.id)}">Hapus</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function initLogListeners() {
+    const logSearchInput = document.getElementById('log-search-input');
+    if (logSearchInput && !logSearchInput.dataset.boundInput) {
+      logSearchInput.dataset.boundInput = 'true';
+      logSearchInput.addEventListener('input', (e) => {
+        state.logSearchQuery = e.target.value;
+        renderLogView();
+      });
+    }
+
+    const logDateFrom = document.getElementById('log-date-from');
+    if (logDateFrom && !logDateFrom.dataset.boundInput) {
+      logDateFrom.dataset.boundInput = 'true';
+      logDateFrom.addEventListener('change', (e) => {
+        state.logDateFrom = e.target.value;
+        renderLogView();
+      });
+    }
+
+    const logDateSampai = document.getElementById('log-date-sampai');
+    if (logDateSampai && !logDateSampai.dataset.boundInput) {
+      logDateSampai.dataset.boundInput = 'true';
+      logDateSampai.addEventListener('change', (e) => {
+        state.logDateTo = e.target.value;
+        renderLogView();
+      });
+    }
+
+    const catatBtn = document.getElementById('btn-catat-log');
+    if (catatBtn && !catatBtn.dataset.boundClick) {
+      catatBtn.dataset.boundClick = 'true';
+      catatBtn.addEventListener('click', () => {
+        openLogModal(null);
+      });
+    }
+
+    const logListContainer = document.getElementById('log-list');
+    if (logListContainer && !logListContainer.dataset.boundClick) {
+      logListContainer.dataset.boundClick = 'true';
+      logListContainer.addEventListener('click', (e) => {
+        const ubahBtn = e.target.closest('.btn-ubah-log');
+        const hapusBtn = e.target.closest('.btn-hapus-log');
+        const actionEl = ubahBtn || hapusBtn;
+        if (!actionEl) return;
+
+        const id = actionEl.getAttribute('data-id');
+        const currentLogs = (state.data && Array.isArray(state.data.logs)) ? state.data.logs : [];
+        const targetLog = currentLogs.find(candidate => candidate.id === id);
+        if (!targetLog) return;
+
+        if (ubahBtn) {
+          openLogModal(targetLog);
+          return;
+        }
+
+        showDeleteLogConfirmation(targetLog);
+      });
+    }
+  }
+
+  function openLogModal(logToEdit = null) {
+    closeActiveModal();
+
+    const isEdit = Boolean(logToEdit && logToEdit.id);
+    const initialText = isEdit ? (logToEdit.teks || '') : '';
+    const initialDate = isEdit && DATE_PATTERN.test(String(logToEdit.date || ''))
+      ? logToEdit.date
+      : getTodayDateString();
+    const initialItemId = isEdit ? (logToEdit.item_id || '') : '';
+
+    const allItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+    const itemOptionsHtml = allItems.map(item => {
+      const isSelected = item.id === initialItemId ? 'selected' : '';
+      return `<option value="${escapeHtml(item.id)}" ${isSelected}>${escapeHtml(item.title)}</option>`;
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-log-box">
+        <div class="modal-header">
+          <div class="modal-title">${isEdit ? 'Ubah Log' : 'Catat Log'}</div>
+          <button type="button" class="btn-close" id="btn-close-log-modal" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="log-date">Tanggal <span class="req">*</span></label>
+            <input type="date" id="log-date" class="form-input" value="${escapeHtml(initialDate)}">
+            <div id="log-date-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="log-text">Teks Log <span class="req">*</span></label>
+            <textarea id="log-text" class="form-textarea" maxlength="200" placeholder="Teks log (1-200 karakter)">${escapeHtml(initialText)}</textarea>
+            <div id="log-text-error" class="form-error" style="display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="log-item-id">Item Tertaut</label>
+            <select id="log-item-id" class="form-select">
+              <option value="">Tanpa tautan</option>
+              ${itemOptionsHtml}
+            </select>
+            <div class="form-hint">Hubungkan dengan item di Indeks (opsional)</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div></div>
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-log-modal">Batal</button>
+            <button type="button" id="btn-log-save" class="btn btn-primary" disabled>Simpan</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const dateInput = document.getElementById('log-date');
+    const textArea = document.getElementById('log-text');
+    const itemSelect = document.getElementById('log-item-id');
+    const saveBtn = document.getElementById('btn-log-save');
+    const closeBtn = document.getElementById('btn-close-log-modal');
+    const cancelBtn = overlay.querySelector('.btn-cancel-log-modal');
+
+    if (dateInput) dateInput.value = initialDate;
+    if (textArea && initialText) textArea.value = initialText;
+
+    function validateLogForm() {
+      const textValue = textArea ? textArea.value.trim() : '';
+      const dateValue = dateInput ? String(dateInput.value || '').trim() : '';
+      const isTextValid = textValue.length >= 1 && textValue.length <= 200;
+      const isDateValid = DATE_PATTERN.test(dateValue);
+      const isFormValid = isTextValid && isDateValid;
+
+      if (saveBtn) {
+        saveBtn.disabled = !isFormValid;
+      }
+
+      const dateErrEl = document.getElementById('log-date-error');
+      if (dateErrEl) {
+        if (!isDateValid) {
+          dateErrEl.textContent = 'Tanggal wajib diisi dengan format YYYY-MM-DD';
+          dateErrEl.style.display = 'block';
+        } else {
+          dateErrEl.textContent = '';
+          dateErrEl.style.display = 'none';
+        }
+      }
+
+      const textErrEl = document.getElementById('log-text-error');
+      if (textErrEl) {
+        if (textArea && textArea.value.length > 200) {
+          textErrEl.textContent = 'Teks log maksimal 200 karakter';
+          textErrEl.style.display = 'block';
+        } else {
+          textErrEl.textContent = '';
+          textErrEl.style.display = 'none';
+        }
+      }
+
+      return isFormValid;
+    }
+
+    validateLogForm();
+
+    if (dateInput) {
+      dateInput.addEventListener('input', validateLogForm);
+      dateInput.addEventListener('change', validateLogForm);
+    }
+    if (textArea) {
+      textArea.addEventListener('input', validateLogForm);
+      textArea.focus();
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        if (!validateLogForm()) return;
+
+        const textValue = textArea.value.trim();
+        const dateValue = String(dateInput.value).trim();
+        const selectedItemId = itemSelect && itemSelect.value ? itemSelect.value : null;
+
+        const logs = (state.data && Array.isArray(state.data.logs)) ? state.data.logs : [];
+
+        if (isEdit) {
+          const logIdx = logs.findIndex(candidate => candidate.id === logToEdit.id);
+          if (logIdx >= 0) {
+            logs[logIdx].date = dateValue;
+            logs[logIdx].teks = textValue;
+            logs[logIdx].item_id = selectedItemId;
+          }
+        } else {
+          logs.unshift({
+            id: generateLogId(logs),
+            date: dateValue,
+            item_id: selectedItemId,
+            teks: textValue
+          });
+        }
+
+        state.data.logs = logs;
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
+        closeActiveModal();
+      });
+    }
+  }
+
+  function showDeleteLogConfirmation(logEntry) {
+    closeActiveModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML = `
+      <div class="modal-box" id="modal-delete-log-box">
+        <div class="modal-header">
+          <div class="modal-title">Hapus Log</div>
+          <button type="button" class="btn-close" id="btn-close-delete-log-modal" aria-label="Tutup">&times;</button>
+        </div>
+        <div class="modal-body delete-confirm-box">
+          <div class="delete-warning">
+            Menghapus log ini tidak akan menghapus item dokumen yang ditautkan.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="input-confirm-delete-log">Ketik <strong>hapus</strong> untuk mengonfirmasi:</label>
+            <input type="text" id="input-confirm-delete-log" class="form-input" placeholder="hapus" autocomplete="off">
+            <div class="form-hint">Huruf besar-kecil diabaikan</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary btn-cancel-delete-log">Batal</button>
+            <button type="button" id="btn-confirm-delete-log" class="btn-text-danger" disabled style="font-weight: 600; padding: 6px 12px;">Hapus Permanen</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const inputConfirm = document.getElementById('input-confirm-delete-log');
+    const confirmBtn = document.getElementById('btn-confirm-delete-log');
+    const cancelBtn = overlay.querySelector('.btn-cancel-delete-log');
+    const closeBtn = document.getElementById('btn-close-delete-log-modal');
+
+    if (inputConfirm && confirmBtn) {
+      inputConfirm.addEventListener('input', (e) => {
+        confirmBtn.disabled = (e.target.value.trim().toLowerCase() !== 'hapus');
+      });
+      inputConfirm.focus();
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', closeActiveModal);
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeActiveModal);
+    }
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        const typed = inputConfirm ? inputConfirm.value.trim().toLowerCase() : '';
+        if (typed !== 'hapus') return;
+
+        if (state.data && Array.isArray(state.data.logs)) {
+          state.data.logs = state.data.logs.filter(candidate => candidate.id !== logEntry.id);
+        }
+
+        const saveSuccess = saveData(state.data);
+        if (!saveSuccess) {
+          return;
+        }
+
+        closeActiveModal();
+      });
+    }
+  }
+
   function loadData() {
     let raw = null;
     try {
@@ -1464,6 +1852,7 @@
       updateStatusBar();
       renderIndeksView();
       renderTodoView();
+      renderLogView();
       return true;
     } catch (err) {
       state.storageBlocked = true;
@@ -1506,6 +1895,12 @@
       const todoInput = document.getElementById('todo-search-input');
       if (todoInput && typeof todoInput.focus === 'function') {
         todoInput.focus();
+      }
+    } else if (tabName === 'log') {
+      renderLogView();
+      const logInput = document.getElementById('log-search-input');
+      if (logInput && typeof logInput.focus === 'function') {
+        logInput.focus();
       }
     }
   }
@@ -1550,6 +1945,7 @@
     }
 
     initTodoListeners();
+    initLogListeners();
     loadData();
     switchTab(state.activeTab);
   }
@@ -1575,6 +1971,11 @@
     window.renderTodoView = renderTodoView;
     window.openTodoModal = openTodoModal;
     window.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
+    window.generateLogId = generateLogId;
+    window.filterLogs = filterLogs;
+    window.renderLogView = renderLogView;
+    window.openLogModal = openLogModal;
+    window.showDeleteLogConfirmation = showDeleteLogConfirmation;
   }
 
   if (typeof globalThis !== 'undefined') {
@@ -1590,6 +1991,11 @@
     globalThis.renderTodoView = renderTodoView;
     globalThis.openTodoModal = openTodoModal;
     globalThis.showDeleteTodoConfirmation = showDeleteTodoConfirmation;
+    globalThis.generateLogId = generateLogId;
+    globalThis.filterLogs = filterLogs;
+    globalThis.renderLogView = renderLogView;
+    globalThis.openLogModal = openLogModal;
+    globalThis.showDeleteLogConfirmation = showDeleteLogConfirmation;
   }
 
   if (typeof module !== 'undefined' && module.exports) {
@@ -1607,7 +2013,12 @@
       filterTodos,
       renderTodoView,
       openTodoModal,
-      showDeleteTodoConfirmation
+      showDeleteTodoConfirmation,
+      generateLogId,
+      filterLogs,
+      renderLogView,
+      openLogModal,
+      showDeleteLogConfirmation
     };
   }
 })();

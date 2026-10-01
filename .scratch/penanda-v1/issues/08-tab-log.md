@@ -1,6 +1,6 @@
 # 08 - Tab Log
 
-Status: ready-for-agent
+Status: resolved
 Blocked by: 06
 Type: task
 
@@ -19,9 +19,9 @@ Tab Log bisa dipakai penuh: catat, ubah, hapus, dan saring berdasarkan teks maup
 
 ## Verifikasi
 
-- Catat entri baru: tanggal terisi hari ini dan entri muncul di baris teratas.
-- Ubah tanggal entri menjadi bulan lalu: urutan daftar ikut berubah.
-- Saring `Dari: 2026-09-01` `Sampai: 2026-09-29`: hanya entri dalam rentang itu tampil.
-- Hapus item tertaut: log tetap ada dengan penanda tanpa tautan.
-- Tab Log dibuka pertama kali: kedua kotak tanggal kosong dan seluruh entri tampil.
-- Ketik judul item tertaut (mis. `sheet admin`): log yang menautkan item itu ikut tampil.
+- [x] Catat entri baru: tanggal terisi hari ini dan entri muncul di baris teratas.
+- [x] Ubah tanggal entri menjadi bulan lalu: urutan daftar ikut berubah.
+- [x] Saring `Dari: 2026-09-01` `Sampai: 2026-09-29`: hanya entri dalam rentang itu tampil.
+- [x] Hapus item tertaut: log tetap ada dengan penanda tanpa tautan.
+- [x] Tab Log dibuka pertama kali: kedua kotak tanggal kosong dan seluruh entri tampil.
+- [x] Ketik judul item tertaut (mis. `sheet admin`): log yang menautkan item itu ikut tampil.

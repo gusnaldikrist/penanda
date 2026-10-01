@@ -989,6 +989,108 @@ body {
 }
 
 /* ==========================================================================
+   Tab Log (Tiket 08)
+   ========================================================================== */
+
+.log-view-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.log-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.log-search-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-date-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.log-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-small);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.log-date-filter .form-input {
+  width: auto;
+  padding: 4px 8px;
+  font-size: var(--font-small);
+}
+
+.log-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  border-top: 1px solid var(--line);
+}
+
+.log-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.log-item-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Kolom tanggal tetap di kiri agar urutan menurun mudah dipindai */
+.log-date-cell {
+  flex: 0 0 90px;
+  width: 90px;
+  font-size: var(--font-small);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-text {
+  font-size: var(--font-body);
+  color: var(--ink);
+  line-height: 1.4;
+  word-break: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.log-linked-item {
+  font-size: var(--font-small);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.log-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
    Aturan Bentuk: Max Radius 6px, Tanpa Shadow (Hanya Focus Ring), Tanpa Gradien
    ========================================================================== */
 
