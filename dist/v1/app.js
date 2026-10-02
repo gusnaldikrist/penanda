@@ -52,6 +52,7 @@
     activeTab: 'indeks',
     activeTag: null,
     focusedItemId: null,
+    viewMode: 'grid',
     todoFilterStatus: 'semua',
     todoSearchQuery: '',
     logSearchQuery: '',
@@ -64,9 +65,98 @@
     storageBlocked: false
   };
 
+  const CATEGORY_MAP = [
+    { tag: 'ta', category: 'Tugas Akhir // Harian', accent: 'amber', icon: 'file' },
+    { tag: 'wisuda', category: 'Repository // Wisuda', accent: 'blue', icon: 'archive' },
+    { tag: 'magang', category: 'Magang // Kerjasama', accent: 'teal', icon: 'briefcase' },
+    { tag: 'sirkulasi', category: 'Sirkulasi // Harian', accent: 'amber', icon: 'refresh' },
+    { tag: 'administrasi', category: 'Administrasi // Harian', accent: 'amber', icon: 'clipboard' },
+    { tag: 'skripsi', category: 'Repository // Skripsi', accent: 'blue', icon: 'book' },
+    { tag: 'sheet', category: 'Master Data // Sheet', accent: 'emerald', icon: 'grid' },
+    { tag: 'form', category: 'Kuesioner // Form', accent: 'purple', icon: 'edit' },
+    { tag: 'pddikti', category: 'Pelaporan // PDDikti', accent: 'sky', icon: 'cloud' }
+  ];
+
+  function resolveCategoryAndAccent(tags) {
+    if (!Array.isArray(tags) || tags.length === 0) {
+      return { category: 'Dokumen // Umum', accent: 'neutral', icon: 'file' };
+    }
+    const tagsLower = tags.map(t => String(t).trim().toLowerCase());
+    for (const rule of CATEGORY_MAP) {
+      if (tagsLower.includes(rule.tag)) {
+        return rule;
+      }
+    }
+    const first = tags[0];
+    return {
+      category: `${formatTagLabel(first)} // Arsip`,
+      accent: 'neutral',
+      icon: 'file'
+    };
+  }
+
+  function getSvgIcon(name, size = 14) {
+    const s = size;
+    switch (name) {
+      case 'buka':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
+      case 'copy':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`;
+      case 'ubah':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>`;
+      case 'grid':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg>`;
+      case 'list':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>`;
+      case 'archive':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>`;
+      case 'briefcase':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`;
+      case 'refresh':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>`;
+      case 'clipboard':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>`;
+      case 'book':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path></svg>`;
+      case 'cloud':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>`;
+      case 'file':
+      default:
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+    }
+  }
+
+  function formatCatatanWithCode(text) {
+    if (!text) return '';
+    const escaped = escapeHtml(text);
+    return escaped.replace(/`([^`]+)`/g, '<code>$1</code>')
+                  .replace(/\b([\w-]+\.(?:xlsx|docx|pdf|json|csv|sql|txt|exe|bat|ps1))\b/gi, '<code>$1</code>');
+  }
+
+  function updateNavTabCounts() {
+    const indeksCountEl = document.getElementById('tab-count-indeks');
+    const todoCountEl = document.getElementById('tab-count-todo');
+    const logCountEl = document.getElementById('tab-count-log');
+
+    if (indeksCountEl) {
+      const count = (state.data && Array.isArray(state.data.items)) ? state.data.items.length : 0;
+      indeksCountEl.textContent = String(count);
+    }
+    if (todoCountEl) {
+      const uncompleted = (state.data && Array.isArray(state.data.todo)) ? state.data.todo.filter(t => !t.done).length : 0;
+      todoCountEl.textContent = String(uncompleted);
+    }
+    if (logCountEl) {
+      const logCount = (state.data && Array.isArray(state.data.logs)) ? state.data.logs.length : 0;
+      logCountEl.textContent = String(logCount);
+    }
+  }
+
   function updateStatusBar() {
     const statusBar = document.getElementById('status-bar');
     if (!statusBar) return;
+
+    updateNavTabCounts();
 
     const count = (state.data && Array.isArray(state.data.items)) ? state.data.items.length : 0;
 
@@ -748,6 +838,7 @@
     }
 
     const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+    const isListView = state.viewMode === 'list';
 
     zoneKartuEl.style.display = 'flex';
     zoneKartuEl.innerHTML = `
@@ -759,6 +850,11 @@
           const isActive = state.activeTag === tagLower;
           return `<button type="button" class="btn-card-tag ${isActive ? 'active' : ''}" data-tag="${escapeHtml(tagLower)}"><span class="tag-title">${escapeHtml(formatTagLabel(tag))}</span> <span class="tag-count">${count}</span></button>`;
         }).join('')}
+      </div>
+      <div class="view-controls">
+        <button type="button" id="btn-toggle-view" class="btn-view-toggle" title="Ganti tampilan grid / list" aria-label="Ganti tampilan">
+          ${isListView ? getSvgIcon('grid') : getSvgIcon('list')}
+        </button>
       </div>
     `;
   }
@@ -845,6 +941,8 @@
       displayItems = results;
     }
 
+    resultListEl.className = 'result-list ' + (state.viewMode === 'list' ? 'bookmark-list' : 'bookmark-grid');
+
     if (displayItems.length === 0) {
       resultListEl.innerHTML = `
         <div class="no-results">Tidak ada item cocok. Coba kata lain atau tambahkan item baru</div>
@@ -855,31 +953,44 @@
 
     const html = displayItems.map(item => {
       const { url: primaryUrl, isLocal: local } = getPrimaryLinkInfo(item);
+      const categoryInfo = resolveCategoryAndAccent(item.tags);
+      const accent = categoryInfo.accent || 'neutral';
+      const categoryBadge = categoryInfo.category || 'Dokumen // Umum';
+      const iconSvg = getSvgIcon(categoryInfo.icon, 13);
 
       const tagsHtml = Array.isArray(item.tags)
-        ? item.tags.map(tag => `<span class="chip-tag">${escapeHtml(tag)}</span>`).join('')
+        ? item.tags.map(tag => {
+            const isHarian = String(tag).trim().toLowerCase() === 'harian';
+            return `<span class="chip-tag ${isHarian ? 'chip-tag-harian' : ''}">${escapeHtml(tag)}</span>`;
+          }).join('')
         : '';
 
       const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
 
       // Path lokal selalu bisa dibuka: backend ada di setiap cara menjalankan
       // aplikasi, jadi tombol Buka dan Copy selalu keduanya tersedia.
-      const localActions = `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true">Copy</button>`;
+      const localActions = `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">${getSvgIcon('buka', 11)} Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true" title="Salin path">${getSvgIcon('copy', 11)} Copy</button>`;
 
       const actionsHtml = local
-        ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`
-        : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false">Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}">Ubah</button>`;
+        ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}" title="Ubah item">${getSvgIcon('ubah', 11)} Ubah</button>`
+        : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">${getSvgIcon('buka', 11)} Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false" title="Salin link">${getSvgIcon('copy', 11)} Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}" title="Ubah item">${getSvgIcon('ubah', 11)} Ubah</button>`;
 
       const isFocused = state.focusedItemId === item.id;
 
       return `
-        <div class="result-item ${isFocused ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}">
-          <div class="result-header">
-            <div class="result-title">${titlePrefix}${escapeHtml(item.title || '')}</div>
-            <div class="result-tags">${tagsHtml}</div>
+        <div class="result-item card-bookmark accent-${accent} ${isFocused ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}">
+          <div class="result-header card-header">
+            <div class="card-title-group">
+              <span class="card-accent-icon">${iconSvg}</span>
+              <div class="result-title">${titlePrefix}${escapeHtml(item.title || '')}</div>
+            </div>
+            <span class="card-category-badge">${escapeHtml(categoryBadge)}</span>
           </div>
-          <div class="result-body">
-            <div class="result-catatan">${escapeHtml(item.catatan || '')}</div>
+          <div class="card-note-box">
+            <div class="result-catatan">${formatCatatanWithCode(item.catatan || '')}</div>
+          </div>
+          <div class="result-tags">${tagsHtml}</div>
+          <div class="card-footer result-actions-row">
             <div class="result-actions">${actionsHtml}</div>
           </div>
         </div>
@@ -926,13 +1037,14 @@
         <div class="search-bar-row">
           <div class="search-bar-wrap">
             <input type="text" id="search-input" class="search-input" placeholder="Cari judul, tag, atau isi dokumen..." autocomplete="off">
+            <span class="search-shortcut-badge">/</span>
           </div>
-          <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">+ Tambah</button>
+          <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">Tambah Penanda</button>
         </div>
         <div id="zone-harian" class="zone-harian"></div>
         <div id="zone-kartu" class="zone-kartu"></div>
         <div id="search-rekap" class="search-rekap" style="display: none;"></div>
-        <div id="result-list" class="result-list"></div>
+        <div id="result-list" class="result-list ${state.viewMode === 'list' ? 'bookmark-list' : 'bookmark-grid'}"></div>
         <div id="zone-terkait" class="zone-terkait" style="display: none;"></div>
       `;
 
@@ -967,7 +1079,16 @@
       const zoneKartuEl = document.getElementById('zone-kartu');
       if (zoneKartuEl) {
         zoneKartuEl.addEventListener('click', (e) => {
-          const cardBtn = e.target.closest('.btn-card-tag');
+          const toggleViewBtn = e.target.closest && (e.target.closest('#btn-toggle-view') || e.target.closest('.btn-view-toggle'));
+          if (toggleViewBtn) {
+            state.viewMode = (state.viewMode === 'grid' ? 'list' : 'grid');
+            renderKartuZone();
+            const input = document.getElementById('search-input');
+            updateIndeksResults(input ? input.value : '');
+            return;
+          }
+
+          const cardBtn = e.target.closest ? e.target.closest('.btn-card-tag') : null;
           if (cardBtn) {
             const tag = cardBtn.getAttribute('data-tag');
             if (state.activeTag === tag) {
@@ -2191,6 +2312,30 @@ async function confirmDestructive(config) {
             const searchInput = document.getElementById('search-input');
             updateIndeksResults(searchInput ? searchInput.value : '');
           }
+        } else if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const modal = document.querySelector('.modal-overlay');
+          if (modal) return;
+          const activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+          if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          if (state.activeTab === 'indeks') {
+            focusSearchInput();
+          } else if (state.activeTab === 'todo') {
+            const el = document.getElementById('todo-search-input');
+            if (el && typeof el.focus === 'function') el.focus();
+          } else if (state.activeTab === 'log') {
+            const el = document.getElementById('log-search-input');
+            if (el && typeof el.focus === 'function') el.focus();
+          }
+        } else if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          const modal = document.querySelector('.modal-overlay');
+          if (modal) return;
+          const activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+          if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          if (state.activeTab === 'indeks') openItemModal();
+          else if (state.activeTab === 'todo') openTodoModal();
+          else if (state.activeTab === 'log') openLogModal();
         }
       });
 

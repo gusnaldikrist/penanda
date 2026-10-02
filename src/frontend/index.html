@@ -11,20 +11,40 @@
   <!-- Baris Navigasi Atas (Tinggi 48px) -->
   <header class="top-bar">
     <div class="top-bar-left">
-      <div class="brand-title">Penanda</div>
+      <div class="brand-title">
+        <span class="brand-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+        </span>
+        Penanda <span class="brand-badge">v1</span>
+      </div>
       <nav class="nav-tabs" role="tablist" aria-label="Modul Penanda">
-        <button id="tab-indeks" class="nav-tab-btn active" data-tab="indeks" role="tab" aria-selected="true" aria-controls="panel-indeks">Indeks</button>
-        <button id="tab-todo" class="nav-tab-btn" data-tab="todo" role="tab" aria-selected="false" aria-controls="panel-todo">Todo</button>
-        <button id="tab-log" class="nav-tab-btn" data-tab="log" role="tab" aria-selected="false" aria-controls="panel-log">Log</button>
+        <button id="tab-indeks" class="nav-tab-btn active" data-tab="indeks" role="tab" aria-selected="true" aria-controls="panel-indeks">
+          Indeks <span id="tab-count-indeks" class="nav-tab-count">0</span>
+        </button>
+        <button id="tab-todo" class="nav-tab-btn" data-tab="todo" role="tab" aria-selected="false" aria-controls="panel-todo">
+          Todo <span id="tab-count-todo" class="nav-tab-count">0</span>
+        </button>
+        <button id="tab-log" class="nav-tab-btn" data-tab="log" role="tab" aria-selected="false" aria-controls="panel-log">
+          Log <span id="tab-count-log" class="nav-tab-count">0</span>
+        </button>
       </nav>
     </div>
     <div class="top-bar-right">
       <div class="top-bar-actions">
-        <button type="button" id="btn-export-json" class="btn btn-secondary btn-sm btn-topbar">Export</button>
-        <button type="button" id="btn-import-json" class="btn btn-secondary btn-sm btn-topbar">Import</button>
+        <button type="button" id="btn-export-json" class="btn btn-secondary btn-sm btn-topbar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export
+        </button>
+        <button type="button" id="btn-import-json" class="btn btn-secondary btn-sm btn-topbar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Import
+        </button>
         <input type="file" id="import-file-input" class="file-input-hidden" accept="application/json,.json">
       </div>
-      <div id="status-bar" class="status-bar" aria-live="polite">Penanda</div>
+      <div class="status-indicator">
+        <span class="status-dot"></span>
+        <div id="status-bar" class="status-bar" aria-live="polite">Penanda</div>
+      </div>
     </div>
   </header>
 
@@ -81,6 +101,16 @@
       </div>
     </section>
   </main>
+
+  <!-- Status Bar Bawah -->
+  <footer id="bottom-status-bar" class="bottom-status-bar">
+    <div id="status-counts" class="status-counts">Database Lokal: Siap</div>
+    <div class="status-shortcuts">
+      <span class="status-shortcut-item"><span class="status-shortcut-key">[/]</span> Cari</span>
+      <span class="status-shortcut-item"><span class="status-shortcut-key">[N]</span> Baru</span>
+      <span class="status-shortcut-item"><span class="status-shortcut-key">[Esc]</span> Batal</span>
+    </div>
+  </footer>
 
   <!-- Skrip dimuat biasa (bukan ES Module) agar kompatibel dengan protokol file:// -->
   <script src="search.js"></script>
