@@ -52,9 +52,6 @@
     activeTab: 'indeks',
     activeTag: null,
     focusedItemId: null,
-    // 'grid' = kartu untuk memindai banyak item dan memakai lebar penuh.
-    // 'table' = tabel untuk mengerjakan satu item, dengan panel di samping.
-    viewMode: 'grid',
     sortOrder: 'recent',
     todoFilterStatus: 'semua',
     todoSearchQuery: '',
@@ -927,8 +924,6 @@
     }
 
     const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
-    const isTableView = state.viewMode === 'table';
-
     zoneKartuEl.style.display = 'flex';
     zoneKartuEl.innerHTML = `
       <div class="zone-label">KARTU</div>
@@ -945,10 +940,6 @@
           <option value="recent"${state.sortOrder === 'recent' ? ' selected' : ''}>Urutan: Terakhir Digunakan</option>
           <option value="az"${state.sortOrder === 'az' ? ' selected' : ''}>A - Z</option>
         </select>
-        <button type="button" id="btn-toggle-view" class="btn-view-toggle" title="Ganti tampilan kartu atau tabel" aria-label="Ganti tampilan kartu atau tabel">
-          ${isTableView ? getSvgIcon('grid') : getSvgIcon('table')}
-          <span class="btn-view-label">${isTableView ? 'Kartu' : 'Tabel'}</span>
-        </button>
       </div>
     `;
 
@@ -980,20 +971,17 @@
     `;
   }
 
-  // Mode tampilan mengubahsusunan layar, bukan hanya isi hasil. Fungsi ini
-  // dipanggil dari setiap render supaya pergantian mode tidak pernah meninggalkan
-  // wadah yang dibangun untuk mode sebelumnya.
+  // Susunan layar tidak lagi berganti, jadi tidak ada yang perlu disinkronkan
+  // ulang pada setiap render. Wadah split dan panel dibangun aktif sejak awal.
   function sinkronkanTampilanMode() {
-    const modeTabel = state.viewMode === 'table';
     const splitEl = document.getElementById('indeks-split');
     const panelEl = document.getElementById('panel-inspeksi');
 
     if (splitEl && splitEl.classList) {
-      if (modeTabel) splitEl.classList.add('indeks-split-aktif');
-      else splitEl.classList.remove('indeks-split-aktif');
+      splitEl.classList.add('indeks-split-aktif');
     }
     if (panelEl) {
-      panelEl.style.display = modeTabel ? '' : 'none';
+      panelEl.style.display = '';
     }
   }
 
@@ -1111,22 +1099,16 @@
   // panel menampilkan kalimat yang salah.
   function renderTerkaitZone(items, panelInfo) {
     const info = panelInfo || { jumlahHasil: 0, adaKueri: false };
-    const zoneTerkaitEl = document.getElementById('zone-terkait');
     const panelEl = document.getElementById('panel-inspeksi');
-    const modeTabel = state.viewMode === 'table';
 
-    // Kosongkan keduanya lebih dulu supaya satu tempat tidak menyisakan
-    // isi dari render sebelumnya, termasuk saat fokus baru saja dilepas.
-    if (zoneTerkaitEl) {
-      zoneTerkaitEl.style.display = 'none';
-      zoneTerkaitEl.innerHTML = '';
-    }
+    // Kosongkan lebih dulu supaya panel tidak menyisakan isi dari render
+    // sebelumnya, termasuk saat fokus baru saja dilepas.
     if (panelEl) {
       panelEl.innerHTML = '';
     }
 
     if (!state.focusedItemId) {
-      if (panelEl && modeTabel) {
+      if (panelEl) {
         // Fokus sudah dilepas sebelum render, jadi alasan hilangnya dibaca
         // dari flag. Bergantung pada state.focusedItemId selalu gagal di sini
         // karena nilainya sudah null justru pada kasus yang perlu dijelaskan.
@@ -1137,7 +1119,7 @@
 
     const focusedItem = items.find(item => item.id === state.focusedItemId);
     if (!focusedItem) {
-      if (panelEl && modeTabel) {
+      if (panelEl) {
         panelEl.innerHTML = buildPanelKosongHtml('hilang', info.jumlahHasil, info.adaKueri);
       }
       return;
@@ -1146,15 +1128,7 @@
     const related = computeRelatedItems(focusedItem, items);
     const relatedHtml = related.length > 0 ? buildTerkaitHtml(related) : '';
 
-    if (modeTabel) {
-      if (panelEl) panelEl.innerHTML = buildPanelHtml(focusedItem, relatedHtml);
-      return;
-    }
-
-    if (zoneTerkaitEl) {
-      zoneTerkaitEl.innerHTML = relatedHtml;
-      if (relatedHtml) zoneTerkaitEl.style.display = 'flex';
-    }
+    if (panelEl) panelEl.innerHTML = buildPanelHtml(focusedItem, relatedHtml);
   }
 
   function updateIndeksResults(query) {
@@ -1221,8 +1195,7 @@
       displayItems = results;
     }
 
-    const modeTabel = state.viewMode === 'table';
-    resultListEl.className = modeTabel ? 'result-list tabel-mode' : 'result-list bookmark-grid';
+    resultListEl.className = 'result-list tabel-mode';
     sinkronkanTampilanMode();
 
     const panelInfo = {
@@ -1238,57 +1211,6 @@
       renderTerkaitZone(items, panelInfo);
       return;
     }
-
-    // Dua renderer, satu sumber data. Mode kartu memakai div bergrid seperti
-    // sebelumnya; mode tabel memakai elemen tabel semantik supaya setiap sel
-    // diumumkan layar baca bersama nama kolomnya.
-    const renderKartu = (item) => {
-      const { url: primaryUrl, isLocal: local } = getPrimaryLinkInfo(item);
-      const categoryInfo = resolveCategoryAndAccent(item.tags);
-      const accent = categoryInfo.accent || 'neutral';
-      const categoryBadge = categoryInfo.category || 'Dokumen // Umum';
-      const iconSvg = getSvgIcon(categoryInfo.icon, 13);
-
-      const tagsHtml = Array.isArray(item.tags)
-        ? item.tags.map(tag => {
-            const isHarian = String(tag).trim().toLowerCase() === 'harian';
-            return `<span class="chip-tag ${isHarian ? 'chip-tag-harian' : ''}">${escapeHtml(tag)}</span>`;
-          }).join('')
-        : '';
-
-      // Penanda berasal dari lapisan pencarian. Teks tetap "dari catatan"
-      // akan ikut tampil pada item yang hanya cocok lewat langkah kerja.
-      const titlePrefix = item.penanda ? `<span class="badge-catatan">${escapeHtml(item.penanda)}:</span> ` : '';
-
-      // Path lokal selalu bisa dibuka: backend ada di setiap cara menjalankan
-      // aplikasi, jadi tombol Buka dan Copy selalu keduanya tersedia.
-      const localActions = `<button type="button" class="btn btn-secondary btn-sm btn-buka-local" data-url="${escapeHtml(primaryUrl)}">${getSvgIcon('buka', 11)} Buka</button><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="true" title="Salin path">${getSvgIcon('copy', 11)} Copy</button>`;
-
-      const actionsHtml = local
-        ? `${localActions}<button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}" title="Ubah item">${getSvgIcon('ubah', 11)} Ubah</button>`
-        : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm btn-buka">${getSvgIcon('buka', 11)} Buka</a><button type="button" class="btn btn-secondary btn-sm btn-copy" data-url="${escapeHtml(primaryUrl)}" data-local="false" title="Salin link">${getSvgIcon('copy', 11)} Copy</button><button type="button" class="btn btn-secondary btn-sm btn-ubah" data-id="${escapeHtml(item.id)}" title="Ubah item">${getSvgIcon('ubah', 11)} Ubah</button>`;
-
-      const isFocused = state.focusedItemId === item.id;
-
-      return `
-        <div class="result-item card-bookmark accent-${accent} ${isFocused ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}">
-          <div class="result-header card-header">
-            <div class="card-title-group">
-              <span class="card-accent-icon">${iconSvg}</span>
-              <div class="result-title">${titlePrefix}${escapeHtml(item.title || '')}</div>
-            </div>
-            <span class="card-category-badge">${escapeHtml(categoryBadge)}</span>
-          </div>
-          <div class="card-note-box">
-            <div class="result-catatan">${formatCatatanWithCode(item.catatan || '')}</div>
-          </div>
-          <div class="result-tags">${tagsHtml}</div>
-          <div class="card-footer result-actions-row">
-            <div class="result-actions">${actionsHtml}</div>
-          </div>
-        </div>
-      `;
-    };
 
     const renderBarisTabel = (item) => {
       const { url: primaryUrl, isLocal: local } = getPrimaryLinkInfo(item);
@@ -1337,31 +1259,22 @@
       `;
     };
 
-    const renderSatu = modeTabel ? renderBarisTabel : renderKartu;
+    const renderSatu = renderBarisTabel;
 
-    if (modeTabel) {
-      const html = `
-        <table class="tabel-hasil">
-          <thead>
-            <tr>
-              <th scope="col" class="sel-judul">JUDUL &amp; KATEGORI</th>
-              <th scope="col" class="sel-alamat">TAUTAN</th>
-              <th scope="col" class="sel-catatan">CATATAN</th>
-              <th scope="col" class="sel-tag">TAGAR</th>
-              <th scope="col" class="sel-aksi">AKSI</th>
-            </tr>
-          </thead>
-          <tbody>${displayItems.map(renderSatu).join('')}</tbody>
-        </table>
-      `;
-      resultListEl.innerHTML = html;
-      renderTerkaitZone(items, panelInfo);
-      return;
-    }
-
-    const html = displayItems.map(renderKartu).join('');
-
-    resultListEl.innerHTML = html;
+    resultListEl.innerHTML = `
+      <table class="tabel-hasil">
+        <thead>
+          <tr>
+            <th scope="col" class="sel-judul">JUDUL &amp; KATEGORI</th>
+            <th scope="col" class="sel-alamat">TAUTAN</th>
+            <th scope="col" class="sel-catatan">CATATAN</th>
+            <th scope="col" class="sel-tag">TAGAR</th>
+            <th scope="col" class="sel-aksi">AKSI</th>
+          </tr>
+        </thead>
+        <tbody>${displayItems.map(renderSatu).join('')}</tbody>
+      </table>
+    `;
     renderTerkaitZone(items, panelInfo);
   }
 
@@ -1397,10 +1310,8 @@
 
     const existingInput = document.getElementById('search-input');
     if (!existingInput) {
-      const modeTabel = state.viewMode === 'table';
-      const kelasHasil = modeTabel ? 'result-list tabel-mode' : 'result-list bookmark-grid';
       container.innerHTML = `
-        <div id="indeks-split" class="indeks-split${modeTabel ? ' indeks-split-aktif' : ''}">
+        <div id="indeks-split" class="indeks-split indeks-split-aktif">
           <div class="indeks-kolom-kiri">
             <div class="search-bar-row">
               <div class="search-bar-wrap">
@@ -1412,10 +1323,10 @@
             <div id="zone-harian" class="zone-harian"></div>
             <div id="zone-kartu" class="zone-kartu"></div>
             <div id="search-rekap" class="search-rekap" style="display: none;"></div>
-            <div id="result-list" class="${kelasHasil}"></div>
-            <div id="zone-terkait" class="zone-terkait" style="display: none;"></div>
+            <div id="result-list" class="result-list tabel-mode"></div>
+
           </div>
-          <aside id="panel-inspeksi" class="panel-inspeksi" ${modeTabel ? '' : 'style="display: none;"'}></aside>
+          <aside id="panel-inspeksi" class="panel-inspeksi"></aside>
         </div>
       `;
 
@@ -1453,14 +1364,6 @@
       const zoneKartuEl = document.getElementById('zone-kartu');
       if (zoneKartuEl) {
         zoneKartuEl.addEventListener('click', (e) => {
-          const toggleViewBtn = e.target.closest && (e.target.closest('#btn-toggle-view') || e.target.closest('.btn-view-toggle'));
-          if (toggleViewBtn) {
-            state.viewMode = (state.viewMode === 'grid' ? 'table' : 'grid');
-            renderKartuZone();
-            const input = document.getElementById('search-input');
-            updateIndeksResults(input ? input.value : '');
-            return;
-          }
 
           const cardBtn = e.target.closest ? e.target.closest('.btn-card-tag') : null;
           if (cardBtn) {
@@ -1517,8 +1420,7 @@
             return;
           }
 
-          // Baris tabel memakai kelas sendiri, jadi keduanya dicari terpisah.
-          const itemRow = e.target.closest('.result-item') || e.target.closest('.baris-tabel');
+          const itemRow = e.target.closest('.baris-tabel');
           if (itemRow) {
             const id = itemRow.getAttribute('data-id');
             state.focusedItemId = id;
@@ -1528,20 +1430,6 @@
         });
       }
 
-      const zoneTerkaitEl = document.getElementById('zone-terkait');
-      if (zoneTerkaitEl) {
-        zoneTerkaitEl.addEventListener('click', (e) => {
-          const terkaitLink = e.target.closest('.terkait-item');
-          if (terkaitLink) {
-            const isLocal = terkaitLink.getAttribute('data-local') === 'true';
-            if (isLocal) {
-              e.preventDefault();
-              const url = terkaitLink.getAttribute('data-url');
-              copyToClipboard(url, true);
-            }
-          }
-        });
-      }
 
       // Panel hanya baca, tapi tombol salin dan tombol buka path tetap hidup
       // di sana supaya konteks tidak perlu dibawa keluar dari panel.
@@ -2762,7 +2650,7 @@ async function confirmDestructive(config) {
           // bukan "klik di luar". Tanpa ini, menekan tombol salin di panel
           // akan menghapus item yang sedang terpilih lalu mengosongkan
           // panel yang baru saja dipakai.
-          if (!e.target.closest || (!e.target.closest('.result-item') && !e.target.closest('.baris-tabel') && !e.target.closest('#zone-terkait') && !e.target.closest('#zone-kartu') && !e.target.closest('#panel-inspeksi'))) {
+          if (!e.target.closest || (!e.target.closest('.baris-tabel') && !e.target.closest('#zone-kartu') && !e.target.closest('#panel-inspeksi'))) {
             state.focusedItemId = null;
             const searchInput = document.getElementById('search-input');
             updateIndeksResults(searchInput ? searchInput.value : '');

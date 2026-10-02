@@ -46,8 +46,8 @@ function createTestEnvironment(initialData = null, options = {}) {
         if (sel === '.btn-copy' && className.includes('btn-copy')) return el;
         if (sel === '.btn-buka' && className.includes('btn-buka')) return el;
         if (sel === '.btn-card-tag' && className.includes('btn-card-tag')) return el;
-        if (sel === '.result-item' && className.includes('result-item')) return el;
-        if (sel === '#zone-terkait' && (id === 'zone-terkait' || className.includes('zone-terkait'))) return el;
+        if (sel === '.baris-tabel' && className.includes('baris-tabel')) return el;
+        if (sel === '#panel-inspeksi' && (id === 'panel-inspeksi' || className.includes('panel-inspeksi'))) return el;
         return null;
       },
       classList: {
@@ -265,6 +265,18 @@ function createTestEnvironment(initialData = null, options = {}) {
   };
 }
 
+// Panel selalu terlihat di layar, jadi "tersembunyi" tidak lagi berarti
+// display:none. Yang berubah adalah isinya: panel menampilkan keadaan
+// kosong ketika tidak ada item terpilih, dan berisi item terkait ketika ada.
+// Assertion lama yang memeriksa display:none harus memeriksa isi.
+function panelKosong(panel) {
+  const isi = String(panel.innerHTML || '').trim();
+  return isi === '' || /panel-kosong/.test(isi);
+}
+
+function panelBerisi(panel) {
+  return !panelKosong(panel);
+}
 test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, Sheet Admin TA)', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
@@ -373,7 +385,7 @@ test('Tiket 05 - Filter bertumpuk: ketik "ta" lalu klik kartu Magang menyaring k
   assert.doesNotMatch(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian tidak memiliki tag magang');
 });
 
-test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan Terkait tanpa dirinya sendiri', async () => {
+test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan item terkait tanpa dirinya sendiri', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
   // detectStorageMode lalu loadData async sejak tiket 11
@@ -381,17 +393,17 @@ test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan T
   await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
-  const zoneTerkait = env.getOrCreateElement('zone-terkait');
+  const panel = env.getOrCreateElement('panel-inspeksi');
 
   // Sebelum ada baris difokuskan, zona Terkait tersembunyi
-  assert.equal(zoneTerkait.style.display, 'none', 'Zona terkait tersembunyi saat belum ada fokus');
+  assert.ok(panelKosong(panel), 'Panel harus menampilkan keadaan kosong saat belum ada fokus');
 
   // Simulasikan klik pada badan baris Sheet Admin TA (id: sheet-ta-admin)
   resultList.trigger('click', {
     target: {
       closest: (sel) => {
         if (sel === '.btn-copy' || sel === '.btn-buka') return null; // bukan tombol
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return {
             getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null
           };
@@ -405,17 +417,17 @@ test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan T
   assert.match(resultList.innerHTML, /focused/, 'Baris terfokus harus memiliki kelas .focused');
 
   // Zona Terkait tampil
-  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait harus tampil');
-  assert.match(zoneTerkait.innerHTML, /TERKAIT/i, 'Label Terkait harus ada');
-  assert.match(zoneTerkait.innerHTML, /Biasanya bareng ini/i, 'Subjudul Biasanya bareng ini harus ada');
+  assert.ok(panelBerisi(panel), 'Panel harus menampilkan item terkait');
+  assert.match(panel.innerHTML, /TERKAIT/i, 'Label terkait harus ada');
+  assert.match(panel.innerHTML, /Biasanya bareng ini/i, 'Subjudul Biasanya bareng ini harus ada');
 
   // Menampilkan item dengan irisan tag terbanyak (Repository UNIGA, Sheet Job Training, SLiMS Bulian)
-  assert.match(zoneTerkait.innerHTML, /Repository UNIGA/, 'Repository UNIGA memiliki irisan tag ta & wisuda');
-  assert.match(zoneTerkait.innerHTML, /Sheet Job Training/, 'Sheet Job Training memiliki irisan tag ta');
+  assert.match(panel.innerHTML, /Repository UNIGA/, 'Repository UNIGA memiliki irisan tag ta & wisuda');
+  assert.match(panel.innerHTML, /Sheet Job Training/, 'Sheet Job Training memiliki irisan tag ta');
 
   // Sheet Admin TA TIDAK boleh muncul di dalam daftar item terkait dirinya sendiri
   assert.doesNotMatch(
-    zoneTerkait.innerHTML,
+    panel.innerHTML,
     /class="[^"]*terkait-item[^"]*"[^>]*>Sheet Admin TA/i,
     'Sheet Admin TA tidak boleh muncul di daftar terkait dirinya'
   );
@@ -429,7 +441,7 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', asyn
   await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
-  const zoneTerkait = env.getOrCreateElement('zone-terkait');
+  const panel = env.getOrCreateElement('panel-inspeksi');
 
   // Simulasikan klik tombol Copy
   resultList.trigger('click', {
@@ -444,7 +456,7 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', asyn
             }
           };
         }
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return {
             getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null
           };
@@ -455,7 +467,7 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', asyn
   });
 
   // Zona terkait tetap tersembunyi karena yang diklik adalah tombol Copy
-  assert.equal(zoneTerkait.style.display, 'none', 'Klik tombol Copy tidak boleh memicu zona Terkait');
+  assert.ok(panelKosong(panel), 'Klik tombol Copy tidak boleh mengisi panel');
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused setelah klik Copy');
 
   // Simulasikan klik tombol Ubah
@@ -463,7 +475,7 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', asyn
     target: {
       closest: (sel) => {
         if (sel === '.btn-ubah') return { className: 'btn-ubah' };
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return {
             getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null
           };
@@ -473,11 +485,11 @@ test('Tiket 05 - Klik tombol aksi Buka/Copy/Ubah tidak memicu fokus baris', asyn
     }
   });
 
-  assert.equal(zoneTerkait.style.display, 'none', 'Klik tombol Ubah tidak boleh memicu zona Terkait');
+  assert.ok(panelKosong(panel), 'Klik tombol Ubah tidak boleh mengisi panel');
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Baris tidak boleh berstatus .focused setelah klik Ubah');
 });
 
-test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona Terkait', async () => {
+test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan panel terkait', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
   // detectStorageMode lalu loadData async sejak tiket 11
@@ -485,14 +497,14 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
   await new Promise(resolve => setImmediate(resolve));
 
   const resultList = env.getOrCreateElement('result-list');
-  const zoneTerkait = env.getOrCreateElement('zone-terkait');
+  const panel = env.getOrCreateElement('panel-inspeksi');
 
   // 1. Fokuskan baris sheet-ta-admin
   resultList.trigger('click', {
     target: {
       closest: (sel) => {
         if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
         }
         return null;
@@ -500,25 +512,25 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
     }
   });
 
-  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait aktif setelah baris diklik');
+  assert.ok(panelBerisi(panel), 'Panel terisi setelah baris diklik');
 
   // Re-click pada baris yang sama tidak melepas fokus (fokus tetap aktif)
   resultList.trigger('click', {
     target: {
       closest: (sel) => {
         if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
         }
         return null;
       }
     }
   });
-  assert.notEqual(zoneTerkait.style.display, 'none', 'Re-click pada baris yang sama harus tetap fokus');
+  assert.ok(panelBerisi(panel), 'Re-click pada baris yang sama tetap mengisi panel');
 
   // 2. Tekan Esc: melepas fokus
   env.triggerDoc('keydown', { key: 'Escape' });
-  assert.equal(zoneTerkait.style.display, 'none', 'Esc harus menyembunyikan zona terkait');
+  assert.ok(panelKosong(panel), 'Esc harus mengembalikan panel ke keadaan kosong');
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh Esc');
 
   // 3. Fokuskan lagi lalu uji klik luar (outside click)
@@ -526,22 +538,22 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan Zona 
     target: {
       closest: (sel) => {
         if (sel === '.btn-copy' || sel === '.btn-buka' || sel === '.btn-ubah') return null;
-        if (sel === '.result-item') {
+        if (sel === '.baris-tabel') {
           return { getAttribute: (attr) => attr === 'data-id' ? 'sheet-ta-admin' : null };
         }
         return null;
       }
     }
   });
-  assert.notEqual(zoneTerkait.style.display, 'none', 'Zona terkait aktif kembali');
+  assert.ok(panelBerisi(panel), 'Panel terisi kembali setelah klik lagi');
 
-  // Trigger klik luar (target bukan .result-item dan bukan #zone-terkait)
+  // Trigger klik luar (target bukan .baris-tabel dan bukan #panel-inspeksi)
   env.triggerDoc('click', {
     target: {
       closest: () => null
     }
   });
-  assert.equal(zoneTerkait.style.display, 'none', 'Klik luar harus menyembunyikan zona terkait');
+  assert.ok(panelKosong(panel), 'Klik luar harus mengembalikan panel ke keadaan kosong');
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh klik luar');
 });
 
@@ -586,8 +598,8 @@ test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa 
     }
   });
 
-  // Hitung jumlah result-item di innerHTML
-  const countMatches = (resultList.innerHTML.match(/class="result-item/g) || []).length;
+  // Hitung jumlah baris tabel di innerHTML
+  const countMatches = (resultList.innerHTML.match(/class="baris-tabel/g) || []).length;
   assert.equal(countMatches, 15, 'Filter kartu tag harus menampilkan seluruh 15 item tanpa terpotong 10 item');
 });
 
@@ -635,7 +647,10 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   const selectSort = env.getOrCreateElement('select-sort-order');
 
   // Ekstrak judul awal (recent default)
-  const titlesInitial = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  const judulDari = (html) => [...html.matchAll(/class="sel-nama">([^<]*)/g)].map(m => m[1]);
+  // Badge kategori ada di span terpisah, jadi judul harus dinormalkan dari spasi ganda.
+  const judulBersih = (h) => judulDari(h).map(s => s.split('//')[0].replace(/\s+/g, ' ').trim());
+  const titlesInitial = judulBersih(resultList.innerHTML);
   assert.deepEqual(titlesInitial, ['SLiMS Bulian', 'Repository UNIGA', 'Sheet Job Training', 'Sheet Admin TA'], 'Urutan awal sesuai recent');
 
   // Trigger perubahan urutan ke A - Z
@@ -643,7 +658,7 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   assert.equal(appState.sortOrder, 'az', 'State sortOrder harus menjadi az');
 
   // Ekstrak judul kartu dari hasil render A - Z
-  const titlesAz = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  const titlesAz = judulBersih(resultList.innerHTML);
   assert.ok(titlesAz.length > 1, 'Harus ada judul yang dirender');
   const sortedTitles = titlesAz.slice().sort((a, b) => a.localeCompare(b));
   assert.deepEqual(titlesAz, sortedTitles, 'Daftar item harus berurutan A - Z secara alfabetis');
@@ -654,7 +669,7 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   assert.equal(appState.sortOrder, 'recent', 'State sortOrder harus kembali ke recent');
 
   // Pastikan urutan DOM benar-benar kembali ke urutan recent awal
-  const titlesRestored = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  const titlesRestored = judulBersih(resultList.innerHTML);
   assert.deepEqual(titlesRestored, titlesInitial, 'Daftar item harus kembali ke urutan recent semula di DOM');
 });
 
@@ -688,8 +703,11 @@ test('Tiket 05 - Pengurutan A - Z mempertahankan lapis pencarian (Lapis 1 > Lapi
   // i3 dan i4 tidak berbagi tag lapis 1, hanya cocok pada catatan -> Lapis 3
   searchInput.trigger('input', { target: { value: 'magang' } });
 
-  const titles = [...resultList.innerHTML.matchAll(/class="result-title">([\s\S]*?)<\/div>/g)]
-    .map(m => m[1].replace(/<[^>]+>/g, '').trim());
+  // Dua badge bisa berada di dalam satu sel nama: penanda pencarian
+  // ("dari catatan:") dan kategori ("//_docs_"). Keduanya bagian dari
+  // teks yang boleh dibaca pengguna, jadi keduanya ikut diambil.
+  const titles = [...resultList.innerHTML.matchAll(/class="sel-nama">([\s\S]*?)<\/span>\s*<span class="sel-kategori"/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
 
   // Di lapis 1 (Alpha Item dan Zeta Item): diurutkan A-Z -> Alpha Item duluan, baru Zeta Item
   assert.equal(titles[0], 'Alpha Item (Tag Cocok)');
@@ -746,8 +764,11 @@ test('Tiket 05 - Simpan data baru mempertahankan state.sortOrder az dan opsi sel
   assert.match(zoneKartu.innerHTML, /<option value="az" selected>/, 'Dropdown harus mempertahankan pilihan A - Z');
 
   // Item baru "Aplikasi Arsip" harus menjadi urutan pertama di DOM karena A-Z
-  const titles = [...resultList.innerHTML.matchAll(/class="result-title">([\s\S]*?)<\/div>/g)]
-    .map(m => m[1].replace(/<[^>]+>/g, '').trim());
+  // Dua badge bisa berada di dalam satu sel nama: penanda pencarian
+  // ("dari catatan:") dan kategori ("//_docs_"). Keduanya bagian dari
+  // teks yang boleh dibaca pengguna, jadi keduanya ikut diambil.
+  const titles = [...resultList.innerHTML.matchAll(/class="sel-nama">([\s\S]*?)<\/span>\s*<span class="sel-kategori"/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
   assert.equal(titles[0], 'Aplikasi Arsip', 'Aplikasi Arsip harus di urutan pertama alfabetis');
 });
 
@@ -772,7 +793,7 @@ test('Tiket 05 - Tie-breaker: jika judul identik pada sortOrder az, urutkan upda
 
   selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
 
-  const ids = [...resultList.innerHTML.matchAll(/class="[^"]*result-item[^"]*"[^>]*data-id="([^"]+)"/g)].map(m => m[1]);
+  const ids = [...resultList.innerHTML.matchAll(/class="[^"]*baris-tabel[^"]*"[^>]*data-id="([^"]+)"/g)].map(m => m[1]);
   assert.deepEqual(ids, ['item-baru', 'item-lama'], 'Item dengan updated_at lebih baru harus mendahului item lama saat judul identik');
 });
 

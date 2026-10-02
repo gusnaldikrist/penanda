@@ -187,31 +187,13 @@ function buatLingkungan(dataAwal) {
     zonaKartu: () => ambil('zone-kartu'),
     split: () => ambil('indeks-split'),
 
-    // Beralih mode lewat tombol sungguhan, bukan lewat kotak pencarian:
-    // mengetik di kotak pencarian sengaja menghapus fokus, jadi tidak bisa
-    // dipakai untuk menguji panel yang bergantung pada fokus.
-    async gantiMode() {
-      const zone = ambil('zone-kartu');
-      // Target harus bereaksi seperti tombol sungguhan di dalam zone-kartu:
-      // handler global memeriksa closest ke zone itu.
-      const tombol = {
-        closest: (sel) => {
-          const daftar = String(sel).split(',').map((s) => s.trim());
-          if (daftar.includes('#btn-toggle-view') || daftar.includes('.btn-view-toggle')) return zone;
-          if (daftar.includes('#zone-kartu')) return zone;
-          return null;
-        }
-      };
-      zone.dispatch('click', { target: tombol });
-      return this.state.viewMode;
-    },
+
 
     async pilihItem(id) {
-      // Baris harus memakai kelas yang sesuai mode: kartu memakai
-      // result-item, tabel memakai baris-tabel. Kalau kelasnya tidak cocok,
+      // Baris tabel memakai kelas baris-tabel. Kalau kelasnya tidak cocok,
       // handler global menganggap klik ini misses lalu menghapus fokus,
       // sehingga test tidak lagi menguji hal yang dimaksudnya.
-      const kelasBaris = this.state.viewMode === 'table' ? 'baris-tabel' : 'result-item';
+      const kelasBaris = 'baris-tabel';
       const baris = {
         id,
         className: kelasBaris + ' accent-amber',
@@ -243,31 +225,11 @@ async function tick(n = 12) {
 
 // ---------------------------------------------------------------------------
 
-test('Tiket 01 - Switcher punya dua mode: kartu dan tabel', async () => {
-  const env = buatLingkungan(contoh());
-  await tick();
 
-  const markup = env.zonaKartu().innerHTML;
-  assert.match(markup, /id="btn-toggle-view"/, 'Switcher tampilan harus ada');
-  assert.match(markup, /Kartu|Tabel/, 'Tombol switcher harus menyebut mode yang dituju');
-});
-
-test('Tiket 01 - Tombol switcher menukar mode kartu dan tabel', async () => {
-  const env = buatLingkungan(contoh());
-  await tick();
-  assert.equal(env.state.viewMode, 'grid', 'Mode awal harus kartu');
-
-  await env.gantiMode();
-  assert.equal(env.state.viewMode, 'table', 'Satu klik harus pindah ke tabel');
-
-  await env.gantiMode();
-  assert.equal(env.state.viewMode, 'grid', 'Klik kedua harus kembali ke kartu');
-});
 
 test('Tiket 01 - Mode tabel memakai elemen tabel dengan header kolom', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.gantiMode();
 
   const hasil = env.hasil();
   assert.match(hasil.innerHTML, /<table/, 'Area hasil harus memakai elemen tabel');
@@ -279,7 +241,6 @@ test('Tiket 01 - Mode tabel memakai elemen tabel dengan header kolom', async () 
 test('Tiket 01 - Baris tabel memuat isi tiap kolom', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.gantiMode();
 
   const html = env.hasil().innerHTML;
   assert.match(html, /<tbody>/, 'Tabel harus punya badan');
@@ -291,7 +252,6 @@ test('Tiket 01 - Baris tabel memuat isi tiap kolom', async () => {
 test('Tiket 01 - Panel menerima "biasanya bareng ini" di mode tabel', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.gantiMode();
   await env.pilihItem('sheet-ta-admin');
 
   assert.match(env.panel().innerHTML, /biasanya bareng ini/i,
@@ -301,7 +261,6 @@ test('Tiket 01 - Panel menerima "biasanya bareng ini" di mode tabel', async () =
 test('Tiket 01 - Baris terkait tidak lagi tampil di bawah tabel pada mode tabel', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.gantiMode();
   await env.pilihItem('sheet-ta-admin');
 
   assert.notEqual(env.terkait().style.display, 'flex',
@@ -310,22 +269,10 @@ test('Tiket 01 - Baris terkait tidak lagi tampil di bawah tabel pada mode tabel'
     'Isinya harus pindah ke panel');
 });
 
-test('Tiket 01 - Mode kartu tetap memakai grid dan panel tetap kosong', async () => {
-  const env = buatLingkungan(contoh());
-  await tick();
-  await env.pilihItem('sheet-ta-admin');
-
-  assert.match(env.hasil().className, /bookmark-grid/, 'Mode kartu harus tetap memakai grid');
-  assert.doesNotMatch(env.hasil().innerHTML, /<table/, 'Mode kartu tidak boleh memakai tabel');
-  assert.equal(env.panel().innerHTML, '', 'Panel harus kosong pada mode kartu');
-  assert.equal(env.terkait().style.display, 'flex',
-    'Mode kartu harus tetap menampilkan baris terkait seperti sebelumnya');
-});
 
 test('Tiket 01 - Memilih baris mengisi panel, melepas fokus mengosongkannya', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.gantiMode();
 
   // Tiket 03 mengubah arti "panel kosong": panel tidak lagi menjadi string
   // kosong, tapi menampilkan keadaan kosong yang menyebutkan tujuannya.
@@ -340,40 +287,43 @@ test('Tiket 01 - Memilih baris mengisi panel, melepas fokus mengosongkannya', as
     'Setelah fokus dilepas, panel kembali ke keadaan kosong');
 });
 
-test('Tiket 01 - Beralih mode mempertahankan item yang sedang dipilih', async () => {
+test('Tiket 01 - Area hasil tampil sebagai tabel sejak aplikasi dibuka', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  await env.pilihItem('sheet-ta-admin');
-  await env.gantiMode();
 
-  assert.equal(env.state.focusedItemId, 'sheet-ta-admin',
-    'Item yang dipilih harus bertahan setelah beralih mode');
-  assert.match(env.panel().innerHTML, /biasanya bareng ini/i,
-    'Panel harus tetap terisi setelah beralih mode');
+  const hasil = env.hasil().innerHTML;
+  assert.match(hasil, /<table class="tabel-hasil"/, 'Area hasil harus berupa tabel sejak dibuka');
+  assert.doesNotMatch(hasil, /card-bookmark/, 'Tidak boleh ada kartu di mode satu-satunya');
+  assert.match(env.hasil().className, /tabel-mode/, 'Area hasil memakai kelas tabel');
 });
 
-test('Tiket 01 - Beralih mode mempertahankan kata kunci pencarian', async () => {
+test('Tiket 01 - Tidak ada tombol switcher tampilan di markup mana pun', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  env.ketik('pkl');
-  await tick();
-  assert.match(env.hasil().innerHTML, /Job Training/, 'Mode kartu harus menemukan kata kunci');
 
-  await env.gantiMode();
-  assert.match(env.hasil().innerHTML, /Job Training/,
-    'Mode tabel harus mempertahankan hasil pencarian yang sama');
+  // `ambil()` selalu membuat elemen kalau belum ada, jadi ketiadaan
+  // tombol switcher tidak bisa diuji lewat pemanggilan itu. Yang diuji
+  // adalah isi markup yang benar-benar dirender.
+  const markup = env.ambil('zone-kartu').innerHTML;
+  assert.doesNotMatch(markup, /btn-toggle-view/,
+    'Markup zona Kartu tidak boleh memuat tombol switcher');
+  assert.doesNotMatch(markup, /btn-view-toggle/,
+    'Kelas tombol switcher tidak boleh muncul');
+  assert.equal(env.state.viewMode, undefined,
+    'Penanda mode tidak boleh ada di state');
 });
 
-test('Tiket 01 - Wadah split aktif hanya pada mode tabel', async () => {
+test('Tiket 01 - Wadah split dan panel aktif sejak awal', async () => {
   const env = buatLingkungan(contoh());
   await tick();
-  assert.doesNotMatch(env.split().className, /indeks-split-aktif/,
-    'Mode kartu tidak punya split aktif');
 
-  await env.gantiMode();
-  assert.match(env.split().className, /indeks-split-aktif/,
-    'Mode tabel harus mengaktifkan split');
+  const split = env.ambil('indeks-split');
+  assert.match(split.className, /indeks-split-aktif/, 'Wadah split aktif sejak dibuka');
+  assert.notEqual(env.panel().style.display, 'none', 'Panel terlihat sejak dibuka');
 });
+
+
+
 // ---------------------------------------------------------------------------
 // Tiket 02: isi panel dan urutan pemangkasan kolom tabel
 // ---------------------------------------------------------------------------
@@ -402,7 +352,6 @@ function buatData(items, pinnedTags) {
 async function panelUntuk(items, pinnedTags) {
   const env = buatLingkungan(buatData(items, pinnedTags));
   await tick();
-  await env.gantiMode();
   await env.pilihItem(items[0].id);
   return { env, html: env.panel().innerHTML };
 }
@@ -482,7 +431,6 @@ test('Tiket 02 - Klik tombol salin di panel menyalin URL tautan itu', async () =
     })
   ]));
   await tick();
-  await env.gantiMode();
   await env.pilihItem('item-uji');
   assert.equal(env.tersalin.length, 0, 'Belum ada yang disalin');
 
@@ -592,7 +540,6 @@ test('Tiket 02 - Klik tombol di panel tidak menghapus item terpilih', async () =
     buatItem({ links: [{ label: 'Katalog', url: 'https://contoh.test/katalog' }] })
   ]));
   await tick();
-  await env.gantiMode();
   await env.pilihItem('item-uji');
   assert.equal(env.state.focusedItemId, 'item-uji', 'Item harus terpilih sebelum diklik');
   const isiSebelum = env.panel().innerHTML;
@@ -623,7 +570,6 @@ const KALIMAT_KOSONG = 'Pilih salah satu baris untuk melihat detailnya';
 async function envTabel(items, pinnedTags) {
   const env = buatLingkungan(buatData(items, pinnedTags));
   await tick();
-  await env.gantiMode();
   return env;
 }
 
@@ -797,20 +743,4 @@ test('Tiket 03 - Keadaan kosong generik hanya muncul karena satu sebab', async (
   await tick();
   assert.ok(env.panel().innerHTML.includes(KALIMAT_KOSONG),
     'Setelah pencarian dilepas, keadaan kosong kembali ke sebab aslinya');
-});
-
-test('Tiket 03 - Panel memakai keadaan kosong hanya di mode tabel', async () => {
-  const env = await envTabel(contohEmpat());
-  await env.pilihItem('slims-bulian');
-
-  const htmlTabel = env.panel().innerHTML;
-  assert.ok(htmlTabel.includes('SLiMS Bulian'), 'Mode tabel mengisi panel');
-
-  await env.gantiMode();
-  assert.equal(env.panel().innerHTML, '',
-    'Mode kartu tidak punya panel, jadi keadaan kosong panel tidak muncul di sana');
-  assert.doesNotMatch(env.panel().innerHTML, new RegExp(KALIMAT_KOSONG),
-    'Kalimat panel tidak boleh bocor ke mode kartu');
-  assert.notEqual(env.terkait().style.display, 'flex',
-    'Mode kartu tetap memakai baris item terkait di bawah daftar, bukan panel');
 });

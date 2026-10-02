@@ -194,7 +194,6 @@ function dataDengan(items) {
 async function panelUntuk(item) {
   const env = buatLingkungan(dataDengan([item]));
   await tick();
-  env.state.viewMode = 'table';
   env.state.focusedItemId = item.id;
   env.ketik('');
   await tick();
@@ -365,7 +364,6 @@ test('Tiket 04 - Data lama tanpa sop tetap terbaca tanpa migrasi', async () => {
   assert.equal(env.state.storageBlocked, false, 'data lama harus terbaca, bukan ditolak');
   assert.equal(env.state.data.items.length, lama.items.length, 'seluruh item lama harus tetap ada');
 
-  env.state.viewMode = 'table';
   env.state.focusedItemId = lama.items[0].id;
   env.ketik('');
   await tick();
@@ -437,7 +435,6 @@ test('Tiket 04 - Badge pada hasil menyebut asal penemuan', async () => {
   ]));
   await tick();
 
-  env.state.viewMode = 'table';
   env.ketik('kepala');
   await tick();
 

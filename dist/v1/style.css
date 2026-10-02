@@ -701,37 +701,6 @@ body {
   box-shadow: 0 0 0 1px var(--action);
 }
 
-.btn-view-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  /* Lebar mengikuti isi supaya label mode muat; min-width menjaga bentuk
-     persegi 28px saat isinya hanya ikon. */
-  width: auto;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  white-space: nowrap;
-  background-color: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-view-toggle:hover {
-  background-color: var(--band);
-  color: var(--ink);
-}
-
-.btn-view-toggle.active {
-  background-color: var(--action-soft);
-  color: var(--action);
-  border-color: var(--action);
-}
-
 /* ==========================================================================
    Baris Rekap Hasil Pencarian
    ========================================================================== */
@@ -779,20 +748,6 @@ body {
 
 .result-list::-webkit-scrollbar-track {
   background-color: transparent;
-}
-
-/* Mode Grid 3 Kolom */
-.bookmark-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
-}
-
-/* Mode List Berbaris */
-.bookmark-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1202,43 +1157,6 @@ body {
   }
 }
 
-.btn-view-label {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-meta-sm);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* Kartu Penanda (Kompatibel dengan .result-item) */
-.result-item,
-.card-bookmark {
-  background-color: var(--card);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--card-accent, var(--line-strong)); /* impeccable-disable-line side-tab -- intentional semantic domain accent per ADR 2026-10-02 */
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  transition: border-color var(--transition-fast), background-color var(--transition-fast);
-}
-
-.result-item:hover,
-.card-bookmark:hover {
-  border-color: var(--line-strong);
-  border-left-color: var(--card-accent, var(--action));
-  background-color: var(--card);
-}
-
-.result-item.focused,
-.card-bookmark.focused {
-  background-color: var(--action-soft);
-  border-color: var(--action);
-  border-left-width: 4px; /* impeccable-disable-line side-tab -- intentional semantic domain accent per ADR 2026-10-02 */
-}
-
 /* Aksen Warna Semantik Kategori Kartu */
 .accent-amber {
   --card-accent: var(--accent-amber);
@@ -1262,36 +1180,6 @@ body {
   --card-accent: var(--accent-neutral);
 }
 
-/* Header Kartu */
-.result-header,
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.card-title-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.card-accent-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  background-color: var(--band);
-  color: var(--card-accent, var(--ink));
-  flex-shrink: 0;
-  font-size: 12px;
-}
-
 .result-title {
   font-size: var(--font-title);
   font-weight: 600;
@@ -1299,27 +1187,6 @@ body {
   line-height: 1.35;
   letter-spacing: -0.01em;
   word-break: break-word;
-}
-
-.result-item.focused .result-title,
-.card-bookmark.focused .result-title {
-  color: var(--action);
-}
-
-.card-category-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 20px;
-  padding: 0 6px;
-  font-family: var(--font-family-mono);
-  font-size: var(--font-meta-sm);
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  background-color: var(--band);
-  color: var(--muted);
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .badge-catatan {
@@ -1335,14 +1202,6 @@ body {
   content: "▸ ";
 }
 
-/* Callout Catatan Operasional */
-.card-note-box {
-  background-color: var(--band);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  margin: 2px 0;
-}
-
 .result-catatan {
   font-size: var(--font-body);
   color: var(--body);
@@ -1353,16 +1212,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: break-word;
-}
-
-.result-catatan code,
-.card-note-box code {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-meta);
-  background-color: var(--band-2);
-  color: var(--ink);
-  padding: 1px 4px;
-  border-radius: 3px;
 }
 
 /* Baris Tag */
@@ -1409,17 +1258,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.card-footer,
-.result-actions-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--band-2);
 }
 
 .result-actions {
@@ -1480,23 +1318,6 @@ body {
 .no-results::before {
   content: "ℹ ";
   color: var(--faint);
-}
-
-/* ==========================================================================
-   Zona 5: Rekomendasi Terkait (Contextual Tray)
-   ========================================================================== */
-
-.zone-terkait {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-  margin-top: 0;
-  padding: 10px 16px;
-  background-color: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  margin-bottom: 10px;
 }
 
 .terkait-header {
