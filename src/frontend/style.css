@@ -16,17 +16,17 @@
   --line-strong: #a1a1aa;
   --ink: #09090b;
   --body: #3f3f46;
-  --muted: #71717a;
-  --faint: #a1a1aa;
+  --muted: #52525b;
+  --faint: #71717a;
   --on-ink: #ffffff;
   --action: #18181b;
   --action-hover: #27272a;
   --action-soft: #f4f4f5;
-  --ok: #10b981;
+  --ok: #047857;
   --ok-bg: #ecfdf5;
-  --warn: #f59e0b;
+  --warn: #b45309;
   --warn-bg: #fffbeb;
-  --bad: #ef4444;
+  --bad: #b91c1c;
   --bad-bg: #fef2f2;
 
   /* Aksen Semantik Kategori Kartu (Garis Tepi Kiri & Badge) */
@@ -59,7 +59,7 @@
   --accent-neutral-text: #52525b;
 
   /* Tipografi: skala dikunci test */
-  --font-family-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-family-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
   --font-family: var(--font-family-sans);
   --font-title: 15px;
@@ -217,7 +217,7 @@ body {
   font-weight: 600;
   border-radius: var(--radius-sm);
   background-color: var(--band-2);
-  color: var(--muted);
+  color: var(--body);
 }
 
 .nav-tab-btn.active .nav-tab-count {
@@ -676,6 +676,31 @@ body {
   flex-shrink: 0;
 }
 
+.select-sort-order {
+  height: 28px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: var(--font-meta);
+  color: var(--body);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.select-sort-order:hover {
+  background-color: var(--band);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.select-sort-order:focus-visible {
+  border-color: var(--action);
+  box-shadow: 0 0 0 1px var(--action);
+}
+
 .btn-view-toggle {
   display: inline-flex;
   align-items: center;
@@ -770,7 +795,7 @@ body {
 .card-bookmark {
   background-color: var(--card);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--card-accent, var(--line-strong));
+  border-left: 3px solid var(--card-accent, var(--line-strong)); /* impeccable-disable-line side-tab -- intentional semantic domain accent per ADR 2026-10-02 */
   border-radius: var(--radius-md);
   padding: 12px 14px;
   cursor: pointer;
@@ -792,7 +817,7 @@ body {
 .card-bookmark.focused {
   background-color: var(--action-soft);
   border-color: var(--action);
-  border-left-width: 4px;
+  border-left-width: 4px; /* impeccable-disable-line side-tab -- intentional semantic domain accent per ADR 2026-10-02 */
 }
 
 /* Aksen Warna Semantik Kategori Kartu */

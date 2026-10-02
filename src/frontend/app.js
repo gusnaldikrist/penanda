@@ -53,6 +53,7 @@
     activeTag: null,
     focusedItemId: null,
     viewMode: 'grid',
+    sortOrder: 'recent',
     todoFilterStatus: 'semua',
     todoSearchQuery: '',
     logSearchQuery: '',
@@ -852,11 +853,27 @@
         }).join('')}
       </div>
       <div class="view-controls">
+        <select id="select-sort-order" class="select-sort-order" aria-label="Urutan kartu">
+          <option value="recent"${state.sortOrder === 'recent' ? ' selected' : ''}>Urutan: Terakhir Digunakan</option>
+          <option value="az"${state.sortOrder === 'az' ? ' selected' : ''}>A - Z</option>
+        </select>
         <button type="button" id="btn-toggle-view" class="btn-view-toggle" title="Ganti tampilan grid / list" aria-label="Ganti tampilan">
           ${isListView ? getSvgIcon('grid') : getSvgIcon('list')}
         </button>
       </div>
     `;
+
+    const selectSort = zoneKartuEl.querySelector ? zoneKartuEl.querySelector('#select-sort-order') : document.getElementById('select-sort-order');
+    if (selectSort && selectSort.addEventListener) {
+      selectSort.addEventListener('change', (e) => {
+        if (e && typeof e.stopPropagation === 'function') {
+          e.stopPropagation();
+        }
+        state.sortOrder = (e.target && e.target.value === 'az') ? 'az' : 'recent';
+        const input = document.getElementById('search-input');
+        updateIndeksResults(input ? input.value : '');
+      });
+    }
   }
 
   function renderTerkaitZone(items) {
@@ -912,6 +929,20 @@
     // Bila ada filter kartu tag aktif (Tiket 05), saring hasil berdasarkan tag tersebut
     if (state.activeTag) {
       results = results.filter(item => Array.isArray(item.tags) && item.tags.some(tag => String(tag).toLowerCase() === state.activeTag.toLowerCase()));
+    }
+
+    // Urutan kartu: default recent (sesuai searchFn), jika 'az' urutkan judul A - Z
+    if (state.sortOrder === 'az') {
+      results = results.slice().sort((a, b) => {
+        if (a.lapis && b.lapis && a.lapis !== b.lapis) {
+          return a.lapis - b.lapis;
+        }
+        const titleDiff = (a.title || '').localeCompare(b.title || '');
+        if (titleDiff !== 0) return titleDiff;
+        const timeA = a && a.updated_at ? a.updated_at : '';
+        const timeB = b && b.updated_at ? b.updated_at : '';
+        return timeB.localeCompare(timeA);
+      });
     }
 
     // Jika baris yang sedang difokuskan keluar dari hasil saringan, lepas fokusnya
