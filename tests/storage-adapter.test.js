@@ -81,7 +81,7 @@ test('Path lokal: alamat tanpa isi ditolak, bukan offered tombol mati', () => {
   }
 });
 
-test('Tiket 11 - Path lokal: 주소 web tidak tertukar dengan path lokal', () => {
+test('Tiket 11 - Path lokal: alamat web tidak tertukar dengan path lokal', () => {
   const adapter = loadAdapter();
 
   // Alamat web tetap bukan path lokal, jadi tombolnya tidak berubah jadi Copy.
