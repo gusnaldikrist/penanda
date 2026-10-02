@@ -68,6 +68,10 @@
     storageBlocked: false
   };
 
+  // Kalimat keadaan kosong panel. Dipisah dari teks lain supaya tes bisa
+  // memeriksa kalimatnya, bukan sekadar elemennya ada.
+  const KALIMAT_PANEL_KOSONG = 'Pilih salah satu baris untuk melihat detailnya';
+
   const CATEGORY_MAP = [
     { tag: 'ta', category: 'Tugas Akhir // Harian', accent: 'amber', icon: 'file' },
     { tag: 'wisuda', category: 'Repository // Wisuda', accent: 'blue', icon: 'archive' },
@@ -911,7 +915,32 @@
     }
   }
 
-// Panel menampilkan konteks lengkap item terpilih: judul, semua tautan,
+  // Panel punya dua keadaan kosong yang berbeda sebabnya, jadi kalimatnya
+  // juga berbeda. Tanpa item terpilih: belum ada yang dipilih. Item terpilih
+  // yang tidak lagi ada di hasil: pilihannya sudah tidak berlaku.
+  // Menyamakan keduanya membuat satu kalimat menutupi dua kejadian yang
+  // tidak sama, dan pesan yang salah jadi alasan yang salah.
+  function buildPanelKosongHtml(alasan, jumlahHasil, adaKueri) {
+    const hitung = adaKueri
+      ? `${jumlahHasil} hasil pencarian`
+      : `${jumlahHasil} item`;
+
+    if (alasan === 'hilang') {
+      return `
+        <div class="panel-kosong panel-kosong-alasan">
+          <div class="panel-kosong-judul">Item ini tidak lagi ada di hasil pencarian.</div>
+          <div class="panel-kosong-ketujan">${hitung}. Pilih baris lain untuk melihat detailnya.</div>
+        </div>`;
+    }
+
+    return `
+      <div class="panel-kosong">
+        <div class="panel-kosong-judul">${KALIMAT_PANEL_KOSONG}</div>
+        <div class="panel-kosong-ketujan">${hitung}</div>
+      </div>`;
+  }
+
+  // Panel menampilkan konteks lengkap item terpilih: judul, semua tautan,
   // semua tag, dan catatan utuh. Yang tidak ada datanya tidak dibuat
   // ruang kosong, jadi item tanpa catatan tidak punya bagian catatan.
   // Urutan bagian mengikuti spec: judul, tautan, tag, catatan, baru
@@ -969,6 +998,14 @@
         <div class="panel-catatan">${formatCatatanWithCode(item.catatan)}</div>
       </section>` : '';
 
+    // Panel hanya-baca, jadi perubahan tetap lewat modal CRUD yang sama.
+    // Tombol ini jalan pintas, bukan jalur edit kedua: isinya tetap
+    // divalidasi di satu tempat saja.
+    const kakiHtml = item.id ? `
+      <div class="panel-kaki">
+        <button type="button" class="btn btn-secondary btn-sm panel-ubah" data-id="${escapeHtml(item.id)}" title="Ubah item ini">${getSvgIcon('ubah', 11)} Ubah</button>
+      </div>` : '';
+
     return `
       <div class="panel-kepala">
         <span class="sel-ikon">${iconSvg}</span>
@@ -981,10 +1018,16 @@
       ${tagsHtml}
       ${catatanHtml}
       ${relatedHtml || ''}
+      ${kakiHtml}
     `;
   }
 
-  function renderTerkaitZone(items) {
+  // `panelInfo` membawa jumlah hasil dan alasan panel kosong. Alasannya
+  // harus ikut diteruskan: "tidak ada yang dipilih" dan "itemnya sudah
+  // tidak ada di hasil" adalah dua kejadian berbeda, dan kalau disamakan
+  // panel menampilkan kalimat yang salah.
+  function renderTerkaitZone(items, panelInfo) {
+    const info = panelInfo || { jumlahHasil: 0, adaKueri: false };
     const zoneTerkaitEl = document.getElementById('zone-terkait');
     const panelEl = document.getElementById('panel-inspeksi');
     const modeTabel = state.viewMode === 'table';
@@ -999,10 +1042,23 @@
       panelEl.innerHTML = '';
     }
 
-    if (!state.focusedItemId) return;
+    if (!state.focusedItemId) {
+      if (panelEl && modeTabel) {
+        // Fokus sudah dilepas sebelum render, jadi alasan hilangnya dibaca
+        // dari flag. Bergantung pada state.focusedItemId selalu gagal di sini
+        // karena nilainya sudah null justru pada kasus yang perlu dijelaskan.
+        panelEl.innerHTML = buildPanelKosongHtml(info.hilang ? 'hilang' : '', info.jumlahHasil, info.adaKueri);
+      }
+      return;
+    }
 
     const focusedItem = items.find(item => item.id === state.focusedItemId);
-    if (!focusedItem) return;
+    if (!focusedItem) {
+      if (panelEl && modeTabel) {
+        panelEl.innerHTML = buildPanelKosongHtml('hilang', info.jumlahHasil, info.adaKueri);
+      }
+      return;
+    }
 
     const related = computeRelatedItems(focusedItem, items);
     const relatedHtml = related.length > 0 ? buildTerkaitHtml(related) : '';
@@ -1051,8 +1107,12 @@
       });
     }
 
-    // Jika baris yang sedang difokuskan keluar dari hasil saringan, lepas fokusnya
+    // Jika baris yang sedang difokuskan keluar dari hasil saringan, lepas
+    // fokusnya. Alasannya ikut dicatat supaya panel bisa menjelaskan kenapa
+    // isinya kosong, bukan menampilkan kalimat keadaan kosong yang menyesatkan.
+    let panelItemHilang = false;
     if (state.focusedItemId && !results.some(r => r.id === state.focusedItemId)) {
+      panelItemHilang = true;
       state.focusedItemId = null;
     }
 
@@ -1082,11 +1142,17 @@
     resultListEl.className = modeTabel ? 'result-list tabel-mode' : 'result-list bookmark-grid';
     sinkronkanTampilanMode();
 
+    const panelInfo = {
+      jumlahHasil: cleanQuery === '' && !state.activeTag ? results.length : displayItems.length,
+      adaKueri: cleanQuery !== '' || Boolean(state.activeTag),
+      hilang: panelItemHilang
+    };
+
     if (displayItems.length === 0) {
       resultListEl.innerHTML = `
         <div class="no-results">Tidak ada item cocok. Coba kata lain atau tambahkan item baru</div>
       `;
-      renderTerkaitZone(items);
+      renderTerkaitZone(items, panelInfo);
       return;
     }
 
@@ -1202,14 +1268,14 @@
         </table>
       `;
       resultListEl.innerHTML = html;
-      renderTerkaitZone(items);
+      renderTerkaitZone(items, panelInfo);
       return;
     }
 
     const html = displayItems.map(renderKartu).join('');
 
     resultListEl.innerHTML = html;
-    renderTerkaitZone(items);
+    renderTerkaitZone(items, panelInfo);
   }
 
   function renderIndeksView() {
@@ -1274,7 +1340,10 @@
       const searchInput = document.getElementById('search-input');
       if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-          state.focusedItemId = null;
+          // Fokus tidak dibersihkan di sini. Mengetik boleh mengubah hasil
+          // pencarian, tapi selama item terpilih masih cocok, panel tidak
+          // boleh ikut kosong. updateIndeksResults yang melepasnya kalau
+          // itemnya benar-benar tidak ada lagi di hasil.
           updateIndeksResults(e.target.value);
         });
       }
@@ -1405,6 +1474,18 @@
           if (bukaLocalBtn) {
             e.preventDefault();
             openLocalPathViaBackend(bukaLocalBtn.getAttribute('data-url'));
+            return;
+          }
+
+          // Pintasan ke modal CRUD item yang sama, bukan form sendiri.
+          const ubahBtn = e.target.closest('.panel-ubah');
+          if (ubahBtn) {
+            const id = ubahBtn.getAttribute('data-id');
+            const currentItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
+            const targetItem = currentItems.find(candidate => candidate.id === id);
+            if (targetItem) {
+              openItemModal(targetItem);
+            }
           }
         });
       }

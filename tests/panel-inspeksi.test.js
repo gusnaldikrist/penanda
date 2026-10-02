@@ -120,8 +120,10 @@ function buatLingkungan(dataAwal) {
 
   // document tidak punya execCommand, jadi copyToClipboard selalu jatuh ke
   // navigator.clipboard. Dua jejak ini supaya test bisa memeriksa URL mana
-  // yang benar-benar disalin.
+  // yang benar-benar disalin. Elemen yang ditempel ke body ikut dicatat
+  // supaya test bisa memeriksa modal mana yang benar-benar dibuka.
   const tersalin = [];
+  const ditambahkan = [];
 
   const doc = {
     readyState: 'complete',
@@ -132,8 +134,24 @@ function buatLingkungan(dataAwal) {
       if (sel === '.tab-panel') return panel;
       return [];
     },
-    querySelector: () => null,
-    body: { appendChild() {}, removeChild() {} },
+    querySelector: (sel) => {
+      // Modal yang ditempel ke body harus bisa ditemukan, sama seperti di
+      // peramban. Aplikasi yang memeriksa ini akan memakai nilai itu.
+      if (sel === '.modal-overlay') {
+        return ditambahkan.find((c) =>
+          String(c.className).split(' ').filter(Boolean).includes('modal-overlay')) || null;
+      }
+      return null;
+    },
+    // Elemen yang ditempel ke body dicatat supaya test bisa memeriksa modal
+    // mana yang benar-benar dibuka, bukan menebak dari elemen yang ada.
+    body: {
+      appendChild: (c) => { ditambahkan.push(c); return c; },
+      removeChild: (c) => {
+        const i = ditambahkan.indexOf(c);
+        if (i >= 0) ditambahkan.splice(i, 1);
+      }
+    },
     addEventListener: (t, fn) => { (pendengarDoc[t] ||= []).push(fn); }
   };
 
@@ -161,6 +179,7 @@ function buatLingkungan(dataAwal) {
   const api = {
     ambil,
     tersalin,
+    ditambahkan,
     state: sandbox.module.exports.state,
     hasil: () => ambil('result-list'),
     panel: () => ambil('panel-inspeksi'),
@@ -308,13 +327,17 @@ test('Tiket 01 - Memilih baris mengisi panel, melepas fokus mengosongkannya', as
   await tick();
   await env.gantiMode();
 
-  assert.equal(env.panel().innerHTML, '', 'Panel kosong sebelum ada item dipilih');
+  // Tiket 03 mengubah arti "panel kosong": panel tidak lagi menjadi string
+  // kosong, tapi menampilkan keadaan kosong yang menyebutkan tujuannya.
+  assert.match(env.panel().innerHTML, /panel-kosong/,
+    'Sebelum ada item dipilih, panel menampilkan keadaan kosong');
 
   await env.pilihItem('slims-bulian');
   assert.match(env.panel().innerHTML, /biasanya bareng ini/i, 'Panel harus terisi setelah memilih');
 
   await env.pilihItem(null);
-  assert.equal(env.panel().innerHTML, '', 'Panel harus kosong setelah fokus dilepas');
+  assert.match(env.panel().innerHTML, /panel-kosong/,
+    'Setelah fokus dilepas, panel kembali ke keadaan kosong');
 });
 
 test('Tiket 01 - Beralih mode mempertahankan item yang sedang dipilih', async () => {
@@ -589,4 +612,205 @@ test('Tiket 02 - Klik tombol di panel tidak menghapus item terpilih', async () =
     'Klik di panel tidak boleh menghapus item yang sedang terpilih');
   assert.ok(env.panel().innerHTML.includes('panel-tautan-baris'),
     'Panel tidak boleh ikut kosong setelah diklik');
+});
+
+// ---------------------------------------------------------------------------
+// Tiket 03: keadaan kosong, pintasan ubah, dan ketahanan panel
+// ---------------------------------------------------------------------------
+
+const KALIMAT_KOSONG = 'Pilih salah satu baris untuk melihat detailnya';
+
+async function envTabel(items, pinnedTags) {
+  const env = buatLingkungan(buatData(items, pinnedTags));
+  await tick();
+  await env.gantiMode();
+  return env;
+}
+
+function contohEmpat() {
+  return [
+    buatItem({ id: 'slims-bulian', title: 'SLiMS Bulian', tags: ['slims', 'harian'] }),
+    buatItem({ id: 'repo-uniga', title: 'Repository UNIGA', tags: ['repository', 'ta'] }),
+    buatItem({ id: 'sheet-job-training', title: 'Sheet Job Training', tags: ['sheet', 'magang'] })
+  ];
+}
+
+test('Tiket 03 - Panel menampilkan kalimat keadaan kosong saat tidak ada item dipilih', async () => {
+  const env = await envTabel(contohEmpat());
+  const html = env.panel().innerHTML;
+
+  assert.ok(html.includes(KALIMAT_KOSONG),
+    'Panel harus menjelaskan tujuannya, bukan diam saja atau hilang');
+});
+
+test('Tiket 03 - Keadaan kosong menyebutkan berapa hasil pencarian', async () => {
+  const env = await envTabel(contohEmpat());
+  env.ketik('slims');
+  await tick();
+
+  const html = env.panel().innerHTML;
+  assert.ok(html.includes(KALIMAT_KOSONG), 'Kalimat keadaan kosong harus tetap ada');
+  assert.match(html, /1 hasil/,
+    'Keadaan kosong harus menyebut jumlah hasil pencarian, tidak boleh kosong saja');
+});
+
+test('Tiket 03 - Panel punya tombol ubah yang membuka modal item yang sama', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  assert.match(env.panel().innerHTML, /panel-ubah/,
+    'Panel harus punya tombol ubah, tidak boleh read-only tanpa jalan keluar');
+
+  const target = { getAttribute: () => 'slims-bulian' };
+  target.closest = (sel) =>
+    (String(sel).split(',').map((s) => s.trim()).includes('.panel-ubah') ? target : null);
+  env.panel().dispatch('click', { target });
+  await tick();
+
+  const modal = env.ditambahkan.find((c) =>
+    String(c.className).split(' ').includes('modal-overlay'));
+  assert.ok(modal, 'Tombol ubah di panel harus membuka sebuah modal');
+  assert.ok(modal.innerHTML.includes('Ubah Item'),
+    'Modal yang terbuka harus modal ubah item, bukan judul lain');
+  assert.ok(modal.innerHTML.includes('modal-item-box'),
+    'Modal harus memakai kotak form item yang sama seperti tombol ubah di baris');
+  assert.ok(modal.innerHTML.includes('value="SLiMS Bulian"'),
+    'Modal harus terisi judul item yang sedang dipilih');
+});
+
+test('Tiket 03 - Tombol ubah di panel bukan jalur edit kedua', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  const target = { getAttribute: () => 'slims-bulian' };
+  target.closest = (sel) =>
+    (String(sel).split(',').map((s) => s.trim()).includes('.panel-ubah') ? target : null);
+  env.panel().dispatch('click', { target });
+  await tick();
+
+  const modal = env.ditambahkan.find((c) =>
+    String(c.className).split(' ').includes('modal-overlay'));
+
+  // Satu jalur edit berarti satu modal. Kalau panel membuka form sendiri,
+  // validasi akan ditulis dua kali dan bisa berbeda antar tempat.
+  assert.equal(env.ditambahkan.length, 1, 'Panel harus membuka tepat satu modal');
+  assert.equal(modal.innerHTML.split('id="item-title"').length - 1, 1,
+    'Form item harus muncul tepat sekali, jadi tidak ada jalur edit kedua');
+  assert.equal(modal.innerHTML.split('id="item-tags"').length - 1, 1,
+    'Field tag harus muncul tepat sekali');
+});
+
+test('Tiket 03 - Menggulir tabel tidak mengosongkan panel', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+  const sebelum = env.panel().innerHTML;
+  assert.ok(sebelum.includes('SLiMS Bulian'), 'Panel harus terisi sebelum menggulir');
+
+  env.hasil().dispatch('scroll', {});
+  await tick();
+
+  assert.ok(env.panel().innerHTML.includes('SLiMS Bulian'),
+    'Menggulir tabel tidak boleh mengosongkan panel');
+  assert.equal(env.state.focusedItemId, 'slims-bulian',
+    'Menggulir tabel tidak boleh melepas item terpilih');
+});
+
+test('Tiket 03 - Mengetik tidak mengosongkan panel selama item masih cocok', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  env.ketik('sli');
+  await tick();
+
+  assert.equal(env.state.focusedItemId, 'slims-bulian',
+    'Item yang masih cocok dengan hasil tidak boleh kehilangan fokus');
+  assert.ok(env.panel().innerHTML.includes('SLiMS Bulian'),
+    'Panel harus tetap menampilkan item terpilih saat mengetik');
+});
+
+test('Tiket 03 - Memilih baris lain mengganti isi panel', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+  assert.ok(env.panel().innerHTML.includes('SLiMS Bulian'));
+
+  await env.pilihItem('repo-uniga');
+
+  assert.equal(env.state.focusedItemId, 'repo-uniga', 'Fokus harus pindah ke baris baru');
+  const html = env.panel().innerHTML;
+  assert.ok(html.includes('Repository UNIGA'), 'Panel harus menampilkan item yang baru dipilih');
+  assert.doesNotMatch(html, /SLiMS Bulian/, 'Isi item sebelumnya tidak boleh ikut tertinggal');
+});
+
+test('Tiket 03 - Memilih baris lagi mengisi panel kembali dengan data yang benar', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  // Lepas fokus dengan klik di luar area hasil.
+  env.hasil().dispatch('click', { target: { closest: () => null } });
+  await tick();
+  assert.ok(env.panel().innerHTML.includes(KALIMAT_KOSONG),
+    'Setelah fokus dilepas panel harus kembali ke keadaan kosong');
+
+  await env.pilihItem('repo-uniga');
+
+  const html = env.panel().innerHTML;
+  assert.ok(html.includes('Repository UNIGA'), 'Panel harus terisi lagi setelah dipilih ulang');
+  assert.ok(html.includes('contoh.test/a'),
+    'Panel harus menampilkan tautan item yang dipilih ulang, bukan sisa item sebelumnya');
+});
+
+test('Tiket 03 - Item terpilih hilang dari hasil, panel menyebut alasannya', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  env.ketik('job training');
+  await tick();
+
+  assert.equal(env.state.focusedItemId, null,
+    'Item yang tidak lagi cocok harus kehilangan fokus');
+  const html = env.panel().innerHTML;
+  assert.match(html, /tidak lagi ada di hasil/,
+    'Panel harus menyebut bahwa itemnya tidak lagi ada di hasil');
+  assert.doesNotMatch(html, new RegExp(KALIMAT_KOSONG),
+    'Alasan item hilang tidak boleh memakai kalimat keadaan kosong generik');
+});
+
+test('Tiket 03 - Keadaan kosong generik hanya muncul karena satu sebab', async () => {
+  const env = await envTabel(contohEmpat());
+
+  // Sebab satu: tidak ada yang dipilih.
+  assert.ok(env.panel().innerHTML.includes(KALIMAT_KOSONG),
+    'Tanpa item terpilih, kalimat keadaan kosong harus muncul');
+  assert.equal(env.state.focusedItemId, null, 'Sebabnya memang tidak ada item terpilih');
+
+  // Item yang hilang punya sebab lain, jadi kalimat yang sama tidak boleh muncul.
+  await env.pilihItem('slims-bulian');
+  env.ketik('job training');
+  await tick();
+
+  assert.equal(env.state.focusedItemId, null, 'Fokus sudah lepas karena item hilang dari hasil');
+  assert.doesNotMatch(env.panel().innerHTML, new RegExp(KALIMAT_KOSONG),
+    'Kalimat keadaan kosong hanya boleh muncul karena tidak ada yang dipilih');
+
+  // Dan kembali ke sebab satu ketika memang tidak ada yang dipilih lagi.
+  env.ketik('');
+  await tick();
+  assert.ok(env.panel().innerHTML.includes(KALIMAT_KOSONG),
+    'Setelah pencarian dilepas, keadaan kosong kembali ke sebab aslinya');
+});
+
+test('Tiket 03 - Panel memakai keadaan kosong hanya di mode tabel', async () => {
+  const env = await envTabel(contohEmpat());
+  await env.pilihItem('slims-bulian');
+
+  const htmlTabel = env.panel().innerHTML;
+  assert.ok(htmlTabel.includes('SLiMS Bulian'), 'Mode tabel mengisi panel');
+
+  await env.gantiMode();
+  assert.equal(env.panel().innerHTML, '',
+    'Mode kartu tidak punya panel, jadi keadaan kosong panel tidak muncul di sana');
+  assert.doesNotMatch(env.panel().innerHTML, new RegExp(KALIMAT_KOSONG),
+    'Kalimat panel tidak boleh bocor ke mode kartu');
+  assert.notEqual(env.terkait().style.display, 'flex',
+    'Mode kartu tetap memakai baris item terkait di bawah daftar, bukan panel');
 });

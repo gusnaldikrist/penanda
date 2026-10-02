@@ -1122,6 +1122,42 @@ body {
    ketika lebar layar turun. Judul dan aksi tidak punya ambang sama sekali.
    -------------------------------------------------------------------------- */
 
+/* Keadaan kosong dan kaki panel -------------------------------------------
+   Panel tidak hilang saat tidak ada baris dipilih. Dia berubah jadi keadaan
+   kosong yang menyebutkan tujuannya sendiri, supaya tidak terbaca sebagai
+   bagian yang gagal. */
+
+.panel-kosong {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+}
+
+.panel-kosong-judul {
+  font-size: var(--font-small);
+  color: var(--body);
+}
+
+/* Keadaan kosong karena itemnya hilang dari hasil punya sebab lain, jadi
+   ditulis berbeda supaya kalimatnya tidak sama dengan keadaan kosong biasa. */
+.panel-kosong-alasan .panel-kosong-judul {
+  color: var(--warn);
+}
+
+.panel-kosong-ketujan {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--faint);
+}
+
+.panel-kaki {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 1280px) {
   .tabel-hasil .sel-alamat {
     display: none;
