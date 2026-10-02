@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "./src/frontend/style.css"
+        ],
+        "createdAt": "2026-10-02T03:54:36.453Z",
+        "reason": "ADR 2026-10-02 di vault decisions.md: kartu beraksen garis vertikal kiri 3px adalah keputusan sadar"
+      }
+    ]
+  }
+}

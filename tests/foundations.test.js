@@ -199,3 +199,84 @@ test('app.js: inisialisasi state dan logika pergantian tab di memori', () => {
   assert.equal(panels[0].hidden, false, 'Panel Indeks tampil');
   assert.equal(panels[2].hidden, true, 'Panel Log hidden');
 });
+
+// Helper: baca nilai hex sebuah custom property dari deklarasi token di style.css.
+// Sengaja tidak menulis hex hardcode di test supaya pengujian tetap membaca file aslinya.
+function bacaTokenHex(css, nama) {
+  const pola = new RegExp(`--${nama}\\s*:\\s*(#[0-9a-fA-F]{3,8})\\s*;`);
+  const cocok = css.match(pola);
+  assert.ok(cocok, `Token --${nama} harus tetap ada di style.css`);
+  return cocok[1];
+}
+
+// Helper: luminance relatif WCAG 2.x dari warna hex (3 atau 6 digit).
+function luminanceHex(hex) {
+  let h = hex.slice(1);
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  const kanal = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const linier = kanal.map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  return 0.2126 * linier[0] + 0.7152 * linier[1] + 0.0722 * linier[2];
+}
+
+// Helper: rasio kontras dua warna hex menurut WCAG 2.x.
+function rasioKontras(hexA, hexB) {
+  const a = luminanceHex(hexA);
+  const b = luminanceHex(hexB);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+test('style.css: kontras aksesibilitas WCAG AA untuk badge status, counter tab, dan tier teks', () => {
+  const css = fs.readFileSync(cssPath, 'utf8');
+  const AMBANG_AA = 4.5;
+
+  // Badge status Todo dirender kecil di atas latar bertinted sendiri.
+  // Setiap pasangan teks/latar harus dihitung dari nilai nyata di file, bukan dari nilai yang diasumsikan.
+  const pasanganBadge = [
+    ['ok', 'ok-bg'],
+    ['warn', 'warn-bg'],
+    ['bad', 'bad-bg'],
+  ];
+  for (const [teks, latar] of pasanganBadge) {
+    const rasio = rasioKontras(bacaTokenHex(css, teks), bacaTokenHex(css, latar));
+    assert.ok(
+      rasio >= AMBANG_AA,
+      `Badge --${teks} di atas --${latar} harus >= ${AMBANG_AA}:1 (terukur ${rasio.toFixed(2)}:1)`
+    );
+  }
+
+  // Tier teks sekunder harus tetap terbaca di atas permukaan yang dipakai.
+  const tierTeks = [
+    ['muted', 'band'],
+    ['faint', 'card'],
+  ];
+  for (const [teks, latar] of tierTeks) {
+    const rasio = rasioKontras(bacaTokenHex(css, teks), bacaTokenHex(css, latar));
+    assert.ok(
+      rasio >= AMBANG_AA,
+      `Teks --${teks} di atas --${latar} harus >= ${AMBANG_AA}:1 (terukur ${rasio.toFixed(2)}:1)`
+    );
+  }
+
+  // Keempat tier teks harus tetap berupa tangga yang berurutan dan tidak saling tumpang tindih.
+  const urutanTier = ['ink', 'body', 'muted', 'faint'];
+  const tangga = urutanTier.map((n) => luminanceHex(bacaTokenHex(css, n)));
+  for (let i = 1; i < tangga.length; i += 1) {
+    assert.ok(
+      tangga[i - 1] < tangga[i],
+      `Tier teks harus naik strict dari gelap ke terang: --${urutanTier[i - 1]} lebih gelap dari --${urutanTier[i]}`
+    );
+  }
+
+  // Counter badge tab memakai --body di atas --band-2 agar tetap kontras saat aktif dan tidak.
+  assert.match(
+    css,
+    /\.nav-tab-count\s*\{[^}]*color:\s*var\(--body\);/s,
+    'Counter badge tab harus memakai var(--body) agar kontrasnya tetap di atas ambang WCAG AA'
+  );
+  const rasioCounter = rasioKontras(bacaTokenHex(css, 'body'), bacaTokenHex(css, 'band-2'));
+  assert.ok(
+    rasioCounter >= AMBANG_AA,
+    `Counter --body di atas --band-2 harus >= ${AMBANG_AA}:1 (terukur ${rasioCounter.toFixed(2)}:1)`
+  );
+});
+

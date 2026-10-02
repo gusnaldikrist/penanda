@@ -228,6 +228,7 @@ function createTestEnvironment(initialData = null, options = {}) {
     document: domDocument,
     localStorage: mockLocalStorage,
     window: mockWindow,
+    module: { exports: {} },
     navigator: options.navigator || {
       clipboard: {
         writeText: async () => {}
@@ -253,6 +254,7 @@ function createTestEnvironment(initialData = null, options = {}) {
 
   return {
     sandbox,
+    state: sandbox.module.exports.state,
     getOrCreateElement,
     panelIndeks,
     statusBar,
@@ -611,3 +613,166 @@ test('Tiket 05 - Validasi CSS: batasan 768 px, scrolling independen zona hasil, 
   assert.match(css, /--action-soft/, 'Harus memakai token --action-soft');
   assert.match(css, /--action/, 'Harus memakai token --action');
 });
+
+test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A - Z', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const zoneKartu = env.getOrCreateElement('zone-kartu');
+  assert.ok(zoneKartu, 'Elemen #zone-kartu harus ada');
+
+  // Dropdown sort harus ada dengan opsi yang benar
+  assert.match(zoneKartu.innerHTML, /id="select-sort-order"/, 'Harus ada elemen #select-sort-order');
+  assert.match(zoneKartu.innerHTML, /Urutan: Terakhir Digunakan/, 'Opsi Terakhir Digunakan harus ada');
+  assert.match(zoneKartu.innerHTML, /A - Z/, 'Opsi A - Z harus ada');
+
+  const appState = env.sandbox.module.exports.state;
+  assert.equal(appState.sortOrder, 'recent', 'Default sortOrder harus recent');
+
+  const resultList = env.getOrCreateElement('result-list');
+  const selectSort = env.getOrCreateElement('select-sort-order');
+
+  // Ekstrak judul awal (recent default)
+  const titlesInitial = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  assert.deepEqual(titlesInitial, ['SLiMS Bulian', 'Repository UNIGA', 'Sheet Job Training', 'Sheet Admin TA'], 'Urutan awal sesuai recent');
+
+  // Trigger perubahan urutan ke A - Z
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
+  assert.equal(appState.sortOrder, 'az', 'State sortOrder harus menjadi az');
+
+  // Ekstrak judul kartu dari hasil render A - Z
+  const titlesAz = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  assert.ok(titlesAz.length > 1, 'Harus ada judul yang dirender');
+  const sortedTitles = titlesAz.slice().sort((a, b) => a.localeCompare(b));
+  assert.deepEqual(titlesAz, sortedTitles, 'Daftar item harus berurutan A - Z secara alfabetis');
+  assert.deepEqual(titlesAz, ['Repository UNIGA', 'Sheet Admin TA', 'Sheet Job Training', 'SLiMS Bulian']);
+
+  // Kembalikan ke 'recent'
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'recent' } });
+  assert.equal(appState.sortOrder, 'recent', 'State sortOrder harus kembali ke recent');
+
+  // Pastikan urutan DOM benar-benar kembali ke urutan recent awal
+  const titlesRestored = [...resultList.innerHTML.matchAll(/class="result-title">([^<]+)<\/div>/g)].map(m => m[1]);
+  assert.deepEqual(titlesRestored, titlesInitial, 'Daftar item harus kembali ke urutan recent semula di DOM');
+});
+
+test('Tiket 05 - Pengurutan A - Z mempertahankan lapis pencarian (Lapis 1 > Lapis 2 > Lapis 3)', async () => {
+  const customData = {
+    version: 1,
+    items: [
+      { id: 'i1', title: 'Zeta Item (Tag Cocok)', tags: ['magang'], links: [], catatan: '', updated_at: '2026-09-01' },
+      { id: 'i2', title: 'Alpha Item (Tag Cocok)', tags: ['magang'], links: [], catatan: '', updated_at: '2026-09-02' },
+      { id: 'i3', title: 'Beta Note Match', tags: ['pkl'], links: [], catatan: 'memuat magang di catatan', updated_at: '2026-09-03' },
+      { id: 'i4', title: 'Alpha Note Match', tags: ['pkl'], links: [], catatan: 'juga magang di catatan', updated_at: '2026-09-04' }
+    ],
+    todo: [],
+    logs: [],
+    pinned_tags: ['magang']
+  };
+
+  const env = createTestEnvironment(customData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const selectSort = env.getOrCreateElement('select-sort-order');
+  const searchInput = env.getOrCreateElement('search-input');
+  const resultList = env.getOrCreateElement('result-list');
+
+  // Ganti urutan ke 'az'
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
+
+  // Cari dengan query "magang":
+  // i1 dan i2 cocok pada tag -> Lapis 1
+  // i3 dan i4 tidak berbagi tag lapis 1, hanya cocok pada catatan -> Lapis 3
+  searchInput.trigger('input', { target: { value: 'magang' } });
+
+  const titles = [...resultList.innerHTML.matchAll(/class="result-title">([\s\S]*?)<\/div>/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').trim());
+
+  // Di lapis 1 (Alpha Item dan Zeta Item): diurutkan A-Z -> Alpha Item duluan, baru Zeta Item
+  assert.equal(titles[0], 'Alpha Item (Tag Cocok)');
+  assert.equal(titles[1], 'Zeta Item (Tag Cocok)');
+  // Lapis 3 (Alpha Note Match dan Beta Note Match): diurutkan A-Z di dalam lapis 3 -> Alpha Note Match duluan, baru Beta Note Match
+  // dan seluruh Lapis 1 tetap mendahului Lapis 3 meskipun Zeta > Alpha secara alfabetis
+  assert.equal(titles[2], 'dari catatan: Alpha Note Match');
+  assert.equal(titles[3], 'dari catatan: Beta Note Match');
+});
+
+test('Tiket 05 - Validasi CSS: .select-sort-order memakai token resmi dan focus ring', () => {
+  const css = fs.readFileSync(styleCssPath, 'utf8');
+  assert.match(css, /\.select-sort-order\s*\{/, 'Harus ada style untuk .select-sort-order');
+  assert.match(css, /\.select-sort-order:focus-visible/, 'Harus ada focus-visible ring untuk .select-sort-order');
+});
+
+test('Tiket 05 - Simpan data baru mempertahankan state.sortOrder az dan opsi selected di dropdown', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const selectSort = env.getOrCreateElement('select-sort-order');
+  const resultList = env.getOrCreateElement('result-list');
+  const appState = env.sandbox.module.exports.state;
+
+  // Ganti ke 'az'
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
+  assert.equal(appState.sortOrder, 'az');
+
+  // Tambah item baru bernama "Aplikasi Arsip" lewat saveData
+  const updatedData = {
+    ...exampleData,
+    items: [
+      ...exampleData.items,
+      {
+        id: 'aplikasi-arsip',
+        title: 'Aplikasi Arsip',
+        tags: ['arsip'],
+        links: [{ label: 'Buka', url: 'https://example.com/arsip' }],
+        catatan: '',
+        updated_at: '2026-10-02'
+      }
+    ]
+  };
+
+  await env.sandbox.module.exports.saveData(updatedData);
+
+  // State tetap 'az'
+  assert.equal(appState.sortOrder, 'az', 'sortOrder harus tetap az setelah simpan data baru');
+
+  // Dropdown tetap merender opsi selected az
+  const zoneKartu = env.getOrCreateElement('zone-kartu');
+  assert.match(zoneKartu.innerHTML, /<option value="az" selected>/, 'Dropdown harus mempertahankan pilihan A - Z');
+
+  // Item baru "Aplikasi Arsip" harus menjadi urutan pertama di DOM karena A-Z
+  const titles = [...resultList.innerHTML.matchAll(/class="result-title">([\s\S]*?)<\/div>/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').trim());
+  assert.equal(titles[0], 'Aplikasi Arsip', 'Aplikasi Arsip harus di urutan pertama alfabetis');
+});
+
+test('Tiket 05 - Tie-breaker: jika judul identik pada sortOrder az, urutkan updated_at menurun', async () => {
+  const duplicateTitlesData = {
+    version: 1,
+    items: [
+      { id: 'item-lama', title: 'SOP Pelayanan', tags: ['sop'], links: [], catatan: '', updated_at: '2026-09-01' },
+      { id: 'item-baru', title: 'SOP Pelayanan', tags: ['sop'], links: [], catatan: '', updated_at: '2026-09-30' }
+    ],
+    todo: [],
+    logs: [],
+    pinned_tags: ['sop']
+  };
+
+  const env = createTestEnvironment(duplicateTitlesData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const selectSort = env.getOrCreateElement('select-sort-order');
+  const resultList = env.getOrCreateElement('result-list');
+
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
+
+  const ids = [...resultList.innerHTML.matchAll(/class="[^"]*result-item[^"]*"[^>]*data-id="([^"]+)"/g)].map(m => m[1]);
+  assert.deepEqual(ids, ['item-baru', 'item-lama'], 'Item dengan updated_at lebih baru harus mendahului item lama saat judul identik');
+});
+
