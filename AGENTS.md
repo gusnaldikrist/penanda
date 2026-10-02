@@ -19,6 +19,8 @@ Hub dokumen: `C:\vault\01-Projects\Penanda\index.md` (BUKAN `spec.md`).
 - `src/pro/` — Backend: `main.go`, `go.mod` (stdlib saja)
 - `src/shared/` — `data.example.json`, `local-path-cases.json`
 - `tests/` — File testing / unit test
+- `build.ps1` — Sinkronisasi paket rilis `dist/v1/` dari `src/frontend/` (wajib, lihat aturan 11)
+- `dist/v1/` — Paket rilis: apa yang benar-benar dilihat user
 - `.agents/` — Aturan & workflow agent proyek ini
 - `.agents/rules/` — `vault-logging.md`, `git-convention.md`, `code-style.md`
 - `.agents/workflows/` — alur kerja (mis. `new-feature.md`)
@@ -39,6 +41,7 @@ Hub dokumen: `C:\vault\01-Projects\Penanda\index.md` (BUKAN `spec.md`).
 8. **Aturan tag**: huruf kecil tanpa spasi; tag bermakna sama dipasang berdampingan pada item yang sama, bukan item baru; nilai kartu awal `ta`, `wisuda`, `magang`. Rincian: `prd-skema.md` bagian 5.
 9. **Isolasi modul**: pencarian hanya membaca `items`; todo dan log tidak menambah field wajib di form item dan tidak menambah zona di layar Indeks. Rincian: `prd.md` bagian 6.2.
 10. **Peta dokumen**: sebelum mengubah dokumen produk atau tiket — termasuk menambah tiket dan menutup celah spec — ikuti pemilik topik dan urutan perubahan di `.agents/doc-map.md`.
+11. **Sinkronisasi paket rilis wajib**: setiap selesai mengubah `src/frontend/` atau `src/shared/`, jalankan `.\build.ps1`. `penanda.exe` menyajikan frontend dari folder binary-nya sendiri, jadi `dist/v1/` adalah yang benar-benar dilihat user — perubahan yang tidak disalin tidak akan pernah terlihat. Jangan menyalin manual; `build.ps1` memverifikasi dengan hash SHA256.
 
 ---
 
