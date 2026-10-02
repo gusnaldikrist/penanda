@@ -295,6 +295,92 @@ func TestNoDataFiles_MenolakBerkasDataPengguna(t *testing.T) {
 	}
 }
 
+// Frontend harus selalu ditanyakan ulang ke server sebelum peramban memakai
+// salinan lamanya sendiri. Diuji lewat newHandler, bukan middleware yang
+// dibungkus sendiri: kalau dibungkus sendiri, test ini tetap lulus walau
+// newHandler lupa memasang middleware-nya.
+// Tanpa ini, hasil perubahan CSS baru tidak terlihat sampai peramban
+// dibersihkan manual, dan penyebabnya tidak kelihatan dari layar.
+func TestNoStaleAssets_MenyalinHeaderCacheControl(t *testing.T) {
+	server := httptest.NewServer(newHandler(newTestDir(t)))
+	defer server.Close()
+
+	for _, path := range []string{"/", "/index.html", "/style.css", "/app.js"} {
+		resp, err := http.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("gagal meminta %s: %v", path, err)
+		}
+		got := resp.Header.Get("Cache-Control")
+		resp.Body.Close()
+
+		if got != "no-cache" {
+			t.Fatalf("%s harus mengirim Cache-Control no-cache, dapat %q", path, got)
+		}
+	}
+}
+
+// Header harus muncul walau berkas ditolak: peramban yang pernah menyimpan
+// respons 404 pun perlu diberi tahu untuk menanyakannya lagi.
+func TestNoStaleAssets_HeaderTetapAdaSaatBerkasDitolak(t *testing.T) {
+	server := httptest.NewServer(newHandler(newTestDir(t)))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/halaman-yang-tidak-ada.css")
+	if err != nil {
+		t.Fatalf("gagal meminta berkas tak ada: %v", err)
+	}
+	got := resp.Header.Get("Cache-Control")
+	resp.Body.Close()
+
+	if got != "no-cache" {
+		t.Fatalf("respons 404 juga harus memakai no-cache, dapat %q", got)
+	}
+}
+
+// Sifat yang benar: no-cache bukan no-store. Peramban boleh menyimpan,
+// tapi wajib menanyakan ulang.
+func TestNoStaleAssets_BukanLarangMenyimpan(t *testing.T) {
+	server := httptest.NewServer(newHandler(newTestDir(t)))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/index.html")
+	if err != nil {
+		t.Fatalf("gagal meminta index.html: %v", err)
+	}
+	directives := resp.Header.Get("Cache-Control")
+	resp.Body.Close()
+
+	for _, forbidden := range []string{"no-store", "max-age="} {
+		if strings.Contains(directives, forbidden) {
+			t.Fatalf("Cache-Control %q tidak boleh memuat %q", directives, forbidden)
+		}
+	}
+}
+
+// Last-Modified harus tetap ada supaya penanyaan ulang dijawab dengan 304
+// yang murah, bukan dengan mengirim ulang seluruh berkas.
+func TestNoStaleAssets_LastModifiedTetapAda(t *testing.T) {
+	dir := newTestDir(t)
+	target := filepath.Join(dir, "index.html")
+	if err := os.WriteFile(target, []byte("<html></html>"), 0o644); err != nil {
+		t.Fatalf("gagal menulis index.html uji: %v", err)
+	}
+
+	server := httptest.NewServer(newHandler(dir))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/index.html")
+	if err != nil {
+		t.Fatalf("gagal meminta index.html: %v", err)
+	}
+	lastModified := resp.Header.Get("Last-Modified")
+	resp.Body.Close()
+
+	if lastModified == "" {
+		t.Fatal("Last-Modified tidak boleh hilang, tanpa itu penanyaan ulang mahal")
+	}
+}
+
 // Arsitektur bagian 5: POST /open menerima path lokal Windows dan skema file.
 func TestIsAllowedLocalPath_MenerimaPathLokalWindows(t *testing.T) {
 	for _, candidate := range []string{

@@ -190,7 +190,8 @@ func newHandler(baseDir string) http.Handler {
 	// Frontend: seluruh berkas di folder binary, termasuk index.html.
 	// Berkas data dan salinan harian disaring supaya tidak bisa diunduh lewat
 	// peramban; isinya milik user dan tidak perlu dibuka dari HTTP.
-	mux.Handle("/", noDataFiles(http.FileServer(http.Dir(baseDir))))
+	// noStaleAssets menahan peramban agar tidak menampilkan versi lama.
+	mux.Handle("/", noStaleAssets(noDataFiles(http.FileServer(http.Dir(baseDir)))))
 
 	return mux
 }
@@ -334,6 +335,25 @@ func isDataFile(urlPath string) bool {
 		return strings.HasSuffix(name, ".json") || strings.HasSuffix(name, ".tmp")
 	}
 	return false
+}
+
+// noStaleAssets Memberi header Cache-Control pada berkas frontend.
+//
+// Tanpa ini peramban boleh memakai salinan lamanya sendiri tanpa bertanya.
+// Header "no-cache" tidak melarang menyimpan: peramban tetap menyimpan, tapi
+// selalu menanyakan ulang sebelum memakai. Karena http.FileServer sudah
+// mengirim Last-Modified, pertanyaan itu dijawab dengan 304 yang murah tanpa
+// mengirim ulang isi berkas.
+//
+// Alasannya praktis: Penanda berjalan lokal untuk satu orang yang sering
+// menyunting frontend-nya sendiri. Kalau peramban menahan versi lama, hasil
+// perubahan tidak terlihat sampai peramban dibersihkan secara manual, dan itu
+// salah karena penyebabnya tidak kelihatan dari layar.
+func noStaleAssets(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func handleGetData(w http.ResponseWriter, baseDir string) {
