@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf16"
 )
 
 const (
@@ -70,7 +71,44 @@ func validatePayload(raw []byte) error {
 		}
 	}
 
+	// Bentuk sop tiap item diperiksa di sini, bukan cuma bentuknya di
+	// frontend. Backend adalah gerbang terakhir, jadi berkas yang salah
+	// bentuk harus ditolak walau dikirim dari luar aplikasi.
+	for indeks, entry := range parsed["items"].([]any) {
+		item, isObject := entry.(map[string]any)
+		if !isObject {
+			return fmt.Errorf("item pada indeks %d bukan objek", indeks)
+		}
+		if sop, ada := item["sop"]; ada && !validSop(sop) {
+			return fmt.Errorf("field sop pada item indeks %d harus berupa teks maksimal %d karakter", indeks, maksSopChars)
+		}
+	}
+
 	return nil
+}
+
+// maksSopChars batas panjang field sop pada satu item.
+//
+// Panjang dihitung dalam satuan kode UTF-16, bukan jumlah rune, supaya
+// hasilnya sama dengan atribut maxlength di frontend dan dengan String
+// .length di JavaScript. Menghitung rune akan membuat keduanya berbeda tepat
+// pada teks yang memakai karakter di luar bidang dasar.
+const maksSopChars = 600
+
+// validSop memeriksa satu nilai field sop.
+//
+// Field ini opsional, jadi nilai yang tidak ada sama sekali tetap sah. Yang
+// ditolak hanya bentuk yang salah dan yang melebihi batas, supaya berkas yang
+// diterima backend sama persis dengan yang diterima frontend.
+func validSop(value any) bool {
+	if value == nil {
+		return true
+	}
+	teks, isString := value.(string)
+	if !isString {
+		return false
+	}
+	return len(utf16.Encode([]rune(teks))) <= maksSopChars
 }
 
 // emptyData adalah jawaban saat data.json belum ada. Ini keadaan instalasi

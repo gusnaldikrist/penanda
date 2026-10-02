@@ -66,7 +66,11 @@
     }
 
     const lapis2 = [];
-    const lapis3 = [];
+    // Lapis 3 dipisah dua: yang cocok lewat catatan dan yang cocok lewat
+    // langkah kerja. Kalau digabung, penanda "dari catatan" akan ikut
+    // tampil pada item yang catatannya sebenarnya tidak cocok.
+    const lapis3Catatan = [];
+    const lapis3Sop = [];
 
     // Evaluasi sisa item untuk Lapis 2 dan Lapis 3
     for (const item of items) {
@@ -92,10 +96,18 @@
         continue;
       }
 
-      // Lapis 3: catatan memuat kata kunci
+      // Lapis 3: catatan atau langkah kerja memuat kata kunci
       const catatan = (item.catatan || '').toLowerCase();
+      const sop = (item.sop || '').toLowerCase();
+      // Catatan didahulukan kalau dua-duanya cocok, supaya satu item
+      // tidak muncul dua kali.
       if (catatan.includes(query)) {
-        lapis3.push(item);
+        lapis3Catatan.push(item);
+        if (item.id) {
+          seenIds.add(item.id);
+        }
+      } else if (sop.includes(query)) {
+        lapis3Sop.push(item);
         if (item.id) {
           seenIds.add(item.id);
         }
@@ -118,7 +130,8 @@
     return [
       ...formatLayer(lapis1, 1),
       ...formatLayer(lapis2, 2),
-      ...formatLayer(lapis3, 3, 'dari catatan')
+      ...formatLayer(lapis3Catatan, 3, 'dari catatan'),
+      ...formatLayer(lapis3Sop, 3, 'dari langkah kerja')
     ];
   }
 

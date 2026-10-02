@@ -1122,6 +1122,32 @@ body {
    ketika lebar layar turun. Judul dan aksi tidak punya ambang sama sekali.
    -------------------------------------------------------------------------- */
 
+/* Langkah kerja ---------------------------------------------------------
+   Penomoran datang dari elemen daftar terurut, jadi browser yang mengurus
+   nomor, indentasi, dan pengumuman layar baca sekaligus. Tidak ada hitungan
+   nomor di skrip yang bisa keluar dari urutan. */
+
+.panel-sop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--body);
+}
+
+.panel-sop-langkah {
+  font-size: var(--font-small);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.panel-sop-langkah::marker {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--faint);
+}
+
 /* Keadaan kosong dan kaki panel -------------------------------------------
    Panel tidak hilang saat tidak ada baris dipilih. Dia berubah jadi keadaan
    kosong yang menyebutkan tujuannya sendiri, supaya tidak terbaca sebagai

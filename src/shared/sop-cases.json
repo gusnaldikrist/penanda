@@ -1,0 +1,71 @@
+{
+  "_catatan": "Aturan validasi field sop item dipakai dua bahasa: validSop di frontend dan validSop di src/pro/main.go. Backend adalah gerbang, jadi kalau satu sisi menerima berkas yang ditolak sisi lain, tombol simpan akan gagal tanpa penjelasan. File ini jadi satu sumber kebenaran, dan test di dua bahasa membacanya.",
+  "_keputusan": "sop opsional. Batas 600 karakter dihitung dalam satuan kode UTF-16 supaya frontend dan Go menghitung panjang yang sama; memakai jumlah rune di Go akan membuat keduanya berbeda tepat pada teks yang memakai emoji.",
+  "kasus": [
+    {
+      "masukan": null,
+      "harapan": true,
+      "alasan": "sop opsional; null berarti tidak diisi"
+    },
+    {
+      "masukan": "",
+      "harapan": true,
+      "alasan": "string kosong berarti tidak diisi"
+    },
+    {
+      "masukan": "   ",
+      "harapan": true,
+      "alasan": "hanya spasi dianggap tidak diisi"
+    },
+    {
+      "masukan": "Cek form pengajuan\nKirim ke kepala bagian",
+      "harapan": true,
+      "alasan": "dua langkah, satu per baris"
+    },
+    {
+      "masukan": "1. Cek form\n2. Kirim ke kepala bagian",
+      "harapan": true,
+      "alasan": "nomor yang diketik pengguna tetap bentuk yang sah"
+    },
+    {
+      "masukan": "   Cek form\r\n   Kirim   ",
+      "harapan": true,
+      "alasan": "spasi berlebih dan akhir baris CRLF tetap sah"
+    },
+    {
+      "masukan": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "harapan": true,
+      "alasan": "tepat di batas 600 karakter"
+    },
+    {
+      "masukan": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "harapan": false,
+      "alasan": "melebihi batas 600 karakter"
+    },
+    {
+      "masukan": 123,
+      "harapan": false,
+      "alasan": "angka bukan teks"
+    },
+    {
+      "masukan": true,
+      "harapan": false,
+      "alasan": "boolean bukan teks"
+    },
+    {
+      "masukan": [
+        "Cek form",
+        "Kirim"
+      ],
+      "harapan": false,
+      "alasan": "array bukan teks"
+    },
+    {
+      "masukan": {
+        "langkah": "Cek form"
+      },
+      "harapan": false,
+      "alasan": "objek bukan teks"
+    }
+  ]
+}

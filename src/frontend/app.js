@@ -497,6 +497,56 @@
     }
   }
 
+// Batas panjang field sop, dalam satuan kode UTF-16 supaya sama dengan
+  // validSop di src/pro/main.go. Kalau salah satu sisi menghitung rune dan
+  // sisi lain menghitung kode UTF-16, keduanya akan berbeda tepat pada teks
+  // sisi lain menghitung kode UTF-16, keduanya akan berbeda tepat pada teks
+  const MAKS_SOP = 600;
+
+  // validateSop memeriksa satu nilai field sop.
+  //
+  // Field ini opsional, jadi nilai yang tidak ada tetap sah. Yang ditolak
+  // hanya bentuk yang salah dan yang melebihi batas. Aturannya dibaca dari
+  // src/shared/sop-cases.json oleh test JavaScript dan test Go, supaya
+  // gerbang backend dan form frontend tidak bisa berbeda pendapat.
+  function validateSop(value) {
+    if (value === null || value === undefined) {
+      return { valid: true, error: '' };
+    }
+    if (typeof value !== 'string') {
+      return { valid: false, error: 'Langkah kerja harus berupa teks' };
+    }
+    if (value.length > MAKS_SOP) {
+      return { valid: false, error: `Langkah kerja maksimal ${MAKS_SOP} karakter` };
+    }
+    return { valid: true, error: '' };
+  }
+
+  // Nomor langkah datang dari elemen daftar terurut, bukan dari perhitungan
+  // di skrip, supaya browser yang mengurus nomor, indentasi, dan pengumuman
+  // layar baca sekaligus. Yang dibuang di sini hanya nomor yang diketik
+  // pengguna sendiri, karena kalau tidak, "1. Cek form" akan tampil jadi
+  // "1. 1. Cek form".
+  function parseSopSteps(sop) {
+    return String(sop || '')
+      .split(/\r?\n/)
+      .map(baris => baris.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+      .filter(Boolean);
+  }
+
+  function buildSopHtml(sop) {
+    const langkah = parseSopSteps(sop);
+    if (langkah.length === 0) return '';
+
+    return `
+      <section class="panel-bagian">
+        <div class="panel-bagian-judul">LANGKAH KERJA</div>
+        <ol class="panel-sop">
+          ${langkah.map(teks => `<li class="panel-sop-langkah">${escapeHtml(teks)}</li>`).join('')}
+        </ol>
+      </section>`;
+  }
+
   function openItemModal(itemToEdit = null) {
     closeActiveModal();
 
@@ -504,6 +554,7 @@
     const initialTitle = isEdit ? (itemToEdit.title || '') : '';
     const initialTags = isEdit && Array.isArray(itemToEdit.tags) ? itemToEdit.tags.join(', ') : '';
     const initialCatatan = isEdit ? (itemToEdit.catatan || '') : '';
+    const initialSop = isEdit && typeof itemToEdit.sop === 'string' ? itemToEdit.sop : '';
     let links = isEdit && Array.isArray(itemToEdit.links) && itemToEdit.links.length > 0
       ? itemToEdit.links.map(l => ({ label: l.label || '', url: l.url || '' }))
       : [{ label: '', url: '' }];
@@ -546,6 +597,13 @@
             <label class="form-label" for="item-catatan">Catatan</label>
             <textarea id="item-catatan" class="form-textarea" maxlength="200" placeholder="Catatan alur kerja / pemicu (opsional, maks 200 karakter)">${escapeHtml(initialCatatan)}</textarea>
             <div class="form-hint">Maksimal 200 karakter</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="item-sop">Langkah Kerja</label>
+            <textarea id="item-sop" class="form-textarea" maxlength="600" rows="4" placeholder="Satu baris satu langkah:&#10;Cek form pengajuan&#10;Kirim ke kepala bagian">${escapeHtml(initialSop)}</textarea>
+            <div class="form-hint">Opsional, maks 600 karakter. Satu baris satu langkah; nomornya dibuat otomatis jadi tidak perlu diketik.</div>
+            <div id="item-sop-error" class="form-error" style="display: none;"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -642,7 +700,11 @@
       }
 
       const isTitleValid = titleValue.length >= 1 && titleValue.length <= 120;
-      const isFormValid = isTitleValid && tagValidationResult.valid && linksValid;
+      // validateForm tidak boleh bergantung pada variabel handler simpan,
+      // jadi elemennya diambil sendiri di sini.
+      const sopFormInput = document.getElementById('item-sop');
+      const sopValidation = validateSop(sopFormInput ? String(sopFormInput.value || '').trim() : '');
+      const isFormValid = isTitleValid && tagValidationResult.valid && linksValid && sopValidation.valid;
 
       if (saveBtn) {
         saveBtn.disabled = !isFormValid;
@@ -667,6 +729,17 @@
         } else {
           tagsErrEl.textContent = '';
           tagsErrEl.style.display = 'none';
+        }
+      }
+
+      const sopErrEl = document.getElementById('item-sop-error');
+      if (sopErrEl) {
+        if (!sopValidation.valid) {
+          sopErrEl.textContent = sopValidation.error;
+          sopErrEl.style.display = 'block';
+        } else {
+          sopErrEl.textContent = '';
+          sopErrEl.style.display = 'none';
         }
       }
 
@@ -716,6 +789,13 @@
         const title = titleInput.value.trim();
         const tagValidationResult = validateTags(tagsInput.value);
         const cleanCatatan = catatanInput ? catatanInput.value.trim() : '';
+        const sopInput = document.getElementById('item-sop');
+        const rawSop = sopInput ? String(sopInput.value || '') : '';
+        const cleanSop = rawSop.trim();
+        // Form validasi sudah menolak nilai yang tidak sah, jadi simpan
+        // berhenti di sini kalau ada yang lolos, misalnya nilai yang
+        // disisipkan lewat skrip dan bukan diketik.
+        if (!validateSop(cleanSop).valid) return;
         const cleanLinks = getFormLinks().filter(itemLink => itemLink.label && itemLink.url);
         const today = getTodayDateString();
 
@@ -728,6 +808,7 @@
             items[itemIndex].tags = tagValidationResult.tags;
             items[itemIndex].links = cleanLinks;
             items[itemIndex].catatan = cleanCatatan;
+            items[itemIndex].sop = cleanSop;
             items[itemIndex].updated_at = today;
           }
         } else {
@@ -738,6 +819,7 @@
             tags: tagValidationResult.tags,
             links: cleanLinks,
             catatan: cleanCatatan,
+            sop: cleanSop,
             updated_at: today
           });
         }
@@ -1017,6 +1099,7 @@
       ${linksHtml}
       ${tagsHtml}
       ${catatanHtml}
+      ${buildSopHtml(item.sop)}
       ${relatedHtml || ''}
       ${kakiHtml}
     `;
@@ -1173,7 +1256,9 @@
           }).join('')
         : '';
 
-      const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
+      // Penanda berasal dari lapisan pencarian. Teks tetap "dari catatan"
+      // akan ikut tampil pada item yang hanya cocok lewat langkah kerja.
+      const titlePrefix = item.penanda ? `<span class="badge-catatan">${escapeHtml(item.penanda)}:</span> ` : '';
 
       // Path lokal selalu bisa dibuka: backend ada di setiap cara menjalankan
       // aplikasi, jadi tombol Buka dan Copy selalu keduanya tersedia.
@@ -1220,7 +1305,9 @@
         ? formatCatatanWithCode(item.catatan)
         : '<span class="sel-kosong">-</span>';
 
-      const titlePrefix = item.lapis === 3 ? '<span class="badge-catatan">dari catatan:</span> ' : '';
+      // Penanda berasal dari lapisan pencarian. Teks tetap "dari catatan"
+      // akan ikut tampil pada item yang hanya cocok lewat langkah kerja.
+      const titlePrefix = item.penanda ? `<span class="badge-catatan">${escapeHtml(item.penanda)}:</span> ` : '';
       const ariaSelected = state.focusedItemId === item.id ? 'true' : 'false';
 
       const aksi = local
@@ -2744,6 +2831,7 @@ async function confirmDestructive(config) {
     switchTab,
     generateItemId,
     validateTags,
+    validateSop,
     openItemModal,
     generateTodoId,
     getTodoStatus,
