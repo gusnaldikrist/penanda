@@ -705,9 +705,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  gap: 6px;
+  /* Lebar mengikuti isi supaya label mode muat; min-width menjaga bentuk
+     persegi 28px saat isinya hanya ikon. */
+  width: auto;
+  min-width: 28px;
   height: 28px;
-  padding: 0;
+  padding: 0 8px;
+  white-space: nowrap;
   background-color: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -788,6 +793,235 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Mode Tabel + Panel Inspeksi
+   Area hasil jadi tabel dan panel detail pindah ke samping kanan. Mode
+   kartu tidak memakai aturan di blok ini.
+   -------------------------------------------------------------------------- */
+
+.indeks-split {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.indeks-split-aktif {
+  flex-direction: row;
+  gap: 14px;
+}
+
+.indeks-kolom-kiri {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 65% area hasil, 35% panel. Keduanya boleh menyusut supaya tabel tetap
+   bisa dibaca di layar sempit. */
+.indeks-split-aktif .indeks-kolom-kiri {
+  flex: 65 1 0%;
+}
+
+.indeks-split-aktif .panel-inspeksi {
+  flex: 35 1 0%;
+}
+
+.panel-inspeksi {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 12px;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+/* Panel ikut gaya zone-terkait supaya "biasanya bareng ini" tidak berubah
+   bentuk hanya karena pindah tempat. */
+.panel-inspeksi .terkait-header {
+  font-size: var(--font-meta);
+  font-family: var(--font-family-mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.panel-inspeksi .terkait-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-inspeksi .terkait-sep {
+  display: none;
+}
+
+.panel-inspeksi .terkait-item {
+  font-size: var(--font-small);
+  color: var(--body);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.panel-inspeksi .terkait-item:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.tabel-mode {
+  padding: 0 0 20px;
+}
+
+.tabel-hasil {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.tabel-hasil th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background-color: var(--band);
+  border-bottom: 1px solid var(--line-strong);
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.baris-tabel td {
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  padding: 8px 10px;
+  vertical-align: top;
+  font-size: var(--font-small);
+}
+
+.baris-tabel:last-child td {
+  border-bottom: none;
+}
+
+.baris-tabel:hover td {
+  background-color: var(--action-soft);
+}
+
+.baris-tabel.focused td {
+  background-color: var(--action-soft);
+  border-left-color: var(--card-accent, var(--action));
+}
+
+.baris-tabel .sel-judul {
+  width: 34%;
+}
+
+.baris-tabel .sel-alamat {
+  width: 26%;
+}
+
+.baris-tabel .sel-catatan {
+  width: 22%;
+}
+
+.baris-tabel .sel-tag {
+  width: 12%;
+}
+
+.baris-tabel .sel-aksi {
+  width: 6%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.sel-judul-isi {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.sel-ikon {
+  display: inline-flex;
+  color: var(--card-accent, var(--muted));
+  flex-shrink: 0;
+}
+
+.sel-teks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sel-nama {
+  font-size: var(--font-small);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.sel-kategori {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--faint);
+}
+
+.sel-url {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.sel-tag {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--muted);
+}
+
+.sel-kosong {
+  color: var(--faint);
+}
+
+.btn-aksi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background-color: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-aksi:hover {
+  background-color: var(--action-soft);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn-view-label {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* Kartu Penanda (Kompatibel dengan .result-item) */

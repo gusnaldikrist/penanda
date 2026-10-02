@@ -36,6 +36,17 @@ function createTestEnvironment(initialData = null, options = {}) {
       removeAttribute: () => {},
       closest: (sel) => null,
       classList: {
+        contains: (cls) => className.split(' ').filter(Boolean).includes(cls),
+        add: (cls) => {
+          const classes = new Set(className.split(' ').filter(Boolean));
+          classes.add(cls);
+          className = Array.from(classes).join(' ');
+        },
+        remove: (cls) => {
+          const classes = new Set(className.split(' ').filter(Boolean));
+          classes.delete(cls);
+          className = Array.from(classes).join(' ');
+        },
         toggle: (cls, force) => {
           const classes = new Set(className.split(' ').filter(Boolean));
           if (force === undefined) {
