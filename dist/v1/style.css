@@ -1017,6 +1017,129 @@ body {
   color: var(--ink);
 }
 
+/* --------------------------------------------------------------------------
+   Isi panel inspeksi: judul, tautan, tag, catatan, item terkait
+   -------------------------------------------------------------------------- */
+
+.panel-kepala {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-judul {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.panel-bagian {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel-bagian-judul {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  letter-spacing: 0.04em;
+  color: var(--faint);
+}
+
+.panel-tautan {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel-tautan-baris {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.panel-tautan-teks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.panel-tautan-label {
+  font-size: var(--font-small);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* URL tampil utuh di panel: kalau dipangkas di sini, tidak ada tempat lain
+   yang masih memuatnya, dan tombol salin jadi satu-satunya jalan keluar. */
+.panel-tautan-url {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-meta-sm);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.panel-tautan-aksi {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.panel-tag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Catatan juga tampil utuh di panel. Yang dipangkas hanya salinannya di
+   tabel, karena catatan adalah pembeda utama item yang namanya mirip. */
+.panel-catatan {
+  font-size: var(--font-small);
+  line-height: 1.5;
+  color: var(--body);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   Urutan pemangkasan kolom saat layar menyempit
+
+   Urutannya ditetapkan di sini, bukan diserahkan ke cascade: kolom yang
+   dipangkas lebih dulu punya ambang lebih tinggi, jadi hilang lebih awal
+   ketika lebar layar turun. Judul dan aksi tidak punya ambang sama sekali.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .tabel-hasil .sel-alamat {
+    display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .tabel-hasil .sel-tag {
+    display: none;
+  }
+}
+
+@media (max-width: 940px) {
+  .tabel-hasil .sel-catatan {
+    display: none;
+  }
+}
+
 .btn-view-label {
   font-family: var(--font-family-mono);
   font-size: var(--font-meta-sm);

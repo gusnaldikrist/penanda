@@ -911,6 +911,79 @@
     }
   }
 
+// Panel menampilkan konteks lengkap item terpilih: judul, semua tautan,
+  // semua tag, dan catatan utuh. Yang tidak ada datanya tidak dibuat
+  // ruang kosong, jadi item tanpa catatan tidak punya bagian catatan.
+  // Urutan bagian mengikuti spec: judul, tautan, tag, catatan, baru
+  // item terkait di paling bawah.
+  function buildPanelHtml(item, relatedHtml) {
+    if (!item) return '';
+
+    const categoryInfo = resolveCategoryAndAccent(item.tags);
+    const categoryBadge = categoryInfo.category || 'Dokumen // Umum';
+    const iconSvg = getSvgIcon(categoryInfo.icon, 14);
+
+    const links = Array.isArray(item.links)
+      ? item.links.filter(link => link && link.url)
+      : [];
+
+    const linksHtml = links.length > 0 ? `
+      <section class="panel-bagian">
+        <div class="panel-bagian-judul">TAUTAN</div>
+        <ul class="panel-tautan">
+          ${links.map(link => {
+            const url = String(link.url);
+            const label = link.label ? String(link.label) : 'Buka Link';
+            const isLocal = storage.isLocalPath(url);
+            // Path lokal tidak bisa dibuka peramban, jadi pakai tombol yang
+            // minta backend membukanya. Tautan web cukup elemen a biasa.
+            const buka = isLocal
+              ? `<button type="button" class="btn-aksi btn-buka-local" data-url="${escapeHtml(url)}" title="Buka">${getSvgIcon('buka', 12)}</button>`
+              : `<a class="btn-aksi btn-buka" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" title="Buka">${getSvgIcon('buka', 12)}</a>`;
+            return `<li class="panel-tautan-baris">
+              <span class="panel-tautan-teks">
+                <span class="panel-tautan-label">${escapeHtml(label)}</span>
+                <span class="panel-tautan-url">${escapeHtml(url)}</span>
+              </span>
+              <span class="panel-tautan-aksi">
+                ${buka}
+                <button type="button" class="btn-aksi btn-copy" data-url="${escapeHtml(url)}" data-local="${isLocal}" title="Salin">${getSvgIcon('copy', 12)}</button>
+              </span>
+            </li>`;
+          }).join('')}
+        </ul>
+      </section>` : '';
+
+    const tags = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
+    // Semua tag ditampilkan, bukan hanya yang jadi kartu di zona kartu,
+    // supaya tidak tercipta tag duplikat karena tidak kelihatan.
+    const tagsHtml = tags.length > 0 ? `
+      <section class="panel-bagian">
+        <div class="panel-bagian-judul">TAG</div>
+        <div class="panel-tag">${tags.map(tag => `<span class="chip-tag">${escapeHtml(tag)}</span>`).join('')}</div>
+      </section>` : '';
+
+    const catatanHtml = item.catatan ? `
+      <section class="panel-bagian">
+        <div class="panel-bagian-judul">CATATAN</div>
+        <div class="panel-catatan">${formatCatatanWithCode(item.catatan)}</div>
+      </section>` : '';
+
+    return `
+      <div class="panel-kepala">
+        <span class="sel-ikon">${iconSvg}</span>
+        <div class="sel-teks">
+          <h2 class="panel-judul">${escapeHtml(item.title || '')}</h2>
+          <span class="sel-kategori">${escapeHtml(categoryBadge)}</span>
+        </div>
+      </div>
+      ${linksHtml}
+      ${tagsHtml}
+      ${catatanHtml}
+      ${relatedHtml || ''}
+    `;
+  }
+
   function renderTerkaitZone(items) {
     const zoneTerkaitEl = document.getElementById('zone-terkait');
     const panelEl = document.getElementById('panel-inspeksi');
@@ -932,18 +1005,16 @@
     if (!focusedItem) return;
 
     const related = computeRelatedItems(focusedItem, items);
-    if (related.length === 0) return;
-
-    const html = buildTerkaitHtml(related);
+    const relatedHtml = related.length > 0 ? buildTerkaitHtml(related) : '';
 
     if (modeTabel) {
-      if (panelEl) panelEl.innerHTML = html;
+      if (panelEl) panelEl.innerHTML = buildPanelHtml(focusedItem, relatedHtml);
       return;
     }
 
     if (zoneTerkaitEl) {
-      zoneTerkaitEl.style.display = 'flex';
-      zoneTerkaitEl.innerHTML = html;
+      zoneTerkaitEl.innerHTML = relatedHtml;
+      if (relatedHtml) zoneTerkaitEl.style.display = 'flex';
     }
   }
 
@@ -1312,6 +1383,28 @@
               const url = terkaitLink.getAttribute('data-url');
               copyToClipboard(url, true);
             }
+          }
+        });
+      }
+
+      // Panel hanya baca, tapi tombol salin dan tombol buka path tetap hidup
+      // di sana supaya konteks tidak perlu dibawa keluar dari panel.
+      const panelInspksiEl = document.getElementById('panel-inspeksi');
+      if (panelInspksiEl) {
+        panelInspksiEl.addEventListener('click', (e) => {
+          const copyBtn = e.target.closest('.btn-copy');
+          if (copyBtn) {
+            e.preventDefault();
+            const url = copyBtn.getAttribute('data-url');
+            const isLocal = copyBtn.getAttribute('data-local') === 'true';
+            copyToClipboard(url, isLocal);
+            return;
+          }
+
+          const bukaLocalBtn = e.target.closest('.btn-buka-local');
+          if (bukaLocalBtn) {
+            e.preventDefault();
+            openLocalPathViaBackend(bukaLocalBtn.getAttribute('data-url'));
           }
         });
       }
@@ -2497,9 +2590,11 @@ async function confirmDestructive(config) {
         if (modal) return;
 
         if (state.focusedItemId) {
-          // Kontrol di zone-kartu (ganti mode, urutan, filter tag) bukan "klik di luar",
-          // jadi memilihnya tidak boleh menghapus item yang sedang terpilih.
-          if (!e.target.closest || (!e.target.closest('.result-item') && !e.target.closest('.baris-tabel') && !e.target.closest('#zone-terkait') && !e.target.closest('#zone-kartu'))) {
+          // Kontrol di zone-kartu (ganti mode, urutan, filter tag) dan isi panel
+          // bukan "klik di luar". Tanpa ini, menekan tombol salin di panel
+          // akan menghapus item yang sedang terpilih lalu mengosongkan
+          // panel yang baru saja dipakai.
+          if (!e.target.closest || (!e.target.closest('.result-item') && !e.target.closest('.baris-tabel') && !e.target.closest('#zone-terkait') && !e.target.closest('#zone-kartu') && !e.target.closest('#panel-inspeksi'))) {
             state.focusedItemId = null;
             const searchInput = document.getElementById('search-input');
             updateIndeksResults(searchInput ? searchInput.value : '');
