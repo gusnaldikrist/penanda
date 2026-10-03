@@ -280,7 +280,7 @@
       textarea.select();
       syncSuccess = document.execCommand('copy');
       document.body.removeChild(textarea);
-    } catch (err) {
+    } catch {
       syncSuccess = false;
     }
 
@@ -905,25 +905,7 @@
           return `<button type="button" class="btn-card-tag ${isActive ? 'active' : ''}" data-tag="${escapeHtml(tagLower)}"><span class="tag-title">${escapeHtml(formatTagLabel(tag))}</span> <span class="tag-count">${count}</span></button>`;
         }).join('')}
       </div>
-      <div class="view-controls">
-        <select id="select-sort-order" class="select-sort-order" aria-label="Urutan kartu">
-          <option value="recent"${state.sortOrder === 'recent' ? ' selected' : ''}>Urutan: Terakhir Digunakan</option>
-          <option value="az"${state.sortOrder === 'az' ? ' selected' : ''}>A - Z</option>
-        </select>
-      </div>
     `;
-
-    const selectSort = zoneKartuEl.querySelector ? zoneKartuEl.querySelector('#select-sort-order') : document.getElementById('select-sort-order');
-    if (selectSort && selectSort.addEventListener) {
-      selectSort.addEventListener('change', (e) => {
-        if (e && typeof e.stopPropagation === 'function') {
-          e.stopPropagation();
-        }
-        state.sortOrder = (e.target && e.target.value === 'az') ? 'az' : 'recent';
-        const input = document.getElementById('search-input');
-        updateIndeksResults(input ? input.value : '');
-      });
-    }
   }
 
   // Konten item terkait dirender ke tepat satu tempat, tergantung mode:
@@ -1275,6 +1257,10 @@
                 <input type="text" id="search-input" class="search-input" placeholder="Cari judul, tag, atau isi dokumen..." autocomplete="off">
                 <span class="search-shortcut-badge">/</span>
               </div>
+              <select id="select-sort-order" class="select-sort-order" aria-label="Urutan hasil">
+                <option value="recent" selected>Urutan: Terakhir Digunakan</option>
+                <option value="az">A - Z</option>
+              </select>
               <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">Tambah Penanda</button>
             </div>
             <div id="zone-harian" class="zone-harian"></div>
@@ -1300,6 +1286,22 @@
           // boleh ikut kosong. updateIndeksResults yang melepasnya kalau
           // itemnya benar-benar tidak ada lagi di hasil.
           updateIndeksResults(e.target.value);
+        });
+      }
+
+      // Pengatur urutan tinggal di baris kendali Indeks, bukan di dalam zona
+      // Kartu. Di dalam zona itu ia ikut hilang saat zona tidak dirender, dan
+      // zona tidak dirender pada setiap instalasi baru. Blok ini dibangun
+      // sekali saja, jadi pendengarnya tidak perlu dijaga dari penumpukan.
+      const selectSort = document.getElementById('select-sort-order');
+      if (selectSort) {
+        selectSort.addEventListener('change', (e) => {
+          if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation();
+          }
+          state.sortOrder = (e.target && e.target.value === 'az') ? 'az' : 'recent';
+          const input = document.getElementById('search-input');
+          updateIndeksResults(input ? input.value : '');
         });
       }
 
@@ -2385,7 +2387,7 @@ async function confirmDestructive(config) {
     try {
       const fileText = await file.text();
       parsed = JSON.parse(fileText);
-    } catch (parseErr) {
+    } catch {
       showImportRejectedModal('Berkas ditolak: isinya bukan JSON yang bisa dibaca');
       return;
     }
@@ -2450,7 +2452,7 @@ async function confirmDestructive(config) {
       state.data = normalizeData(JSON.parse(remoteJson));
       state.storageBlocked = false;
       state.statusMessage = '';
-    } catch (err) {
+    } catch {
       // Jangan diam-diam menampilkan data kosong: user bisa mengira datanya
       // hilang lalu mengetik ulang, dan penulisan berikutnya bisa menimpa
       // data.json yang sebenarnya masih utuh.
@@ -2481,7 +2483,7 @@ async function confirmDestructive(config) {
       state.storageBlocked = false;
       state.statusMessage = '';
       state.savedAt = storage.formatSavedTime(new Date());
-    } catch (err) {
+    } catch {
       state.storageBlocked = true;
       state.statusMessage = 'Gagal menyimpan ke server';
     }

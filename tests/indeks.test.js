@@ -529,3 +529,77 @@ test('Tiket 04: Jaring pengaman Copy: Cara 3 (modal manual fallback) muncul saat
     assert.equal(env.modals.length, 0, 'Modal tertutup saat tombol Tutup ditekan');
   }
 });
+
+test('Tiket 01: Pengatur urutan ada di baris kendali, bukan di zona Kartu', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const markup = env.panelIndeks.innerHTML;
+  assert.match(markup, /id="select-sort-order"/,
+    'Pengatur urutan harus ada di markup baris kendali Indeks');
+  assert.doesNotMatch(markup, /Urutan kartu/,
+    'Label aksesibilitas pengatur urutan tidak lagi boleh menyebut kartu');
+
+  const zoneKartu = env.getOrCreateElement('zone-kartu');
+  assert.doesNotMatch(zoneKartu.innerHTML, /select-sort-order/,
+    'Pengatur urutan tidak boleh lagi dirender di dalam zona Kartu');
+});
+
+test('Tiket 01: Pengatur urutan tetap ada saat tidak ada satu pun tag tersemat', async () => {
+  // Keadaan ini berlaku di setiap instalasi baru dan tidak pernah diuji
+  // sebelumnya: seluruh fixture lama memakai data.example.json yang pinned_tags-nya
+  // terisi, jadi regresi yang menutup pengatur urutan tidak pernah terlihat.
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment({ ...exampleData, pinned_tags: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.match(env.panelIndeks.innerHTML, /id="select-sort-order"/,
+    'Pengatur urutan harus tetap ada walau tidak ada tag tersemat sama sekali');
+
+  const selectSort = env.getOrCreateElement('select-sort-order');
+  const resultList = env.getOrCreateElement('result-list');
+
+  const judulDari = (html) => [...html.matchAll(/<span class="sel-nama">([\s\S]*?)<\/span>\s*<\/span>/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+
+  // Keadaan urutan tidak dibaca langsung karena harness berkas ini tidak
+  // mengekspor state; yang diperiksa adalah akibatnya pada DOM.
+  const judulAwal = judulDari(resultList.innerHTML);
+  assert.ok(judulAwal.length > 1, 'Harus ada beberapa baris untuk diurutkan');
+
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'az' } });
+
+  const judulAz = judulDari(resultList.innerHTML);
+  assert.deepEqual(judulAz, judulAz.slice().sort((a, b) => a.localeCompare(b)),
+    'Daftar harus benar-benar terurut A - Z setelah memilihnya');
+  assert.notDeepEqual(judulAz, judulAwal,
+    'Memilih A - Z harus mengubah urutan baris, bukan hanya menyimpan keadaan');
+
+  selectSort.trigger('change', { target: { id: 'select-sort-order', value: 'recent' } });
+  assert.deepEqual(judulDari(resultList.innerHTML), judulAwal,
+    'Urutan semula harus pulih persis');
+});
+
+test('Tiket 01: Pengatur urutan tidak terduplikasi dan pendengarnya tidak menumpuk', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const selectSort = env.getOrCreateElement('select-sort-order');
+  assert.equal(selectSort.listeners.change.length, 1,
+    'Pengatur urutan harus punya tepat satu pendengar change');
+
+  const searchInput = env.getOrCreateElement('search-input');
+  searchInput.trigger('input', { target: { value: 'ta' } });
+  await new Promise(resolve => setImmediate(resolve));
+
+  const kemunculan = (env.panelIndeks.innerHTML.match(/id="select-sort-order"/g) || []).length;
+  assert.equal(kemunculan, 1,
+    'Pengatur urutan harus tetap muncul tepat satu kali setelah render ulang');
+  assert.equal(selectSort.listeners.change.length, 1,
+    'Render ulang tidak boleh menambah pendengar change');
+});

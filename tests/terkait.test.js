@@ -635,10 +635,12 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   const zoneKartu = env.getOrCreateElement('zone-kartu');
   assert.ok(zoneKartu, 'Elemen #zone-kartu harus ada');
 
-  // Dropdown sort harus ada dengan opsi yang benar
-  assert.match(zoneKartu.innerHTML, /id="select-sort-order"/, 'Harus ada elemen #select-sort-order');
-  assert.match(zoneKartu.innerHTML, /Urutan: Terakhir Digunakan/, 'Opsi Terakhir Digunakan harus ada');
-  assert.match(zoneKartu.innerHTML, /A - Z/, 'Opsi A - Z harus ada');
+  // Dropdown sort pindah ke baris kendali Indeks (tiket 01), bukan lagi
+  // dirender di dalam zona Kartu.
+  const markupKendali = env.panelIndeks.innerHTML;
+  assert.match(markupKendali, /id="select-sort-order"/, 'Harus ada elemen #select-sort-order');
+  assert.match(markupKendali, /Urutan: Terakhir Digunakan/, 'Opsi Terakhir Digunakan harus ada');
+  assert.match(markupKendali, /A - Z/, 'Opsi A - Z harus ada');
 
   const appState = env.sandbox.module.exports.state;
   assert.equal(appState.sortOrder, 'recent', 'Default sortOrder harus recent');
@@ -758,9 +760,11 @@ test('Tiket 05 - Simpan data baru mempertahankan state.sortOrder az dan opsi sel
   // State tetap 'az'
   assert.equal(appState.sortOrder, 'az', 'sortOrder harus tetap az setelah simpan data baru');
 
-  // Dropdown tetap merender opsi selected az
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  assert.match(zoneKartu.innerHTML, /<option value="az" selected>/, 'Dropdown harus mempertahankan pilihan A - Z');
+  // Kontrol dibangun sekali saja sejak tiket 01, jadi pilihannya tidak lagi
+  // tercermin lewat atribut selected pada markup. Yang dijaga adalah kontrolnya
+  // masih ada tepat satu kali, dan urutannya masih berlaku seperti di bawah.
+  const kemunculan = (env.panelIndeks.innerHTML.match(/id="select-sort-order"/g) || []).length;
+  assert.equal(kemunculan, 1, 'Pengatur urutan harus tetap ada tepat satu kali setelah simpan data');
 
   // Item baru "Aplikasi Arsip" harus menjadi urutan pertama di DOM karena A-Z
   // Penanda pencarian ("dari catatan:") berada di dalam span nama sebagai
