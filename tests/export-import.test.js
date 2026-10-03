@@ -787,3 +787,52 @@ test('Tiket 03 - Berkas versi lama dengan pinned_tags tetap diimpor dan field it
   assert.ok(!('pinned_tags' in stored),
     'Field yang dibuang tidak boleh ikut tersimpan ulang; ia hilang sendiri saat simpan');
 });
+
+// Tanpa contoh data, Import mustahil dipakai siapa pun yang belum punya
+// cadangan: berkasnya wajib punya bentuk tertentu dan tidak ada yang
+// memberitahu bentuk itu. Contohnya sudah ada di paket rilis, tapi sebelumnya
+// tidak terjangkau dari layar.
+test('Tiket 09 - Tombol Unduh contoh ada dan mengunduh berkas contoh', async () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
+  assert.match(html, /id="btn-contoh-json"/, 'Harus ada tombol Unduh contoh');
+  assert.match(html, /Contoh/i, 'Tombol harus menyebut Contoh');
+
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  env.sandbox.unduhContohData();
+
+  assert.equal(env.downloads.length, 1, 'Tombol contoh harus memicu satu unduhan');
+  assert.match(env.downloads[0].download, /contoh/i, 'Nama berkas harus menyebut contoh');
+  assert.match(env.downloads[0].href, /data\.example\.json/, 'Unduhan harus menunjuk berkas contoh');
+});
+
+test('Tiket 09 - Tombol Export diberi nama yang menjelaskan tugasnya', () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
+  assert.match(html, /id="btn-export-json"[\s\S]{0,400}?Cadangkan/i,
+    'Tombol Export harus diberi nama Cadangkan, bukan istilah yang tidak berarti apa-apa');
+});
+
+test('Tiket 09 - Penolakan import memberi petunjuk yang bisa ditindaklanjuti', async () => {
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  // Berkas JSON yang valid tapi salah bentuk: penolakan yang paling sering
+  // muncul dan paling tidak bisa ditindaklanjuti tanpa petunjuk.
+  await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [] });
+  const konfirm = env.getOrCreateElement('btn-confirm-import');
+  if (konfirm && konfirm.trigger) konfirm.trigger('click');
+  await new Promise(resolve => setImmediate(resolve));
+
+  assert.ok(env.activeModals.length > 0, 'Penolakan harus membuka modal');
+
+  const isi = env.activeModals.map(m => m.innerHTML).join('\n');
+  assert.match(isi, /Cadangkan/i,
+    'Modal penolakan harus menyebut dari mana berkas yang benar itu berasal');
+  assert.match(isi, /Contoh/i,
+    'Modal penolakan harus menawarkan jalan mendapatkan berkas contoh');
+  assert.match(isi, /tidak berubah/i,
+    'Modal penolakan harus menyebut data yang sudah ada tidak berubah');
+});

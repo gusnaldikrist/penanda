@@ -2213,6 +2213,21 @@ async function confirmDestructive(config) {
     return todayString.split('-').join('');
   }
 
+  // Berkas contoh yang menilai bentuk data Penanda. Tanpanya, Import hanya bisa
+  // dipakai orang yang sudah punya cadangan; orang lain akan membaca pesan
+  // galat tanpa punya cara mencari apa yang salah. Berkasnya sudah ikut
+  // terkirim bersama aplikasi, jadi di sini hanya diberi jalannya.
+  function unduhContohData() {
+    const link = document.createElement('a');
+    link.href = 'data.example.json';
+    link.download = 'penanda-contoh.json';
+    document.body.appendChild(link);
+    link.click();
+    if (link.parentNode) {
+      link.parentNode.removeChild(link);
+    }
+  }
+
   function exportDataAsJson() {
     const payload = normalizeData(state.data);
     const jsonText = JSON.stringify(payload, null, 2);
@@ -2271,6 +2286,7 @@ async function confirmDestructive(config) {
         </div>
         <div class="modal-body">
           <div class="delete-warning">${escapeHtml(errorMessage)}</div>
+          <div class="form-hint">Berkas harus hasil tombol <strong>Cadangkan</strong> di Penanda. Kalau belum pernah punya cadangan, unduh dulu berkasnya lewat tombol <strong>Contoh</strong>, isi, lalu import.</div>
           <div class="form-hint">Data yang sudah ada tidak berubah.</div>
         </div>
         <div class="modal-footer">
@@ -2378,6 +2394,14 @@ async function confirmDestructive(config) {
   }
 
   function initBackupListeners() {
+    const contohBtn = document.getElementById('btn-contoh-json');
+    if (contohBtn && !contohBtn.dataset.boundClick) {
+      contohBtn.dataset.boundClick = 'true';
+      contohBtn.addEventListener('click', () => {
+        unduhContohData();
+      });
+    }
+
     const exportBtn = document.getElementById('btn-export-json');
     if (exportBtn && !exportBtn.dataset.boundClick) {
       exportBtn.dataset.boundClick = 'true';
@@ -2665,6 +2689,7 @@ async function confirmDestructive(config) {
     openLogModal,
     showDeleteLogConfirmation,
     exportDataAsJson,
+    unduhContohData,
     validateImportedData,
     openImportFilePicker,
     renderAllViews,

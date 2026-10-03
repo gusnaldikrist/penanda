@@ -257,7 +257,7 @@ func TestNoDataFiles_MenolakBerkasDataPengguna(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, dataFileName), []byte(contohData), 0o644); err != nil {
 		t.Fatalf("gagal menulis data.json uji: %v", err)
 	}
-	for _, frontendFile := range []string{"index.html", "app.js", "style.css"} {
+	for _, frontendFile := range []string{"index.html", "app.js", "style.css", "data.example.json"} {
 		if err := os.WriteFile(filepath.Join(dir, frontendFile), []byte("/* frontend */"), 0o644); err != nil {
 			t.Fatalf("gagal menulis %s uji: %v", frontendFile, err)
 		}
@@ -270,7 +270,7 @@ func TestNoDataFiles_MenolakBerkasDataPengguna(t *testing.T) {
 	server := httptest.NewServer(noDataFiles(http.FileServer(http.Dir(dir))))
 	defer server.Close()
 
-	for _, path := range []string{"/data.json", "/data-20261001.json", "/app.js", "/style.css", "/index.html"} {
+	for _, path := range []string{"/data.json", "/data-20261001.json", "/app.js", "/style.css", "/index.html", "/data.example.json"} {
 		resp, err := http.Get(server.URL + path)
 		if err != nil {
 			t.Fatalf("gagal meminta %s: %v", path, err)
@@ -286,6 +286,13 @@ func TestNoDataFiles_MenolakBerkasDataPengguna(t *testing.T) {
 			}
 			if strings.Contains(string(body), "pinned_tags") {
 				t.Fatalf("%s membocorkan isi data user", path)
+			}
+		case "/data.example.json":
+			// Berkas contoh harus bisa disajikan: tanpa itu tombol Unduh
+			// contoh tidak berfungsi, dan import jadi mustahil dipakai
+			// siapa pun yang belum pernah punya cadangan.
+			if status != http.StatusOK {
+				t.Fatalf("%s harus 200, dapat %d", path, status)
 			}
 		default:
 			if status != http.StatusOK {
