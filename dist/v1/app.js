@@ -75,6 +75,8 @@
         return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>`;
       case 'ubah':
         return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>`;
+      case 'chevron':
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
       case 'grid':
         return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg>`;
       case 'table':
@@ -864,14 +866,30 @@
   // perlu lagi: pada bentuk daftar vertikal ia hanya menambah kotak kosong.
   function buildTerkaitHtml(related) {
     return `
-      <div class="terkait-header">TERKAIT "Biasanya bareng ini":</div>
+      <div class="terkait-header">
+        <span>TERKAIT "Biasanya bareng ini":</span>
+        <span class="terkait-count">${related.length} item</span>
+      </div>
       <div class="terkait-items">
-        ${related.map(item => {
-          const { url, isLocal } = getPrimaryLinkInfo(item);
-          return `<a href="${escapeHtml(url)}" class="terkait-item" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || "")}</a>`;
-        }).join('')}
+        ${related.map(item => `
+          <button type="button" class="terkait-item" data-id="${escapeHtml(item.id || '')}" title="Pilih ${escapeHtml(item.title || '')} di tabel">
+            <span class="terkait-judul">${escapeHtml(item.title || '')}</span>
+            <span class="terkait-panah" aria-hidden="true">${getSvgIcon('chevron', 12)}</span>
+          </button>`).join('')}
       </div>
     `;
+  }
+
+  // Baris tabel yang dipilih digulir ke layar. Tanpa itu, klik item terkait
+  // mengganti isi panel sementara tabel tetap menampilkan baris lain di luar
+  // pandangan.
+  function scrollBarisKeLayar(id) {
+    if (typeof document.querySelectorAll !== 'function') return;
+    const rows = Array.from(document.querySelectorAll('.baris-tabel'));
+    const barisDipilih = rows.find(el => el.getAttribute && el.getAttribute('data-id') === id);
+    if (barisDipilih && typeof barisDipilih.scrollIntoView === 'function') {
+      barisDipilih.scrollIntoView({ block: 'nearest' });
+    }
   }
 
   // Susunan layar tidak lagi berganti, jadi tidak ada yang perlu disinkronkan
@@ -1320,8 +1338,21 @@
             return;
           }
 
-          // Pintasan ke modal CRUD item yang sama, bukan form sendiri.
-          const ubahBtn = e.target.closest('.panel-ubah');
+// Klik item terkait memindahkan konteks ke item itu, bukan membuka dokumennya.
+const terkaitBtn = e.target.closest ? e.target.closest('.terkait-item') : null;
+if (terkaitBtn) {
+const id = terkaitBtn.getAttribute('data-id');
+if (id) {
+state.focusedItemId = id;
+const input = document.getElementById('search-input');
+updateIndeksResults(input ? input.value : '');
+scrollBarisKeLayar(id);
+}
+return;
+}
+
+// Pintasan ke modal CRUD item yang sama, bukan form sendiri.
+const ubahBtn = e.target.closest('.panel-ubah');
           if (ubahBtn) {
             const id = ubahBtn.getAttribute('data-id');
             const currentItems = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];

@@ -320,7 +320,7 @@ test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan i
   // Sheet Admin TA TIDAK boleh muncul di dalam daftar item terkait dirinya sendiri
   assert.doesNotMatch(
     panel.innerHTML,
-    /class="[^"]*terkait-item[^"]*"[^>]*>Sheet Admin TA/i,
+    /class="terkait-judul">Sheet Admin TA/i,
     'Sheet Admin TA tidak boleh muncul di daftar terkait dirinya'
   );
 });
@@ -735,12 +735,86 @@ test('Tiket 05 - Item terkait diurutkan berdasarkan tag yang langka, bukan yang 
   });
 
   // `class="terkait-items"` pada pembungkus div juga memuat kata
-  // "terkait-item", jadi kelasnya harus dicocokkan persis agar pembungkus
-  // itu tidak ikut terambil sebagai item.
-  const urutan = [...panel.innerHTML.matchAll(/class="terkait-item"[^>]*>([^<]*)</g)]
+  // "terkait-item", jadi kelasnya harus dicocokkan persis. Judul ada di
+  // dalam <span class="terkait-judul">, bukan langsung setelah tag.
+  const urutan = [...panel.innerHTML.matchAll(/class="terkait-judul">([^<]*)</g)]
     .map(m => m[1].trim());
 
   assert.ok(urutan.length > 0, 'Panel harus menampilkan item terkait');
   assert.equal(urutan[0], 'Item Khusus',
     'Item yang berbagi tag langka harus mendahului item yang hanya berbagi tag umum');
+});
+
+// Klik item terkait memindahkan konteks ke item itu, bukan membuka dokumennya.
+// Spec desain v1 bagian 4.2: entri terkait dipilih langsung di tabel utama.
+test('Klik item terkait memindahkan fokus ke item itu di tabel', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const resultList = env.getOrCreateElement('result-list');
+  const panel = env.getOrCreateElement('panel-inspeksi');
+  const appState = env.state;
+
+  // Fokuskan Sheet Admin TA lebih dulu
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy' || sel === '.btn-buka') return null;
+        if (sel === '.baris-tabel') {
+          return { getAttribute: (a) => (a === 'data-id' ? 'sheet-ta-admin' : null) };
+        }
+        return null;
+      }
+    }
+  });
+  assert.equal(appState.focusedItemId, 'sheet-ta-admin', 'Fokus awal harus di Sheet Admin TA');
+
+  // Klik entri terkait pertama, harus memindahkan fokus ke item itu
+  const pertama = [...panel.innerHTML.matchAll(/class="terkait-item" data-id="([^"]+)"/g)]
+    .map(m => m[1]);
+  assert.ok(pertama.length > 0, 'Panel harus punya entri terkait yang bisa diklik');
+
+  panel.trigger('click', {
+    target: {
+      closest: (sel) => (sel === '.terkait-item' ? { getAttribute: (a) => (a === 'data-id' ? pertama[0] : null) } : null)
+    }
+  });
+
+  assert.equal(appState.focusedItemId, pertama[0],
+    'Klik item terkait harus memindahkan fokus ke item itu, bukan membuka dokumen');
+  assert.match(resultList.innerHTML, /focused/,
+    'Baris item yang dipilih harus ditandai terfokus di tabel');
+});
+
+test('Header TERKAIT menampilkan penghitung jumlah item terkait', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const resultList = env.getOrCreateElement('result-list');
+  const panel = env.getOrCreateElement('panel-inspeksi');
+
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy' || sel === '.btn-buka') return null;
+        if (sel === '.baris-tabel') {
+          return { getAttribute: (a) => (a === 'data-id' ? 'sheet-ta-admin' : null) };
+        }
+        return null;
+      }
+    }
+  });
+
+  const jumlah = (panel.innerHTML.match(/class="terkait-item"/g) || []).length;
+  assert.ok(jumlah > 0, 'Panel harus punya item terkait');
+  assert.match(panel.innerHTML, new RegExp(`class="terkait-count">${jumlah} item<`),
+    'Penghitung harus sesuai jumlah item terkait yang benar-benar dirender');
+
+  // Tiap baris punya chevron di tepi kanan
+  assert.match(panel.innerHTML, /class="terkait-panah"/,
+    'Tiap item terkait harus punya chevron');
 });

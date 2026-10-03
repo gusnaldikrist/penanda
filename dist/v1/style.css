@@ -1093,6 +1093,10 @@ body {
    vertikal tanpa kotak lebih terbaca dan lebih hemat tinggi. Hierarki datang
    dari indentasi dan jarak, bukan dari border. */
 .terkait-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
   font-family: var(--font-family-mono);
   font-size: var(--font-meta-sm);
   font-weight: 600;
@@ -1101,29 +1105,59 @@ body {
   text-transform: uppercase;
 }
 
+/* Penghitung relasi di tepi kanan header. Sengaja paling redup: ini
+  metadata, bukan judul. */
+.terkait-count {
+  font-weight: 500;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .terkait-items {
   display: flex;
   flex-direction: column;
 }
 
+/* Satu baris per item: judul di kiri, chevron di tepi kanan. Judul boleh
+   membungkus karena panel sempit; chevron tidak, supaya tetap rata kanan. */
 .terkait-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   padding: 4px 8px 4px 10px;
+  border: 0;
   border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: inherit;
   font-size: var(--font-small);
   line-height: 1.4;
   color: var(--body);
-  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-/* Judul item boleh membungkus: panel selebar 35 persen, dan memotong
-   judul dokumen membuat orang tidak tahu sedang membuka apa. */
+.terkait-judul {
+  min-width: 0;
+}
+
+.terkait-panah {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--faint);
+}
+
 .terkait-item:hover {
   background-color: var(--band);
   color: var(--ink);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+}
+
+.terkait-item:hover .terkait-panah {
+  color: var(--action);
 }
 
 /* ==========================================================================
