@@ -305,6 +305,35 @@
     return `${year}-${month}-${day}`;
   }
 
+  // Tanggal hari ini untuk footer. Memakai API bawaan peramban supaya tidak
+  // ada daftar nama hari dan bulan yang harus dirawat di dalam kode, dan
+  // tanpa permintaan ke luar sesuai syarat offline. Bila peramban tidak punya
+  // data locale, jatuh ke tanggal ISO: lebih kurang enak dibaca, tapi jujur
+  // dan bukan menampilkan sesuatu yang salah.
+  function formatTanggalHariIni() {
+    const now = new Date();
+    try {
+      return new Intl.DateTimeFormat('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }).format(now);
+    } catch {
+      return getTodayDateString();
+    }
+  }
+
+  // Footer pernah menampilkan "Database Lokal: Siap" sebagai teks tetap.
+  // Nilainya tidak pernah ditulis siapa pun, jadi tidak bisa berubah dan
+  // tidak bisa melaporkan kegagalan apa pun. Diganti tanggal hari ini,
+  // yang memang bisa berubah dan tidak mengada hal yang tidak diketahui.
+  function initTanggalFooter() {
+    const el = document.getElementById('status-counts');
+    if (!el) return;
+    el.textContent = formatTanggalHariIni();
+  }
+
   function generateItemId(title, existingItems) {
     if (!title) return 'item';
     let slug = String(title)
@@ -2560,6 +2589,7 @@ async function confirmDestructive(config) {
     initTodoListeners();
     initLogListeners();
     initBackupListeners();
+    initTanggalFooter();
 
     // Tab diganti lebih dulu supaya panel yang benar terlihat, tapi kotak
     // cari tab Indeks baru bisa difokus setelah loadData selesai merender
@@ -2631,6 +2661,7 @@ async function confirmDestructive(config) {
     generateLogId,
     filterLogs,
     renderLogView,
+    formatTanggalHariIni,
     openLogModal,
     showDeleteLogConfirmation,
     exportDataAsJson,

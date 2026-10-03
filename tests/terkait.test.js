@@ -249,6 +249,12 @@ function createTestEnvironment(initialData = null, options = {}) {
   const appJs = fs.readFileSync(appJsPath, 'utf8');
   const adapterJs = fs.readFileSync(adapterJsPath, 'utf8');
   vm.runInContext(adapterJs, sandbox);
+  // Elemen footer harus ada sebelum app.js jalan, karena init() mengisinya
+  // tepat sekali saat skrip dimuat. Kalau tidak di-seed di sini,
+  // getElementById akan mengembalikan null dan jalur pengisiannya tidak pernah
+  // ikut teruji.
+  getOrCreateElement('status-counts');
+
   vm.runInContext(appJs, sandbox);
 
   return {
@@ -817,4 +823,38 @@ test('Header TERKAIT menampilkan penghitung jumlah item terkait', async () => {
   // Tiap baris punya chevron di tepi kanan
   assert.match(panel.innerHTML, /class="terkait-panah"/,
     'Tiap item terkait harus punya chevron');
+});
+
+test('Footer: label Esc menyebut tutup panel, bukan Batal', () => {
+  // "Batal" membuat orang mengira Esc menutup modal atau membatalkan
+  // penyimpanan. Tidak satupun yang terjadi: Esc hanya melepas baris terpilih.
+  const html = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
+  assert.match(html, /\[Esc\]/, 'Footer harus tetap menyebut tombol Esc');
+  assert.match(html, /Tutup panel/i, 'Footer harus menyebut Tutup panel');
+  assert.doesNotMatch(html, /\[Esc\]\s*Batal/, 'Label Esc tidak boleh lagi hanya Batal');
+});
+
+test('Footer: menampilkan hari dan tanggal sekarang, bukan status database', async () => {
+  const html = fs.readFileSync(path.join(repoRoot, 'src', 'frontend', 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /Database Lokal: Siap/,
+    'Status database yang tidak pernah bisa berubah harus hilang dari footer');
+
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const info = env.sandbox.module.exports.formatTanggalHariIni();
+  assert.ok(info && typeof info === 'string', 'Tanggal hari ini harus mengembalikan teks');
+  const now = new Date();
+  assert.ok(info.includes(String(now.getDate())),
+    `Tanggal harus memuat angka hari hari ini: ${info}`);
+  assert.ok(now.getFullYear().toString().slice(2) === info.slice(-2) || info.includes(String(now.getFullYear())),
+    `Tanggal harus memuat tahun: ${info}`);
+
+  // Yang diuji bukan hanya formatnya, tetapi bahwa hasilnya benar-benar
+  // ditulis ke footer. Fungsi yang benar tetapi tidak terpanggil adalah
+  // kegagalan yang paling sunyi.
+  const footer = env.getOrCreateElement('status-counts');
+  assert.equal(footer.textContent, info,
+    'Footer harus menampilkan tanggal hari ini yang sama dengan hasil formatter');
 });
