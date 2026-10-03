@@ -814,26 +814,36 @@
     return { link: primaryLink, url, label, isLocal };
   }
 
+  // Bobot tiap tag dibalik terhadap frekuensinya. Tag yang dipakai banyak item
+  // hampir tidak membedakan satu item dari yang lain, jadi tidak boleh
+  // menentukan urutan: tanpa pembobotan, tag generik seperti "sheet"
+  // mengalahkan tag yang benar-benar khas hanya karena jumlahnya banyak.
   function computeRelatedItems(focusedItem, allItems) {
     if (!focusedItem || !Array.isArray(allItems)) return [];
 
-    const focusedTags = (Array.isArray(focusedItem.tags) ? focusedItem.tags : [])
+    const tagOf = (item) => (Array.isArray(item.tags) ? item.tags : [])
       .map(tag => String(tag).trim().toLowerCase())
       .filter(Boolean);
 
+    const focusedTags = [...new Set(tagOf(focusedItem))];
     if (focusedTags.length === 0) return [];
+
+    // Berapa item yang memakai tiap tag.
+    const frekuensiTag = new Map();
+    for (const item of allItems) {
+      for (const tag of new Set(tagOf(item))) {
+        frekuensiTag.set(tag, (frekuensiTag.get(tag) || 0) + 1);
+      }
+    }
 
     const candidates = [];
     for (const item of allItems) {
       if (item.id === focusedItem.id) continue;
 
-      const itemTags = (Array.isArray(item.tags) ? item.tags : [])
-        .map(tag => String(tag).trim().toLowerCase())
-        .filter(Boolean);
-
-      const intersection = itemTags.filter(tag => focusedTags.includes(tag)).length;
-      if (intersection > 0) {
-        candidates.push({ item, score: intersection });
+      const sama = [...new Set(tagOf(item))].filter(tag => focusedTags.includes(tag));
+      if (sama.length > 0) {
+        const score = sama.reduce((total, tag) => total + 1 / (frekuensiTag.get(tag) || 1), 0);
+        candidates.push({ item, score });
       }
     }
 

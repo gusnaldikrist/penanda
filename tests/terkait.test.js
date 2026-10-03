@@ -681,3 +681,66 @@ test('Tiket 04 - Gaya zona Harian dan zona Kartu sudah tidak ada', () => {
   // Gaya pengatur urutan masih dipakai, jadi harus tetap ada.
   assert.match(css, /\.select-sort-order\s*\{/, 'Gaya pengatur urutan harus tetap ada');
 });
+
+// Perbaikan: tag yang dipakai banyak item tidak boleh menentukan urutan.
+// Skor lama menghitung tag sama mentah, jadi tag generik seperti "sheet"
+// mengalahkan tag yang benar-benar membedakan. Perbaikan ini memberi bobot
+// terbalik terhadap frekuensi tag, jadiirlalu tag yang langka yang menang.
+test('Tiket 05 - Item terkait diurutkan berdasarkan tag yang langka, bukan yang paling sering', async () => {
+  const filler = [];
+  for (let i = 1; i <= 8; i++) {
+    filler.push({
+      id: `umum-${i}`,
+      title: `Pengisi Umum ${i}`,
+      tags: ['umum'],
+      links: [{ label: 'Buka', url: `https://contoh.test/u${i}` }],
+      catatan: '',
+      updated_at: '2026-09-01'
+    });
+  }
+
+  const customData = {
+    version: 1,
+    items: [
+      // Fokus: berbagi tag generik "umum" dan tag langka "khusus"
+      { id: 'fokus', title: 'Item Fokus', tags: ['umum', 'khusus'], links: [{ label: 'Buka', url: 'https://contoh.test/fokus' }], catatan: '', updated_at: '2026-09-15' },
+      // Hanya berbagi tag generik, tapi lebih baru daripada yang langka.
+      // Tanpa bobot frekuensi, yang ini menang karena seri dipecah updated_at.
+      { id: 'sekadar-umum', title: 'Item Sekadar Umum', tags: ['umum'], links: [{ label: 'Buka', url: 'https://contoh.test/umum' }], catatan: '', updated_at: '2026-10-02' },
+      // Hanya berbagi tag langka.
+      { id: 'khusus', title: 'Item Khusus', tags: ['khusus'], links: [{ label: 'Buka', url: 'https://contoh.test/khusus' }], catatan: '', updated_at: '2026-09-10' },
+      ...filler
+    ],
+    todo: [],
+    logs: []
+  };
+
+  const env = createTestEnvironment(customData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const resultList = env.getOrCreateElement('result-list');
+  const panel = env.getOrCreateElement('panel-inspeksi');
+
+  resultList.trigger('click', {
+    target: {
+      closest: (sel) => {
+        if (sel === '.btn-copy' || sel === '.btn-buka') return null;
+        if (sel === '.baris-tabel') {
+          return { getAttribute: (attr) => (attr === 'data-id' ? 'fokus' : null) };
+        }
+        return null;
+      }
+    }
+  });
+
+  // `class="terkait-items"` pada pembungkus div juga memuat kata
+  // "terkait-item", jadi kelasnya harus dicocokkan persis agar pembungkus
+  // itu tidak ikut terambil sebagai item.
+  const urutan = [...panel.innerHTML.matchAll(/class="terkait-item"[^>]*>([^<]*)</g)]
+    .map(m => m[1].trim());
+
+  assert.ok(urutan.length > 0, 'Panel harus menampilkan item terkait');
+  assert.equal(urutan[0], 'Item Khusus',
+    'Item yang berbagi tag langka harus mendahului item yang hanya berbagi tag umum');
+});
