@@ -347,8 +347,7 @@ function buatData(items, pinnedTags) {
     version: 1,
     items: items,
     todo: [],
-    logs: [],
-    pinned_tags: pinnedTags || ['ta']
+    logs: []
   };
 }
 

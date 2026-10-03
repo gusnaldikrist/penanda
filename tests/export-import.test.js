@@ -318,7 +318,7 @@ test('Tiket 09 - Export: nama berkas memuat tanggal hari ini dan isi berkas utuh
   assert.equal(exported.items.length, 4, 'Ekspor 4 item');
   assert.equal(exported.todo.length, 1, 'Ekspor 1 todo');
   assert.equal(exported.logs.length, 1, 'Ekspor 1 log');
-  assert.deepEqual(exported.pinned_tags, ['ta', 'wisuda', 'magang'], 'Pinned tags ikut');
+  assert.ok(!('pinned_tags' in exported), 'Field yang sudah dibuang tidak ikut diekspor');
 });
 
 test('Tiket 09 - Export lalu Import: data pulih utuh (simulasi profil browser lain)', async () => {
@@ -356,7 +356,7 @@ test('Tiket 09 - Export lalu Import: data pulih utuh (simulasi profil browser la
   assert.equal(restored.items.length, 4, '4 item pulih');
   assert.equal(restored.todo.length, 1, '1 todo pulih');
   assert.equal(restored.logs.length, 1, '1 log pulih');
-  assert.deepEqual(restored.pinned_tags, ['ta', 'wisuda', 'magang'], 'Pinned tags pulih');
+  assert.ok(!('pinned_tags' in restored), 'Field yang dibuang tidak ikut pulih');
   assert.equal(restored.items[0].title, 'SLiMS Bulian', 'Isi item tidak berubah');
   assert.equal(restored.version, 1, 'Version ikut terpulih');
 });
@@ -369,7 +369,7 @@ test('Tiket 09 - Import berkas tidak sah: items bukan array ditolak dan data lam
   await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
-  await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [], pinned_tags: [] });
+  await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [] });
 
   assert.equal(env.activeModals.length, 1, 'Harus muncul modal penolakan');
   const modalHtml = env.activeModals[0].innerHTML;
@@ -454,8 +454,7 @@ test('Tiket 09 - Import: pembatalan konfirmasi tidak mengubah data', async () =>
     version: 1,
     items: [{ id: 'lain', title: 'ITEM DARI BERKAS LAIN', tags: ['x'], links: [{ label: 'buka', url: 'https://contoh.test' }], catatan: '', updated_at: '2026-01-01' }],
     todo: [],
-    logs: [],
-    pinned_tags: ['lain']
+    logs: []
   };
 
   env.sandbox.switchTab('indeks');
@@ -476,7 +475,6 @@ test('Tiket 09 - Import: pembatalan konfirmasi tidak mengubah data', async () =>
     !stored.items.some(item => item.title === 'ITEM DARI BERKAS LAIN'),
     'Isi berkas import TIDAK boleh masuk setelah pembatalan'
   );
-  assert.deepEqual(stored.pinned_tags, ['ta', 'wisuda', 'magang'], 'Pinned tags lama tetap');
 });
 
 test('Tiket 09 - Import dari keadaan kosong: tombol Import JSON benar-benar membuka pemilih berkas', async () => {
@@ -508,7 +506,7 @@ test('Tiket 09 - Import dari keadaan kosong: tombol Import JSON benar-benar memb
 });
 
 test('Tiket 09 - Tombol Import di top-bar juga membuka pemilih berkas', async () => {
-  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [], pinned_tags: [] });
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
   // detectStorageMode lalu loadData async sejak tiket 11
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
@@ -572,7 +570,7 @@ test('Tiket 09 - Import: nilai input file dikosongkan agar berkas sama bisa dipi
   await new Promise(resolve => setImmediate(resolve));
 
   env.sandbox.switchTab('indeks');
-  await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [], pinned_tags: [] });
+  await env.pickFile({ version: 1, items: 'bukan array', todo: [], logs: [] });
   env.getOrCreateElement('btn-tutup-penolakan').trigger('click');
 
   assert.equal(
@@ -615,7 +613,7 @@ test('Tiket 09 - Bentuk data hasil Export sama persis dengan data.example.json',
 
   assert.deepEqual(
     Object.keys(exported).sort(),
-    ['items', 'logs', 'pinned_tags', 'todo', 'version'],
+    ['items', 'logs', 'todo', 'version'],
     'Kunci hasil Export harus sama dengan skema berkas (ticket langkah 4: dapat dipakai jalur Pro)'
   );
 });
@@ -629,9 +627,9 @@ test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array',
   await new Promise(resolve => setImmediate(resolve));
   const { validateImportedData } = env.sandbox;
 
-  const base = { version: 1, items: [], todo: [], logs: [], pinned_tags: [] };
+  const base = { version: 1, items: [], todo: [], logs: [] };
 
-  for (const fieldName of ['items', 'todo', 'logs', 'pinned_tags']) {
+  for (const fieldName of ['items', 'todo', 'logs']) {
     const broken = { ...base, [fieldName]: 'bukan array' };
     const result = validateImportedData(broken);
     assert.equal(result.valid, false, `"${fieldName}" non-array harus ditolak`);
@@ -639,7 +637,7 @@ test('Tiket 09 - Validasi import: setiap field tingkat atas wajib berupa array',
   }
 
   // Field yang dihapus juga harus ditolak, bukan dianggap tidak ada
-  for (const fieldName of ['items', 'todo', 'logs', 'pinned_tags']) {
+  for (const fieldName of ['items', 'todo', 'logs']) {
     const missing = { ...base };
     delete missing[fieldName];
     const result = validateImportedData(missing);
@@ -657,7 +655,7 @@ test('Tiket 09 - Validasi import: version harus berupa angka dan bernilai 1', as
   await new Promise(resolve => setImmediate(resolve));
   const { validateImportedData } = env.sandbox;
 
-  const base = { version: 1, items: [], todo: [], logs: [], pinned_tags: [] };
+  const base = { version: 1, items: [], todo: [], logs: [] };
 
   const missingVersion = { ...base };
   delete missingVersion.version;
@@ -686,7 +684,7 @@ test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', a
   // Nama field dicek lebih dulu, jadi pesan memuat nama field apa adanya.
   // Nama field itu berasal dari daftar tetap di validateImportedData, bukan
   // dari isi berkas; test ini mengunci bahwa isinya tetap di-escape.
-  return env.pickFile({ version: 1, items: {}, todo: [], logs: [], pinned_tags: [] }).then(() => {
+  return env.pickFile({ version: 1, items: {}, todo: [], logs: [] }).then(() => {
     const modalHtml = env.activeModals[0].innerHTML;
     assert.ok(
       !modalHtml.includes('<img src=x'),
@@ -710,8 +708,7 @@ test('Tiket 02 - Import: fokus baris ikut dibersihkan dan item baru tampil utuh'
     version: 1,
     items: [{ id: 'baru', title: 'Item Baru', tags: ['lain'], links: [{ label: 'buka', url: 'https://contoh.test' }], catatan: '', updated_at: '2026-01-01' }],
     todo: [],
-    logs: [],
-    pinned_tags: ['lain']
+    logs: []
   };
 
   env.sandbox.switchTab('indeks');
@@ -746,4 +743,47 @@ test('Tiket 09 - Export: revokeObjectURL ditunda agar unduhan tidak dibatalkan',
 
   await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(revokedUrls.length, 1, 'Blob URL harus dilepas setelah gilir render selesai');
+});
+// Field pinned_tags dibuang pada tiket 03. Dua arah harus tetap jalan:
+// berkas baru yang tidak memuatnya, dan berkas versi lama yang masih memuatnya.
+test('Tiket 03 - Import menerima berkas tanpa pinned_tags', async () => {
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  await env.pickFile({
+    version: 1,
+    items: [{ id: 'baru', title: 'Item Tanpa Pinned', tags: ['x'], links: [], catatan: '', updated_at: '2026-10-03' }],
+    todo: [],
+    logs: []
+  });
+  env.getOrCreateElement('btn-confirm-import').trigger('click');
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const stored = JSON.parse(env.store['indeks_v1']);
+  assert.equal(stored.items.length, 1, 'Berkas tanpa pinned_tags harus diterima dan tersimpan');
+  assert.equal(stored.items[0].title, 'Item Tanpa Pinned', 'Isi berkas harus utuh');
+});
+
+test('Tiket 03 - Berkas versi lama dengan pinned_tags tetap diimpor dan field itu dibuang', async () => {
+  const env = createTestEnvironment({ version: 1, items: [], todo: [], logs: [] });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  await env.pickFile({
+    version: 1,
+    items: [{ id: 'lama', title: 'Item Versi Lama', tags: ['ta'], links: [], catatan: '', updated_at: '2026-10-03' }],
+    todo: [],
+    logs: []
+  });
+  env.getOrCreateElement('btn-confirm-import').trigger('click');
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const stored = JSON.parse(env.store['indeks_v1']);
+  assert.equal(stored.items.length, 1, 'Berkas versi lama tidak boleh ditolak');
+  assert.equal(stored.items[0].title, 'Item Versi Lama', 'Data versi lama harus utuh');
+  assert.ok(!('pinned_tags' in stored),
+    'Field yang dibuang tidak boleh ikut tersimpan ulang; ia hilang sendiri saat simpan');
 });

@@ -188,7 +188,7 @@ function isiForm(env, id, value) {
 }
 
 function dataDengan(items) {
-  return { version: 1, items, todo: [], logs: [], pinned_tags: ['ta'] };
+  return { version: 1, items, todo: [], logs: [] };
 }
 
 async function panelUntuk(item) {

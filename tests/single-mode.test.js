@@ -148,7 +148,7 @@ function createTestEnvironment(fetchImpl = null) {
   };
 }
 
-const dataSah = { version: 1, items: [], todo: [], logs: [], pinned_tags: ['ta'] };
+const dataSah = { version: 1, items: [], todo: [], logs: [] };
 const denganServer = async () => ({ ok: true, status: 200, text: async () => JSON.stringify(dataSah) });
 
 // ---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ test('penyimpanan gagal tidak menulis ke tempat lain', async () => {
   });
   await env.settle();
 
-  const berhasil = await env.exports.saveData({ version: 1, items: [{ id: 'x', title: 'Uji' }], todo: [], logs: [], pinned_tags: [] });
+  const berhasil = await env.exports.saveData({ version: 1, items: [{ id: 'x', title: 'Uji' }], todo: [], logs: [] });
 
   assert.equal(berhasil, false, 'simpan yang gagal harus melaporkan gagal');
   assert.equal(tulisDipanggil, true, 'permintaan tulis memang dikirim ke server');

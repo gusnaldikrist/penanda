@@ -61,7 +61,7 @@ func validatePayload(raw []byte) error {
 		return fmt.Errorf("version %v tidak dikenal; hanya version %d yang dipakai", versionNumber, supportedVersion)
 	}
 
-	for _, field := range []string{"items", "todo", "logs", "pinned_tags"} {
+	for _, field := range []string{"items", "todo", "logs"} {
 		value, ada := parsed[field]
 		if !ada {
 			return fmt.Errorf("field %s tidak ditemukan", field)
@@ -116,11 +116,10 @@ func validSop(value any) bool {
 func emptyData() []byte {
 	// Marshal dari map literal ini tidak mungkin gagal, jadi err diabaikan.
 	payload, _ := json.Marshal(map[string]any{
-		"version":     supportedVersion,
-		"items":       []any{},
-		"todo":        []any{},
-		"logs":        []any{},
-		"pinned_tags": []any{},
+		"version": supportedVersion,
+		"items":   []any{},
+		"todo":    []any{},
+		"logs":    []any{},
 	})
 	return payload
 }

@@ -5,7 +5,7 @@
 // aplikasi lalu memakai localStorage; sekarang tidak ada fallback itu.
 
 function kosong() {
-  return { version: 1, items: [], todo: [], logs: [], pinned_tags: [] };
+  return { version: 1, items: [], todo: [], logs: [] };
 }
 
 /**

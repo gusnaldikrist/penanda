@@ -483,8 +483,7 @@ test("Tiket 02 - Daftar awal dipotong 10 item terbaru", async () => {
     version: 1,
     items: fifteenItems,
     todo: [],
-    logs: [],
-    pinned_tags: []
+    logs: []
   });
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
@@ -573,8 +572,7 @@ test('Tiket 05 - Pengurutan A - Z mempertahankan lapis pencarian (Lapis 1 > Lapi
       { id: 'i4', title: 'Alpha Note Match', tags: ['pkl'], links: [], catatan: 'juga magang di catatan', updated_at: '2026-09-04' }
     ],
     todo: [],
-    logs: [],
-    pinned_tags: ['magang']
+    logs: []
   };
 
   const env = createTestEnvironment(customData);
@@ -670,8 +668,7 @@ test('Tiket 05 - Tie-breaker: jika judul identik pada sortOrder az, urutkan upda
       { id: 'item-baru', title: 'SOP Pelayanan', tags: ['sop'], links: [], catatan: '', updated_at: '2026-09-30' }
     ],
     todo: [],
-    logs: [],
-    pinned_tags: ['sop']
+    logs: []
   };
 
   const env = createTestEnvironment(duplicateTitlesData);

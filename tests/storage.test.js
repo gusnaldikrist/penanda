@@ -97,7 +97,11 @@ test('data.example.json: validasi format dan skema V1', () => {
   assert.equal(parsed.todo.length, 1, 'Harus ada 1 data todo');
   assert.ok(Array.isArray(parsed.logs), 'logs harus berupa array');
   assert.equal(parsed.logs.length, 1, 'Harus ada 1 data log');
-  assert.deepEqual(parsed.pinned_tags, ['ta', 'wisuda', 'magang'], 'Pinned tags harus ta, wisuda, magang');
+  assert.deepEqual(
+    Object.keys(parsed).sort(),
+    ['items', 'logs', 'todo', 'version'],
+    'Data contoh hanya boleh memuat field yang masih dipakai'
+  );
 });
 
 test('app.js: loadData() bentuk kosong awal dan render empty state', async () => {

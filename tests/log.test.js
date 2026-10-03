@@ -737,8 +737,7 @@ test('Tiket 08 - Fallback "tanpa tautan" ketika item_id null atau item terhapus'
     )),
     logs: exampleData.logs.map(entry => (
       entry.item_id === 'sheet-ta-admin' ? { ...entry, item_id: null } : entry
-    )),
-    pinned_tags: exampleData.pinned_tags
+    ))
   });
 
   logList = env.getOrCreateElement('log-list');

@@ -221,7 +221,7 @@ test('simpan mengirim data lama DAN item baru, bukan hanya item baru', async () 
   const data = {
     version: 1,
     items: [{ id: 'a', title: 'Item Dari Server', tags: ['x'], links: [{ label: 'b', url: 'https://a.test' }], catatan: '', updated_at: '2026-10-01' }],
-    todo: [], logs: [], pinned_tags: []
+    todo: [], logs: []
   };
   const posts = [];
 
@@ -269,7 +269,7 @@ test('backend menjawab galat saat baca: kegagalan harus terlihat', async () => {
 
 test('backend mati saat simpan: isian harus tetap di tempatnya', async () => {
   const env = createTestEnvironment(null, async () => ({
-    ok: true, status: 200, text: async () => '{"version":1,"items":[],"todo":[],"logs":[],"pinned_tags":[]}'
+    ok: true, status: 200, text: async () => '{"version":1,"items":[],"todo":[],"logs":[],}'
   }));
   await env.settle();
 
@@ -296,7 +296,7 @@ test('path lokal memakai tombol Buka dan tetap ada tombol Copy', async () => {
       catatan: '',
       updated_at: '2026-10-01'
     }],
-    todo: [], logs: [], pinned_tags: []
+    todo: [], logs: []
   };
 
   const env = createTestEnvironment(null, async () => ({

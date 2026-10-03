@@ -30,8 +30,7 @@
       version: 1,
       items: [],
       todo: [],
-      logs: [],
-      pinned_tags: []
+      logs: []
     };
   }
 
@@ -43,8 +42,7 @@
       version: raw.version || 1,
       items: Array.isArray(raw.items) ? raw.items : [],
       todo: Array.isArray(raw.todo) ? raw.todo : [],
-      logs: Array.isArray(raw.logs) ? raw.logs : [],
-      pinned_tags: Array.isArray(raw.pinned_tags) ? raw.pinned_tags : []
+      logs: Array.isArray(raw.logs) ? raw.logs : []
     };
   }
 
@@ -2215,7 +2213,7 @@ async function confirmDestructive(config) {
         error: `Berkas ditolak: version ${JSON.stringify(parsed.version)} tidak dikenal; hanya version ${SUPPORTED_VERSION} yang dipakai`
       };
     }
-    const requiredArrays = ['items', 'todo', 'logs', 'pinned_tags'];
+    const requiredArrays = ['items', 'todo', 'logs'];
     for (const fieldName of requiredArrays) {
       if (!Array.isArray(parsed[fieldName])) {
         return { valid: false, error: `Berkas ditolak: "${fieldName}" harus berupa array` };

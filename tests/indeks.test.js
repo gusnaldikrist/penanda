@@ -377,8 +377,7 @@ const twoItemsFixture = {
     }
   ],
   todo: [],
-  logs: [],
-  pinned_tags: []
+  logs: []
 };
 
 function triggerCopyClick(resultList, dataUrl, isLocal) {
@@ -548,7 +547,7 @@ test('Tiket 01: Pengatur urutan tetap ada saat tidak ada satu pun tag tersemat',
   // sebelumnya: seluruh fixture lama memakai data.example.json yang pinned_tags-nya
   // terisi, jadi regresi yang menutup pengatur urutan tidak pernah terlihat.
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
-  const env = createTestEnvironment({ ...exampleData, pinned_tags: [] });
+  const env = createTestEnvironment({ ...exampleData });
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 

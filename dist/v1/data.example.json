@@ -39,6 +39,5 @@
   ],
   "logs": [
     {"id": "l1", "date": "2026-09-29", "item_id": "sheet-ta-admin", "teks": "Input 20 data"}
-  ],
-  "pinned_tags": ["ta", "wisuda", "magang"]
+  ]
 }

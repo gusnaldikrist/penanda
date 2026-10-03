@@ -93,7 +93,6 @@ func TestValidPayload_MenolakSopSalahBentuk(t *testing.T) {
 			"items":       []any{map[string]any{"id": "x", "sop": k.Masukan}},
 			"todo":        []any{},
 			"logs":        []any{},
-			"pinned_tags": []any{},
 		}
 		raw, err := json.Marshal(payload)
 		if err != nil {
@@ -110,7 +109,7 @@ func TestValidPayload_MenolakSopSalahBentuk(t *testing.T) {
 // TestValidPayload_SopHilangTetapDiterima menutup celah data lama: berkas
 // yang ditulis sebelum field ini ada tidak punya sop sama sekali.
 func TestValidPayload_SopHilangTetapDiterima(t *testing.T) {
-	raw := []byte(`{"version":1,"items":[{"id":"lama","title":"Item lama","catatan":"tanpa sop"}],"todo":[],"logs":[],"pinned_tags":[]}`)
+	raw := []byte(`{"version":1,"items":[{"id":"lama","title":"Item lama","catatan":"tanpa sop"}],"todo":[],"logs":[]}`)
 
 	if err := validatePayload(raw); err != nil {
 		t.Fatalf("data lama tanpa field sop harus tetap diterima: %v", err)
@@ -121,7 +120,7 @@ func TestValidPayload_SopHilangTetapDiterima(t *testing.T) {
 // yang disebut di pesan galat benar, supaya pesan itu bisa dipakai menemukan
 // item yang salah tanpa membaca seluruh berkas.
 func TestValidPayload_SopDiItemSalahBentukDitolak(t *testing.T) {
-	raw := []byte(`{"version":1,"items":[{"id":"ok"},{"id":"rusak","sop":42}],"todo":[],"logs":[],"pinned_tags":[]}`)
+	raw := []byte(`{"version":1,"items":[{"id":"ok"},{"id":"rusak","sop":42}],"todo":[],"logs":[]}`)
 
 	err := validatePayload(raw)
 	if err == nil {

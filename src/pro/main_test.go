@@ -18,7 +18,7 @@ func newTestDir(t *testing.T) string {
 	return t.TempDir()
 }
 
-const contohData = `{"version":1,"items":[],"todo":[],"logs":[],"pinned_tags":["ta"]}`
+const contohData = `{"version":1,"items":[],"todo":[],"logs":[]}`
 
 func TestValidatePayload_MenerimaDataSah(t *testing.T) {
 	if err := validatePayload([]byte(contohData)); err != nil {
@@ -43,8 +43,8 @@ func TestValidatePayload_MenolakObjekBukanData(t *testing.T) {
 
 func TestValidatePayload_MenolakFieldTidakArray(t *testing.T) {
 	// Mirip validateImportedData di frontend: bentuk berkas harus sama persis.
-	for _, field := range []string{"items", "todo", "logs", "pinned_tags"} {
-		payload := `{"version":1,"items":[],"todo":[],"logs":[],"pinned_tags":[],"` + field + `":"bukan array"}`
+	for _, field := range []string{"items", "todo", "logs"} {
+		payload := `{"version":1,"items":[],"todo":[],"logs":[],"` + field + `":"bukan array"}`
 		err := validatePayload([]byte(payload))
 		if err == nil {
 			t.Fatalf("field %s non-array harus ditolak", field)
@@ -56,20 +56,20 @@ func TestValidatePayload_MenolakFieldTidakArray(t *testing.T) {
 }
 
 func TestValidatePayload_MenolakVersionTidakDikenal(t *testing.T) {
-	if err := validatePayload([]byte(`{"version":99,"items":[],"todo":[],"logs":[],"pinned_tags":[]}`)); err == nil {
+	if err := validatePayload([]byte(`{"version":99,"items":[],"todo":[],"logs":[]}`)); err == nil {
 		t.Fatal("version yang tidak dikenal harus ditolak")
 	}
-	if err := validatePayload([]byte(`{"version":"1","items":[],"todo":[],"logs":[],"pinned_tags":[]}`)); err == nil {
+	if err := validatePayload([]byte(`{"version":"1","items":[],"todo":[],"logs":[]}`)); err == nil {
 		t.Fatal("version bertipe string harus ditolak")
 	}
-	payload := `{"items":[],"todo":[],"logs":[],"pinned_tags":[]}`
+	payload := `{"items":[],"todo":[],"logs":[]}`
 	if err := validatePayload([]byte(payload)); err == nil {
 		t.Fatal("version yang hilang harus ditolak")
 	}
 	// 1.5 akan terpotong jadi 1 kalau dibandingkan lewat int(); frontend
 	// memakai perbandingan ketat, jadi backend harus menolaknya juga
 	// (spec kontrak 5).
-	if err := validatePayload([]byte(`{"version":1.5,"items":[],"todo":[],"logs":[],"pinned_tags":[]}`)); err == nil {
+	if err := validatePayload([]byte(`{"version":1.5,"items":[],"todo":[],"logs":[]}`)); err == nil {
 		t.Fatal("version 1.5 harus ditolak, sama seperti di frontend")
 	}
 }
@@ -129,7 +129,7 @@ func TestWriteData_HariSamaMenimpaSalinanTidakMenumpuk(t *testing.T) {
 		t.Fatalf("gagal menulis: %v", err)
 	}
 
-	isiBaru := `{"version":1,"items":[{"id":"a","title":"Baru"}],"todo":[],"logs":[],"pinned_tags":[]}`
+	isiBaru := `{"version":1,"items":[{"id":"a","title":"Baru"}],"todo":[],"logs":[]}`
 	if err := writeData(dir, []byte(isiBaru), now.Add(6*time.Hour)); err != nil {
 		t.Fatalf("gagal menulis ulang: %v", err)
 	}
@@ -237,7 +237,7 @@ func TestEmptyData_MengandungVersionSatu(t *testing.T) {
 	if parsed["version"] != float64(1) {
 		t.Fatalf("version bentuk kosong harus 1, dapat %v", parsed["version"])
 	}
-	for _, field := range []string{"items", "todo", "logs", "pinned_tags"} {
+	for _, field := range []string{"items", "todo", "logs"} {
 		v, ok := parsed[field].([]any)
 		if !ok {
 			t.Fatalf("%s harus berupa array kosong", field)
@@ -462,4 +462,34 @@ func TestHandleOpenPath_MenolakAlamatDiLuarCakupan(t *testing.T) {
 
 func containsField(msg, field string) bool {
 	return strings.Contains(msg, field)
+}
+
+// Field pinned_tags dibuang pada tiket 03. Berkas yang tidak memuatnya harus
+// tetap diterima, dan berkas versi lama yang masih memuatnya juga diterima
+// karena field yang tidak dikenal tidak ditolak di sisi mana pun.
+func TestPayloadTanpaPinnedTagsDiterima(t *testing.T) {
+	if err := validatePayload([]byte(`{"version":1,"items":[],"todo":[],"logs":[]}`)); err != nil {
+		t.Fatalf("berkas tanpa pinned_tags harus diterima, dapat: %v", err)
+	}
+}
+
+func TestPayloadVersiLamaDenganPinnedTagsDiterima(t *testing.T) {
+	if err := validatePayload([]byte(`{"version":1,"items":[],"todo":[],"logs":[]}`)); err != nil {
+		t.Fatalf("berkas versi lama yang masih memuat pinned_tags harus diterima, dapat: %v", err)
+	}
+}
+
+// Menjaga agar field yang dibuang tidak diam-diam demanded lagi lewat daftar
+// field wajib, dan agar field yang benar-benar masih dipakai tetap demanded.
+func TestHanyaFieldSkemaYangDiwajibkan(t *testing.T) {
+	dasar := `{"version":1,"items":[],"todo":[],"logs":[]}`
+	for _, field := range []string{"items", "todo", "logs"} {
+		payload := strings.Replace(dasar, `"`+field+`":[]`, `"`+field+`":"bukan array"`, 1)
+		if err := validatePayload([]byte(payload)); err == nil {
+			t.Fatalf("%s salah bentuk harus ditolak", field)
+		}
+	}
+	if err := validatePayload([]byte(`{"version":1,"todo":[],"logs":[]}`)); err == nil {
+		t.Fatal("berkas tanpa items harus ditolak")
+	}
 }
