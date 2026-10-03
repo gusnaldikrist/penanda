@@ -29,6 +29,10 @@
      terpilih adalah latar ini dan judul semibold, bukan garis tepi. */
   --row-selected: #eef2f7;
   --row-selected-hover: #e2e8f0;
+  /* Tinggi baris kendali Indeks. Ketiga kontrol di baris itu — kotak cari,
+     pengatur urutan, tombol tambah — memakai angka yang sama, karena mereka
+     satu baris dan berbeda tinggi akan terlihat seperti tidak sengaja. */
+  --control-height: 42px;
   --ok: #047857;
   --ok-bg: #ecfdf5;
   --warn: #b45309;
@@ -408,21 +412,22 @@ body {
   margin-bottom: 0;
 }
 
-/* Pengatur urutan hasil. Duluan berada di dalam zona Kartu dan ikut hilang
-   bersama zona itu; sekarang tinggal di baris kendali ini. */
+/* Pengatur urutan hasil. Dulu berada di dalam zona Kartu dan memakai
+   metrik chip 28 px; sejak pindah ke baris kendali, metriknya harus ikut
+   baris kendali, bukan chip. */
 .select-sort-order {
-  height: 28px;
-  padding: 0 8px;
+  height: var(--control-height);
+  padding: 0 12px;
   font-family: inherit;
-  font-size: var(--font-meta);
+  font-size: var(--font-small);
   color: var(--body);
   background-color: var(--card);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .select-sort-order:hover {
@@ -465,7 +470,7 @@ body {
 
 .search-input {
   width: 100%;
-  height: 42px;
+  height: var(--control-height);
   padding: 0 44px 0 38px;
   font-family: var(--font-family);
   font-size: var(--font-body);
@@ -505,7 +510,7 @@ body {
 }
 
 .btn-tambah {
-  height: 42px;
+  height: var(--control-height);
   padding: 0 16px;
   font-size: var(--font-small);
   font-weight: 600;
