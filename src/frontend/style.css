@@ -401,6 +401,34 @@ body {
   margin-bottom: 0;
 }
 
+/* Pengatur urutan hasil. Duluan berada di dalam zona Kartu dan ikut hilang
+   bersama zona itu; sekarang tinggal di baris kendali ini. */
+.select-sort-order {
+  height: 28px;
+  padding: 0 8px;
+  font-family: inherit;
+  font-size: var(--font-meta);
+  color: var(--body);
+  background-color: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.select-sort-order:hover {
+  background-color: var(--band);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.select-sort-order:focus-visible {
+  border-color: var(--action);
+  box-shadow: 0 0 0 1px var(--action);
+}
+
 .search-bar-wrap {
   flex: 1 1 auto;
   min-width: 0;
@@ -540,19 +568,16 @@ body {
   scrollbar-color: var(--line) transparent;
 }
 
-.harian-scroll::-webkit-scrollbar,
-.kartu-scroll::-webkit-scrollbar {
+.harian-scroll::-webkit-scrollbar {
   height: 3px;
 }
 
-.harian-scroll::-webkit-scrollbar-thumb,
-.kartu-scroll::-webkit-scrollbar-thumb {
+.harian-scroll::-webkit-scrollbar-thumb {
   background-color: var(--line-strong);
   border-radius: var(--radius-sm);
 }
 
-.harian-scroll::-webkit-scrollbar-track,
-.kartu-scroll::-webkit-scrollbar-track {
+.harian-scroll::-webkit-scrollbar-track {
   background-color: transparent;
 }
 
@@ -590,116 +615,6 @@ body {
   background-color: var(--accent-amber);
 }
 
-/* ==========================================================================
-   Zona Kartu: Saringan Tag Ribbon & Pengatur Tampilan
-   ========================================================================== */
-
-.zone-kartu {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-shrink: 0;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.kartu-scroll {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  overflow-x: auto;
-  white-space: nowrap;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 2px 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
-}
-
-.btn-card-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  background-color: var(--card);
-  color: var(--muted);
-  font-family: var(--font-family);
-  font-size: var(--font-meta);
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.btn-card-tag:hover {
-  background-color: var(--band);
-  color: var(--ink);
-  border-color: var(--line-strong);
-}
-
-.btn-card-tag.active {
-  background-color: var(--action-soft);
-  color: var(--action);
-  border-color: var(--action);
-  font-weight: 600;
-}
-
-.btn-card-tag.active .tag-count {
-  background-color: var(--action);
-  color: var(--on-ink);
-}
-
-.tag-title {
-  letter-spacing: 0.02em;
-}
-
-.tag-count {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-meta-sm);
-  font-weight: 600;
-  color: var(--muted);
-  background-color: var(--band);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Pengatur Mode Tampilan (Grid / List) & Urutan */
-.view-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.select-sort-order {
-  height: 28px;
-  padding: 0 8px;
-  font-family: inherit;
-  font-size: var(--font-meta);
-  color: var(--body);
-  background-color: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  outline: none;
-  transition: all var(--transition-fast);
-}
-
-.select-sort-order:hover {
-  background-color: var(--band);
-  color: var(--ink);
-  border-color: var(--line-strong);
-}
-
-.select-sort-order:focus-visible {
-  border-color: var(--action);
-  box-shadow: 0 0 0 1px var(--action);
-}
 
 /* ==========================================================================
    Baris Rekap Hasil Pencarian
@@ -752,8 +667,7 @@ body {
 
 /* --------------------------------------------------------------------------
    Mode Tabel + Panel Inspeksi
-   Area hasil jadi tabel dan panel detail pindah ke samping kanan. Mode
-   kartu tidak memakai aturan di blok ini.
+   Area hasil jadi tabel dan panel detail pindah ke samping kanan.
    -------------------------------------------------------------------------- */
 
 .indeks-split {

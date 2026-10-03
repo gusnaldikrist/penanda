@@ -541,10 +541,6 @@ test('Tiket 01: Pengatur urutan ada di baris kendali, bukan di zona Kartu', asyn
     'Pengatur urutan harus ada di markup baris kendali Indeks');
   assert.doesNotMatch(markup, /Urutan kartu/,
     'Label aksesibilitas pengatur urutan tidak lagi boleh menyebut kartu');
-
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  assert.doesNotMatch(zoneKartu.innerHTML, /select-sort-order/,
-    'Pengatur urutan tidak boleh lagi dirender di dalam zona Kartu');
 });
 
 test('Tiket 01: Pengatur urutan tetap ada saat tidak ada satu pun tag tersemat', async () => {
@@ -602,4 +598,43 @@ test('Tiket 01: Pengatur urutan tidak terduplikasi dan pendengarnya tidak menump
     'Pengatur urutan harus tetap muncul tepat satu kali setelah render ulang');
   assert.equal(selectSort.listeners.change.length, 1,
     'Render ulang tidak boleh menambah pendengar change');
+});
+
+test('Tiket 02 - Zona Kartu tag tidak ada lagi di markup Indeks', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const markup = env.panelIndeks.innerHTML;
+  assert.doesNotMatch(markup, /id="zone-kartu"/,
+    'Zona Kartu harus hilang dari markup Indeks');
+  assert.doesNotMatch(markup, /btn-card-tag/,
+    'Tombol kartu tag tidak boleh ada di markup mana pun pada layar Indeks');
+  assert.doesNotMatch(markup, /KARTU/,
+    'Penanda KARTU tidak boleh muncul di layar Indeks');
+});
+
+test('Tiket 02 - Penyaringan per tag lewat kotak cari tetap bekerja', async () => {
+  // Dengan kartu dihapus, mengetik tag di kotak cari menjadi satu-satunya
+  // jalan menyaring per tag, jadi jalannya dikunci di sini.
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const searchInput = env.getOrCreateElement('search-input');
+  const resultList = env.getOrCreateElement('result-list');
+
+  // "magang" hanya ada sebagai tag pada satu item dan tidak muncul di judul
+  // maupun catatan mana pun. Jadi mengetik kata itu harus menemukan item itu,
+  // dan harus membuang kedua item yang tidak berbagi tag dengannya.
+  searchInput.trigger('input', { target: { value: 'magang' } });
+
+  const isi = resultList.innerHTML;
+  assert.match(isi, /Sheet Job Training/, 'Item bertag magang harus cocok lewat Lapis 1');
+  assert.doesNotMatch(isi, /SLiMS Bulian/,
+    'SLiMS Bulian tidak memuat magang dan tidak berbagi tag dengannya');
+  assert.doesNotMatch(isi, /Repository UNIGA/,
+    'Repository UNIGA tidak memuat magang dan tidak berbagi tag dengannya');
 });

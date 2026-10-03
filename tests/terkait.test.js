@@ -45,7 +45,6 @@ function createTestEnvironment(initialData = null, options = {}) {
       closest: (sel) => {
         if (sel === '.btn-copy' && className.includes('btn-copy')) return el;
         if (sel === '.btn-buka' && className.includes('btn-buka')) return el;
-        if (sel === '.btn-card-tag' && className.includes('btn-card-tag')) return el;
         if (sel === '.baris-tabel' && className.includes('baris-tabel')) return el;
         if (sel === '#panel-inspeksi' && (id === 'panel-inspeksi' || className.includes('panel-inspeksi'))) return el;
         return null;
@@ -292,99 +291,6 @@ test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, 
   assert.doesNotMatch(zoneHarian.innerHTML, /Repository UNIGA/, 'Repository UNIGA bukan tag harian');
 });
 
-test('Tiket 05 - Zona 3 (Kartu Pinned Tags): menampilkan TA 2, Wisuda 2, Magang 1 dan klik menyaring hasil', async () => {
-  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
-  const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
-  await new Promise(resolve => setImmediate(resolve));
-  await new Promise(resolve => setImmediate(resolve));
-
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  assert.ok(zoneKartu, 'Elemen #zone-kartu harus ada');
-  assert.match(zoneKartu.innerHTML, /KARTU/i, 'Label KARTU harus ada');
-
-  // Periksa kemunculan kartu tag beserta jumlahnya
-  assert.match(zoneKartu.innerHTML, /TA[\s\S]*?2/i, 'Kartu TA harus bernilai 2');
-  assert.match(zoneKartu.innerHTML, /Wisuda[\s\S]*?2/i, 'Kartu Wisuda harus bernilai 2');
-  assert.match(zoneKartu.innerHTML, /Magang[\s\S]*?1/i, 'Kartu Magang harus bernilai 1');
-
-  const resultList = env.getOrCreateElement('result-list');
-
-  // Klik kartu TA
-  zoneKartu.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-card-tag') {
-          return {
-            getAttribute: (attr) => attr === 'data-tag' ? 'ta' : null
-          };
-        }
-        return null;
-      }
-    }
-  });
-
-  // Zona hasil harus mempersempit ke 2 item (Sheet Admin TA dan Repository UNIGA)
-  assert.match(resultList.innerHTML, /Sheet Admin TA/, 'Sheet Admin TA bertag ta');
-  assert.match(resultList.innerHTML, /Repository UNIGA/, 'Repository UNIGA bertag ta');
-  assert.doesNotMatch(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian tidak memiliki tag ta');
-  assert.doesNotMatch(resultList.innerHTML, /Sheet Job Training/, 'Sheet Job Training tidak memiliki tag ta di lapis 1 awal saat filter aktif');
-
-  // Kartu TA harus memiliki kelas .active
-  assert.match(zoneKartu.innerHTML, /active/, 'Kartu yang diklik harus berstatus active');
-
-  // Klik ulang kartu TA untuk melepas filter
-  zoneKartu.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-card-tag') {
-          return {
-            getAttribute: (attr) => attr === 'data-tag' ? 'ta' : null
-          };
-        }
-        return null;
-      }
-    }
-  });
-
-  // Filter lepas, seluruh item default kembali tampil
-  assert.match(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian kembali tampil setelah filter kartu dilepas');
-});
-
-test('Tiket 05 - Filter bertumpuk: ketik "ta" lalu klik kartu Magang menyaring ke irisan keduanya', async () => {
-  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
-  const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
-  await new Promise(resolve => setImmediate(resolve));
-  await new Promise(resolve => setImmediate(resolve));
-
-  const searchInput = env.getOrCreateElement('search-input');
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  const resultList = env.getOrCreateElement('result-list');
-
-  // Ketik "ta" di kotak pencarian
-  searchInput.trigger('input', { target: { value: 'ta' } });
-
-  // Klik kartu Magang
-  zoneKartu.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-card-tag') {
-          return {
-            getAttribute: (attr) => attr === 'data-tag' ? 'magang' : null
-          };
-        }
-        return null;
-      }
-    }
-  });
-
-  // Hanya Sheet Job Training yang lolos (cocok kata kunci "ta" dan bertag "magang")
-  assert.match(resultList.innerHTML, /Sheet Job Training/, 'Sheet Job Training lolos filter AND');
-  assert.doesNotMatch(resultList.innerHTML, /Repository UNIGA/, 'Repository UNIGA tidak memiliki tag magang');
-  assert.doesNotMatch(resultList.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian tidak memiliki tag magang');
-});
-
 test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan item terkait tanpa dirinya sendiri', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
@@ -557,50 +463,35 @@ test('Tiket 05 - Tombol Esc dan klik luar melepas fokus dan menyembunyikan panel
   assert.doesNotMatch(resultList.innerHTML, /focused/, 'Kelas .focused harus dilepas oleh klik luar');
 });
 
-test('Tiket 05 - Klik kartu tag tanpa kata kunci menampilkan seluruh item tanpa terpotong 10 item', async () => {
-  // Buat 15 item dengan tag "projek"
+test("Tiket 02 - Daftar awal dipotong 10 item terbaru", async () => {
+  // Batas 10 item ini dulu ikut teruji lewat jalur filter kartu tag. Kartu
+  // sudah dihapus, jadi batasnya diuji langsung lewat jalur yang menikmatinya:
+  // kata kunci kosong memakai cabang yang sama dihitung hasil dan dipotong.
   const fifteenItems = [];
   for (let i = 1; i <= 15; i++) {
     fifteenItems.push({
       id: `item-${i}`,
       title: `Item Projek ${i}`,
-      tags: ['projek', 'kerja'],
-      links: [{ label: 'Link', url: `https://example.com/${i}` }],
+      tags: ["projek", "kerja"],
+      links: [{ label: "Link", url: `https://example.com/${i}` }],
       catatan: `Catatan ${i}`,
-      updated_at: `2026-09-${String(i).padStart(2, '0')}`
+      updated_at: `2026-09-${String(i).padStart(2, "0")}`
     });
   }
 
-  const customData = {
+  const env = createTestEnvironment({
     version: 1,
     items: fifteenItems,
     todo: [],
     logs: [],
-    pinned_tags: ['projek']
-  };
-
-  const env = createTestEnvironment(customData);
-  // detectStorageMode lalu loadData async sejak tiket 11
-  await new Promise(resolve => setImmediate(resolve));
-  await new Promise(resolve => setImmediate(resolve));
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  const resultList = env.getOrCreateElement('result-list');
-
-  // Klik kartu tag 'projek' saat input pencarian kosong
-  zoneKartu.trigger('click', {
-    target: {
-      closest: (sel) => {
-        if (sel === '.btn-card-tag') {
-          return { getAttribute: (attr) => attr === 'data-tag' ? 'projek' : null };
-        }
-        return null;
-      }
-    }
+    pinned_tags: []
   });
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
 
-  // Hitung jumlah baris tabel di innerHTML
-  const countMatches = (resultList.innerHTML.match(/class="baris-tabel/g) || []).length;
-  assert.equal(countMatches, 15, 'Filter kartu tag harus menampilkan seluruh 15 item tanpa terpotong 10 item');
+  const resultList = env.getOrCreateElement("result-list");
+  const jumlah = (resultList.innerHTML.match(/class="baris-tabel/g) || []).length;
+  assert.equal(jumlah, 10, "Kata kunci kosong harus memotong daftar menjadi 10 item terbaru");
 });
 
 test('Tiket 05 - Validasi CSS: batasan 768 px, scrolling independen zona hasil, chip token', () => {
@@ -631,9 +522,6 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   const env = createTestEnvironment(exampleData);
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
-
-  const zoneKartu = env.getOrCreateElement('zone-kartu');
-  assert.ok(zoneKartu, 'Elemen #zone-kartu harus ada');
 
   // Dropdown sort pindah ke baris kendali Indeks (tiket 01), bukan lagi
   // dirender di dalam zona Kartu.

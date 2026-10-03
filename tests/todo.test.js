@@ -46,7 +46,6 @@ function createTestEnvironment(initialData = null) {
         if (sel === '.btn-copy' && className.includes('btn-copy')) return el;
         if (sel === '.btn-buka' && className.includes('btn-buka')) return el;
         if (sel === '.btn-ubah' && className.includes('btn-ubah')) return el;
-        if (sel === '.btn-card-tag' && className.includes('btn-card-tag')) return el;
         if (sel === '.result-item' && className.includes('result-item')) return el;
         if (sel === '.todo-item' && className.includes('todo-item')) return el;
         if (sel === '.todo-checkbox' && className.includes('todo-checkbox')) return el;

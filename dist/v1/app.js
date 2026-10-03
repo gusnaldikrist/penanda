@@ -50,7 +50,6 @@
 
   const state = {
     activeTab: 'indeks',
-    activeTag: null,
     focusedItemId: null,
     sortOrder: 'recent',
     todoFilterStatus: 'semua',
@@ -817,13 +816,6 @@
     return { link: primaryLink, url, label, isLocal };
   }
 
-  function formatTagLabel(tag) {
-    if (!tag) return '';
-    const str = String(tag).trim();
-    if (str.toLowerCase() === 'ta') return 'TA';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
   function computeRelatedItems(focusedItem, allItems) {
     if (!focusedItem || !Array.isArray(allItems)) return [];
 
@@ -877,32 +869,6 @@
         ${harianItems.map(item => {
           const { url, isLocal } = getPrimaryLinkInfo(item);
           return `<a href="${escapeHtml(url)}" class="chip-harian" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || '')}</a>`;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  function renderKartuZone() {
-    const zoneKartuEl = document.getElementById('zone-kartu');
-    if (!zoneKartuEl) return;
-
-    const pinnedTags = (state.data && Array.isArray(state.data.pinned_tags)) ? state.data.pinned_tags : [];
-    if (pinnedTags.length === 0) {
-      zoneKartuEl.style.display = 'none';
-      zoneKartuEl.innerHTML = '';
-      return;
-    }
-
-    const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
-    zoneKartuEl.style.display = 'flex';
-    zoneKartuEl.innerHTML = `
-      <div class="zone-label">KARTU</div>
-      <div class="kartu-scroll">
-        ${pinnedTags.map(tag => {
-          const tagLower = String(tag).toLowerCase();
-          const count = items.filter(item => Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase() === tagLower)).length;
-          const isActive = state.activeTag === tagLower;
-          return `<button type="button" class="btn-card-tag ${isActive ? 'active' : ''}" data-tag="${escapeHtml(tagLower)}"><span class="tag-title">${escapeHtml(formatTagLabel(tag))}</span> <span class="tag-count">${count}</span></button>`;
         }).join('')}
       </div>
     `;
@@ -1091,11 +1057,6 @@
 
     let results = searchFn(items, query);
 
-    // Bila ada filter kartu tag aktif (Tiket 05), saring hasil berdasarkan tag tersebut
-    if (state.activeTag) {
-      results = results.filter(item => Array.isArray(item.tags) && item.tags.some(tag => String(tag).toLowerCase() === state.activeTag.toLowerCase()));
-    }
-
     // Urutan kartu: default recent (sesuai searchFn), jika 'az' urutkan judul A - Z
     if (state.sortOrder === 'az') {
       results = results.slice().sort((a, b) => {
@@ -1122,7 +1083,7 @@
     const cleanQuery = (typeof query === 'string') ? query.trim() : '';
 
     let displayItems = [];
-    if (cleanQuery === '' && !state.activeTag) {
+    if (cleanQuery === '') {
       if (rekapEl) {
         rekapEl.style.display = 'none';
         rekapEl.textContent = '';
@@ -1145,8 +1106,8 @@
     sinkronkanTampilanMode();
 
     const panelInfo = {
-      jumlahHasil: cleanQuery === '' && !state.activeTag ? results.length : displayItems.length,
-      adaKueri: cleanQuery !== '' || Boolean(state.activeTag),
+      jumlahHasil: cleanQuery === '' ? results.length : displayItems.length,
+      adaKueri: cleanQuery !== '',
       hilang: panelItemHilang
     };
 
@@ -1264,7 +1225,6 @@
               <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">Tambah Penanda</button>
             </div>
             <div id="zone-harian" class="zone-harian"></div>
-            <div id="zone-kartu" class="zone-kartu"></div>
             <div id="search-rekap" class="search-rekap" style="display: none;"></div>
             <div id="result-list" class="result-list tabel-mode"></div>
 
@@ -1316,26 +1276,6 @@
               const url = chip.getAttribute('data-url');
               copyToClipboard(url, true);
             }
-          }
-        });
-      }
-
-      const zoneKartuEl = document.getElementById('zone-kartu');
-      if (zoneKartuEl) {
-        zoneKartuEl.addEventListener('click', (e) => {
-
-          const cardBtn = e.target.closest ? e.target.closest('.btn-card-tag') : null;
-          if (cardBtn) {
-            const tag = cardBtn.getAttribute('data-tag');
-            if (state.activeTag === tag) {
-              state.activeTag = null;
-            } else {
-              state.activeTag = tag;
-            }
-            state.focusedItemId = null;
-            renderKartuZone();
-            const input = document.getElementById('search-input');
-            updateIndeksResults(input ? input.value : '');
           }
         });
       }
@@ -1425,11 +1365,9 @@
       }
 
       renderHarianZone();
-      renderKartuZone();
       updateIndeksResults('');
     } else {
       renderHarianZone();
-      renderKartuZone();
       updateIndeksResults(existingInput.value);
     }
   }
@@ -2366,8 +2304,7 @@ async function confirmDestructive(config) {
       confirmBtn.addEventListener('click', async () => {
         closeActiveModal();
         state.data = importedData;
-        // Saringan lama bisa menunjuk data yang tidak ada lagi di berkas baru
-        state.activeTag = null;
+        // Fokus item terpilih bisa menunjuk data yang tidak ada lagi di berkas baru
         state.focusedItemId = null;
         await saveData(state.data);
       });
@@ -2605,11 +2542,10 @@ async function confirmDestructive(config) {
         if (modal) return;
 
         if (state.focusedItemId) {
-          // Kontrol di zone-kartu (ganti mode, urutan, filter tag) dan isi panel
-          // bukan "klik di luar". Tanpa ini, menekan tombol salin di panel
-          // akan menghapus item yang sedang terpilih lalu mengosongkan
+          // Isi panel bukan "klik di luar". Tanpa ini, menekan tombol salin di
+          // panel akan menghapus item yang sedang terpilih lalu mengosongkan
           // panel yang baru saja dipakai.
-          if (!e.target.closest || (!e.target.closest('.baris-tabel') && !e.target.closest('#zone-kartu') && !e.target.closest('#panel-inspeksi'))) {
+          if (!e.target.closest || (!e.target.closest('.baris-tabel') && !e.target.closest('#panel-inspeksi'))) {
             state.focusedItemId = null;
             const searchInput = document.getElementById('search-input');
             updateIndeksResults(searchInput ? searchInput.value : '');

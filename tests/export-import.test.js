@@ -698,7 +698,7 @@ test('Tiket 09 - Pesan penolakan di-escape agar data tak bisa injecting HTML', a
   });
 });
 
-test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async () => {
+test('Tiket 02 - Import: fokus baris ikut dibersihkan dan item baru tampil utuh', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
   // loadData async saat halaman siap
@@ -714,12 +714,8 @@ test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async 
     pinned_tags: ['lain']
   };
 
-  // Saringan tag dipasang lewat jalur yang sama dengan user: klik kartu tag.
-  // Mock DOM di berkas ini tidak menyimpan listener zona-kartu (getElementById
-  // selalu membuat elemen baru), jadi filter diuji langsung lewat state —
-  // yang memang sudah diekspor lewat module.exports sejak tiket 02.
   env.sandbox.switchTab('indeks');
-  env.state.activeTag = 'ta';
+  env.state.focusedItemId = 'slims-bulian';
 
   await env.pickFile(otherData);
   env.getOrCreateElement('btn-confirm-import').trigger('click');
@@ -727,15 +723,12 @@ test('Tiket 09 - Import: saringan tag yang menyesatkan ikut dibersihkan', async 
   await new Promise(resolve => setImmediate(resolve));
   await new Promise(resolve => setImmediate(resolve));
 
-  // Saringan tag basi harus dilepas, kalau tidak layar menampilkan "tidak ada"
-  // padahal data hasil import ada
-  assert.equal(env.state.activeTag, null, 'Saringan tag harus dilepas setelah import');
+  // Fokus baris bisa menunjuk item yang tidak ada lagi di berkas baru, kalau
+  // tidak panel menampilkan konteks item lama padahal isinya sudah diganti.
   assert.equal(env.state.focusedItemId, null, 'Fokus baris harus dilepas setelah import');
 
-  // Saringan tag basi harus dilepas, kalau tidak layar menampilkan "tidak ada"
-  // padahal data hasil import ada
   const resultList = env.getOrCreateElement('result-list').innerHTML;
-  assert.match(resultList, /Item Baru/, 'Item hasil import harus tampil, tidak boleh tersaring tag basi');
+  assert.match(resultList, /Item Baru/, 'Item hasil import harus tampil');
 });
 
 test('Tiket 09 - Export: revokeObjectURL ditunda agar unduhan tidak dibatalkan', async () => {

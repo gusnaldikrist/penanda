@@ -184,7 +184,7 @@ function buatLingkungan(dataAwal) {
     hasil: () => ambil('result-list'),
     panel: () => ambil('panel-inspeksi'),
     terkait: () => ambil('zone-terkait'),
-    zonaKartu: () => ambil('zone-kartu'),
+    markupIndeks: () => ambil('panel-indeks').innerHTML,
     split: () => ambil('indeks-split'),
 
 
@@ -297,18 +297,21 @@ test('Tiket 01 - Area hasil tampil sebagai tabel sejak aplikasi dibuka', async (
   assert.match(env.hasil().className, /tabel-mode/, 'Area hasil memakai kelas tabel');
 });
 
-test('Tiket 01 - Tidak ada tombol switcher tampilan di markup mana pun', async () => {
+test('Tiket 02 - Tidak ada markup tampilan mana pun di layar Indeks', async () => {
   const env = buatLingkungan(contoh());
   await tick();
 
-  // `ambil()` selalu membuat elemen kalau belum ada, jadi ketiadaan
-  // tombol switcher tidak bisa diuji lewat pemanggilan itu. Yang diuji
-  // adalah isi markup yang benar-benar dirender.
-  const markup = env.ambil('zone-kartu').innerHTML;
+  // `ambil()` selalu membuat elemen kalau belum ada, jadi ketiadaan suatu
+  // bagian tidak bisa diuji lewat pemanggilan itu. Yang diuji adalah markup
+  // baris kendali Indeks yang benar-benar dirender, bukan isi elemen yang
+  // pemanggilannya sudah tidak ada.
+  const markup = env.markupIndeks();
   assert.doesNotMatch(markup, /btn-toggle-view/,
-    'Markup zona Kartu tidak boleh memuat tombol switcher');
+    'Markup layar tidak boleh memuat tombol switcher');
   assert.doesNotMatch(markup, /btn-view-toggle/,
     'Kelas tombol switcher tidak boleh muncul');
+  assert.doesNotMatch(markup, /id="zone-kartu"/,
+    'Zona Kartu harus hilang dari markup layar');
   assert.equal(env.state.viewMode, undefined,
     'Penanda mode tidak boleh ada di state');
 });
