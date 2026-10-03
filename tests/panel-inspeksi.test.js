@@ -507,10 +507,36 @@ test('Tiket 02 - Tabel memuat judul, URL, tag, catatan, dan aksi', async () => {
   const { env } = await panelUntuk([buatItem({})]);
   const html = env.hasil().innerHTML;
 
-  for (const kolom of ['JUDUL &amp; KATEGORI', 'TAUTAN', 'CATATAN', 'TAGAR', 'AKSI']) {
+  for (const kolom of ['JUDUL', 'TAUTAN', 'CATATAN', 'TAGAR', 'AKSI']) {
     assert.ok(html.includes(kolom + '</th>'), 'Kolom ' + kolom + ' harus ada di header tabel');
   }
   assert.equal((html.match(/<th[\s>]/g) || []).length, 5, 'Tabel harus punya lima kolom');
+});
+
+test('Tidak ada lencana, ikon, atau label kategori di tabel maupun panel', async () => {
+  const { env } = await panelUntuk([buatItem({ tags: ['alfa', 'beta'] })], ['alfa']);
+
+  const html = env.hasil().innerHTML;
+  assert.doesNotMatch(html, /sel-nomor/, 'Lencana nomor tidak boleh ada di tabel');
+  assert.doesNotMatch(html, /sel-kategori/, 'Label kategori tidak boleh ada di tabel');
+  assert.doesNotMatch(html, /sel-ikon/, 'Ikon kategori tidak boleh ada di tabel');
+  assert.doesNotMatch(html, /accent-/, 'Kelas aksen warna tidak boleh ada di tabel');
+  assert.doesNotMatch(env.panel().innerHTML, /sel-nomor/, 'Lencana tidak boleh ada di panel');
+  assert.doesNotMatch(env.panel().innerHTML, /sel-kategori/, 'Label kategori tidak boleh ada di panel');
+});
+
+test('Kategori tidak lagi punya daftar tag di kode', async () => {
+  const sumber = fs.readFileSync(appJsPath, 'utf8');
+
+  assert.doesNotMatch(sumber, /CATEGORY_MAP/, 'Daftar kategori tidak boleh ada di kode');
+  assert.doesNotMatch(sumber, /Tugas Akhir \/\/ Harian/, 'Label kategori perpustakaan tidak boleh ada di kode');
+  assert.doesNotMatch(sumber, /Pelaporan \/\/ PDDikti/, 'Label kategori perpustakaan tidak boleh ada di kode');
+  // Nama kelas yang dulu dipakai kategori dicek di sumber, bukan hanya di
+  // markup hasil render. Kalau hanya cek markup, kelas yang kembali ke kode
+  // tapi tidak dirender akan lolos.
+  for (const nama of ['sel-ikon', 'sel-kategori', 'sel-nomor', 'accent-']) {
+    assert.doesNotMatch(sumber, new RegExp(nama), 'Kelas ' + nama + ' tidak boleh ada di kode');
+  }
 });
 
 test('Tiket 02 - Urutan pemangkasan: URL dulu, lalu tag, lalu catatan', () => {

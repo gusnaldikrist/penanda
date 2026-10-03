@@ -69,36 +69,6 @@
   // memeriksa kalimatnya, bukan sekadar elemennya ada.
   const KALIMAT_PANEL_KOSONG = 'Pilih salah satu baris untuk melihat detailnya';
 
-  const CATEGORY_MAP = [
-    { tag: 'ta', category: 'Tugas Akhir // Harian', accent: 'amber', icon: 'file' },
-    { tag: 'wisuda', category: 'Repository // Wisuda', accent: 'blue', icon: 'archive' },
-    { tag: 'magang', category: 'Magang // Kerjasama', accent: 'teal', icon: 'briefcase' },
-    { tag: 'sirkulasi', category: 'Sirkulasi // Harian', accent: 'amber', icon: 'refresh' },
-    { tag: 'administrasi', category: 'Administrasi // Harian', accent: 'amber', icon: 'clipboard' },
-    { tag: 'skripsi', category: 'Repository // Skripsi', accent: 'blue', icon: 'book' },
-    { tag: 'sheet', category: 'Master Data // Sheet', accent: 'emerald', icon: 'grid' },
-    { tag: 'form', category: 'Kuesioner // Form', accent: 'purple', icon: 'edit' },
-    { tag: 'pddikti', category: 'Pelaporan // PDDikti', accent: 'sky', icon: 'cloud' }
-  ];
-
-  function resolveCategoryAndAccent(tags) {
-    if (!Array.isArray(tags) || tags.length === 0) {
-      return { category: 'Dokumen // Umum', accent: 'neutral', icon: 'file' };
-    }
-    const tagsLower = tags.map(t => String(t).trim().toLowerCase());
-    for (const rule of CATEGORY_MAP) {
-      if (tagsLower.includes(rule.tag)) {
-        return rule;
-      }
-    }
-    const first = tags[0];
-    return {
-      category: `${formatTagLabel(first)} // Arsip`,
-      accent: 'neutral',
-      icon: 'file'
-    };
-  }
-
   function getSvgIcon(name, size = 14) {
     const s = size;
     switch (name) {
@@ -1018,10 +988,6 @@
   function buildPanelHtml(item, relatedHtml) {
     if (!item) return '';
 
-    const categoryInfo = resolveCategoryAndAccent(item.tags);
-    const categoryBadge = categoryInfo.category || 'Dokumen // Umum';
-    const iconSvg = getSvgIcon(categoryInfo.icon, 14);
-
     const links = Array.isArray(item.links)
       ? item.links.filter(link => link && link.url)
       : [];
@@ -1078,10 +1044,8 @@
 
     return `
       <div class="panel-kepala">
-        <span class="sel-ikon">${iconSvg}</span>
         <div class="sel-teks">
           <h2 class="panel-judul">${escapeHtml(item.title || '')}</h2>
-          <span class="sel-kategori">${escapeHtml(categoryBadge)}</span>
         </div>
       </div>
       ${linksHtml}
@@ -1214,11 +1178,6 @@
 
     const renderBarisTabel = (item) => {
       const { url: primaryUrl, isLocal: local } = getPrimaryLinkInfo(item);
-      const categoryInfo = resolveCategoryAndAccent(item.tags);
-      const accent = categoryInfo.accent || 'neutral';
-      const categoryBadge = categoryInfo.category || 'Dokumen // Umum';
-      const iconSvg = getSvgIcon(categoryInfo.icon, 12);
-
       const tagsHtml = Array.isArray(item.tags) && item.tags.length > 0
         ? item.tags.map(tag => `#${escapeHtml(tag)}`).join(' ')
         : '<span class="sel-kosong">-</span>';
@@ -1237,13 +1196,11 @@
         : `<a href="${escapeHtml(primaryUrl)}" target="_blank" rel="noopener noreferrer" class="btn-aksi btn-buka" title="Buka">${getSvgIcon('buka', 12)}</a>`;
 
       return `
-        <tr class="baris-tabel accent-${accent} ${state.focusedItemId === item.id ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}" aria-selected="${ariaSelected}">
+        <tr class="baris-tabel ${state.focusedItemId === item.id ? 'focused' : ''}" data-id="${escapeHtml(item.id || '')}" aria-selected="${ariaSelected}">
           <td class="sel-judul">
             <div class="sel-judul-isi">
-              <span class="sel-ikon">${iconSvg}</span>
               <span class="sel-teks">
                 <span class="sel-nama">${titlePrefix}${escapeHtml(item.title || '')}</span>
-                <span class="sel-kategori">${escapeHtml(categoryBadge)}</span>
               </span>
             </div>
           </td>
@@ -1265,7 +1222,7 @@
       <table class="tabel-hasil">
         <thead>
           <tr>
-            <th scope="col" class="sel-judul">JUDUL &amp; KATEGORI</th>
+            <th scope="col" class="sel-judul">JUDUL</th>
             <th scope="col" class="sel-alamat">TAUTAN</th>
             <th scope="col" class="sel-catatan">CATATAN</th>
             <th scope="col" class="sel-tag">TAGAR</th>

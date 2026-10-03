@@ -647,9 +647,9 @@ test('Tiket 05 - Dropdown sort toolbar kartu: Terakhir Digunakan (default) dan A
   const selectSort = env.getOrCreateElement('select-sort-order');
 
   // Ekstrak judul awal (recent default)
-  const judulDari = (html) => [...html.matchAll(/class="sel-nama">([^<]*)/g)].map(m => m[1]);
-  // Badge kategori ada di span terpisah, jadi judul harus dinormalkan dari spasi ganda.
-  const judulBersih = (h) => judulDari(h).map(s => s.split('//')[0].replace(/\s+/g, ' ').trim());
+  const judulDari = (html) => [...html.matchAll(/<span class="sel-nama">([\s\S]*?)<\/span>\s*<\/span>/g)]
+    .map(m => m[1].replace(/<[^>]+>/g, ''));
+  const judulBersih = (h) => judulDari(h).map(s => s.replace(/\s+/g, ' ').trim());
   const titlesInitial = judulBersih(resultList.innerHTML);
   assert.deepEqual(titlesInitial, ['SLiMS Bulian', 'Repository UNIGA', 'Sheet Job Training', 'Sheet Admin TA'], 'Urutan awal sesuai recent');
 
@@ -703,10 +703,9 @@ test('Tiket 05 - Pengurutan A - Z mempertahankan lapis pencarian (Lapis 1 > Lapi
   // i3 dan i4 tidak berbagi tag lapis 1, hanya cocok pada catatan -> Lapis 3
   searchInput.trigger('input', { target: { value: 'magang' } });
 
-  // Dua badge bisa berada di dalam satu sel nama: penanda pencarian
-  // ("dari catatan:") dan kategori ("//_docs_"). Keduanya bagian dari
-  // teks yang boleh dibaca pengguna, jadi keduanya ikut diambil.
-  const titles = [...resultList.innerHTML.matchAll(/class="sel-nama">([\s\S]*?)<\/span>\s*<span class="sel-kategori"/g)]
+  // Penanda pencarian ("dari catatan:") berada di dalam span nama sebagai
+  // tag, jadi teksnya ikut diambil.
+  const titles = [...resultList.innerHTML.matchAll(/<span class="sel-nama">([\s\S]*?)<\/span>\s*<\/span>/g)]
     .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
 
   // Di lapis 1 (Alpha Item dan Zeta Item): diurutkan A-Z -> Alpha Item duluan, baru Zeta Item
@@ -764,10 +763,9 @@ test('Tiket 05 - Simpan data baru mempertahankan state.sortOrder az dan opsi sel
   assert.match(zoneKartu.innerHTML, /<option value="az" selected>/, 'Dropdown harus mempertahankan pilihan A - Z');
 
   // Item baru "Aplikasi Arsip" harus menjadi urutan pertama di DOM karena A-Z
-  // Dua badge bisa berada di dalam satu sel nama: penanda pencarian
-  // ("dari catatan:") dan kategori ("//_docs_"). Keduanya bagian dari
-  // teks yang boleh dibaca pengguna, jadi keduanya ikut diambil.
-  const titles = [...resultList.innerHTML.matchAll(/class="sel-nama">([\s\S]*?)<\/span>\s*<span class="sel-kategori"/g)]
+  // Penanda pencarian ("dari catatan:") berada di dalam span nama sebagai
+  // tag, jadi teksnya ikut diambil.
+  const titles = [...resultList.innerHTML.matchAll(/<span class="sel-nama">([\s\S]*?)<\/span>\s*<\/span>/g)]
     .map(m => m[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
   assert.equal(titles[0], 'Aplikasi Arsip', 'Aplikasi Arsip harus di urutan pertama alfabetis');
 });

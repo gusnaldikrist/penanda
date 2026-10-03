@@ -909,11 +909,6 @@ body {
   gap: 8px;
 }
 
-.sel-ikon {
-  display: inline-flex;
-  color: var(--card-accent, var(--muted));
-  flex-shrink: 0;
-}
 
 .sel-teks {
   display: flex;
@@ -928,11 +923,7 @@ body {
   font-weight: 500;
 }
 
-.sel-kategori {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-meta-sm);
-  color: var(--faint);
-}
+
 
 .sel-url {
   font-family: var(--font-family-mono);
@@ -1157,28 +1148,8 @@ body {
   }
 }
 
-/* Aksen Warna Semantik Kategori Kartu */
-.accent-amber {
-  --card-accent: var(--accent-amber);
-}
-.accent-blue {
-  --card-accent: var(--accent-blue);
-}
-.accent-emerald {
-  --card-accent: var(--accent-emerald);
-}
-.accent-teal {
-  --card-accent: var(--accent-teal);
-}
-.accent-purple {
-  --card-accent: var(--accent-purple);
-}
-.accent-sky {
-  --card-accent: var(--accent-sky);
-}
-.accent-neutral {
-  --card-accent: var(--accent-neutral);
-}
+/* Aksen warna untuk lencana nomor urut. Nomornya sendiri netral;
+   warna yang membuat sekelompok tag mudah dikelompokkan dengan mata. */
 
 .result-title {
   font-size: var(--font-title);
