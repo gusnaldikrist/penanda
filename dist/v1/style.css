@@ -22,6 +22,13 @@
   --action: #18181b;
   --action-hover: #27272a;
   --action-soft: #f4f4f5;
+  /* Latar baris tabel pada tiga keadaan. Nilai `#f8fafc` dan `#f1f5f9`
+     datang dari spesifikasi desain v1 bagian tabel; keduanya sengaja lebih
+     terang dari latar hover supaya baris terpilih tidak terlihat seperti
+     sekadar baris yang sedang disorot mouse. Yang membedakan baris terpilih
+     tetap garis aksen kiri dan judul semibold, bukan warnanya saja. */
+  --row-selected: #f8fafc;
+  --row-selected-hover: #f1f5f9;
   --ok: #047857;
   --ok-bg: #ecfdf5;
   --warn: #b45309;
@@ -656,12 +663,17 @@ body {
   white-space: nowrap;
 }
 
+.baris-tabel {
+  cursor: pointer;
+}
+
 .baris-tabel td {
   border-bottom: 1px solid var(--line);
   border-left: 3px solid transparent;
   padding: 8px 10px;
   vertical-align: top;
   font-size: var(--font-small);
+  transition: background-color 150ms ease;
 }
 
 .baris-tabel:last-child td {
@@ -669,12 +681,27 @@ body {
 }
 
 .baris-tabel:hover td {
-  background-color: var(--action-soft);
+  background-color: var(--band);
 }
 
+/* Baris terpilih: latar sendiri yang lebih terang dari hover, garis aksen
+   kiri, dan judul semibold. Kalau latarnya sama dengan hover,
+   orang tidak bisa tahu baris mana yang sedang dikerjakan. */
 .baris-tabel.focused td {
-  background-color: var(--action-soft);
+  background-color: var(--row-selected);
   border-left-color: var(--card-accent, var(--action));
+}
+
+/* Baris terpilih yang disorot mouse: sedikit lebih gelap, garis aksen kiri
+   tetap ada supaya tidak hilang sebentar saat mouse lewat. */
+.baris-tabel.focused:hover td {
+  background-color: var(--row-selected-hover);
+}
+
+/* Judul semibold sebagai pembeda utama baris terpilih, supaya tidak
+   bergantung pada warna latar saja. */
+.baris-tabel.focused .sel-nama {
+  font-weight: 600;
 }
 
 .baris-tabel .sel-judul {
@@ -748,13 +775,20 @@ body {
   background-color: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  color: var(--muted);
+  color: var(--faint);
   cursor: pointer;
   text-decoration: none;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+/* Ikon aksi redup sampai barisnya disorot, supaya tiga ikon tidak bersaing
+   dengan isi baris saat mata memindai tabel. */
+.baris-tabel:hover .btn-aksi {
+  color: var(--muted);
 }
 
 .btn-aksi:hover {
-  background-color: var(--action-soft);
+  background-color: var(--band-2);
   border-color: var(--line-strong);
   color: var(--ink);
 }
