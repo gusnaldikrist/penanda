@@ -22,13 +22,13 @@
   --action: #18181b;
   --action-hover: #27272a;
   --action-soft: #f4f4f5;
-  /* Latar baris tabel pada tiga keadaan. Nilai `#f8fafc` dan `#f1f5f9`
-     datang dari spesifikasi desain v1 bagian tabel; keduanya sengaja lebih
-     terang dari latar hover supaya baris terpilih tidak terlihat seperti
-     sekadar baris yang sedang disorot mouse. Yang membedakan baris terpilih
-     tetap garis aksen kiri dan judul semibold, bukan warnanya saja. */
-  --row-selected: #f8fafc;
-  --row-selected-hover: #f1f5f9;
+  /* Latar baris tabel pada keadaan terpilih. Nilai ini datang dari
+     spesifikasi desain v1 bagian tabel dan sengaja lebih jelas daripada
+     latar hover: versi sebelumnya #f8fafc nyaris tidak kasatmata bedanya dari
+     putih, sehingga baris terpilih tidak terbaca. Yang membedakan baris
+     terpilih adalah latar ini dan judul semibold, bukan garis tepi. */
+  --row-selected: #eef2f7;
+  --row-selected-hover: #e2e8f0;
   --ok: #047857;
   --ok-bg: #ecfdf5;
   --warn: #b45309;
@@ -669,7 +669,6 @@ body {
 
 .baris-tabel td {
   border-bottom: 1px solid var(--line);
-  border-left: 3px solid transparent;
   padding: 8px 10px;
   vertical-align: top;
   font-size: var(--font-small);
@@ -684,16 +683,16 @@ body {
   background-color: var(--band);
 }
 
-/* Baris terpilih: latar sendiri yang lebih terang dari hover, garis aksen
-   kiri, dan judul semibold. Kalau latarnya sama dengan hover,
-   orang tidak bisa tahu baris mana yang sedang dikerjakan. */
+/* Baris terpilih: latar yang lebih jelas dari hover dan judul semibold.
+   Garis aksen tepi kiri dihapus. Earlier baris ini memakai garis 3 px gelap
+   di tepi kiri sebagai pembeda utama;sekarang sudah tidak dipakai karena satu
+   baris yang bergaris terasa seperti tab, bukan seperti baris tabel. */
 .baris-tabel.focused td {
   background-color: var(--row-selected);
-  border-left-color: var(--card-accent, var(--action));
 }
 
-/* Baris terpilih yang disorot mouse: sedikit lebih gelap, garis aksen kiri
-   tetap ada supaya tidak hilang sebentar saat mouse lewat. */
+/* Baris terpilih yang disorot mouse: sedikit lebih gelap dari biasa, supaya
+   hover tetap terbaca tanpa mengubah penanda baris terpilihnya. */
 .baris-tabel.focused:hover td {
   background-color: var(--row-selected-hover);
 }
