@@ -353,10 +353,14 @@ test('Tiket 04 - Sop juga tersimpan saat menambah item baru', async () => {
 
 test('Tiket 04 - Data lama tanpa sop tetap terbaca tanpa migrasi', async () => {
   const lama = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
-  for (const item of lama.items) {
-    assert.equal(Object.prototype.hasOwnProperty.call(item, 'sop'), false,
-      'data contoh harus tetap tanpa field sop, supaya jalur data lama ikut teruji');
-  }
+
+  // Item slims-bulian sengaja tidak diberi sop supaya jalur data tanpa field
+  // ini ikut teruji setiap kali data contoh dibaca. Item lain boleh punya,
+  // supaya berkas contoh juga menunjukkan bentuk field yang lengkap.
+  const tanpaSop = lama.items.find(item => item.id === 'slims-bulian');
+  assert.ok(tanpaSop, 'data contoh harus punya item slims-bulian');
+  assert.equal(Object.prototype.hasOwnProperty.call(tanpaSop, 'sop'), false,
+    'slims-bulian harus tetap tanpa field sop, supaya jalur data lama ikut teruji');
 
   const env = buatLingkungan(lama);
   await tick();
@@ -364,11 +368,22 @@ test('Tiket 04 - Data lama tanpa sop tetap terbaca tanpa migrasi', async () => {
   assert.equal(env.state.storageBlocked, false, 'data lama harus terbaca, bukan ditolak');
   assert.equal(env.state.data.items.length, lama.items.length, 'seluruh item lama harus tetap ada');
 
-  env.state.focusedItemId = lama.items[0].id;
+  env.state.focusedItemId = tanpaSop.id;
   env.ketik('');
   await tick();
   assert.doesNotMatch(env.ambil('panel-inspeksi').innerHTML, /panel-sop/,
     'Item lama tanpa sop tidak boleh menampilkan bagian langkah kerja');
+
+  // Item yang punya sop tetap menampilkannya, jadi berkas contoh bukan cuma
+  // menguji jalur kosong tapi juga jalur terisi.
+  const denganSop = lama.items.find(item => Object.prototype.hasOwnProperty.call(item, 'sop'));
+  assert.ok(denganSop, 'data contoh harus punya minimal satu item dengan sop');
+
+  env.state.focusedItemId = denganSop.id;
+  env.ketik('');
+  await tick();
+  assert.match(env.ambil('panel-inspeksi').innerHTML, /panel-sop/,
+    'Item yang punya sop harus menampilkan bagian langkah kerja');
 });
 
 // ---------------------------------------------------------------------------

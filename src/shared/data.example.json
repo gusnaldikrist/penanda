@@ -31,6 +31,7 @@
       "tags": ["ta", "skripsi", "sheet", "admin", "wisuda", "harian"],
       "links": [{"label": "Buka Sheet", "url": "https://docs.google.com/spreadsheets/d/1lW_j8FhRSZ3bNnxYoG7x5jFhsy2PTA1PCFiIvqLUzFE/edit"}],
       "catatan": "Terima draft TA lalu catat di sheet admin ini",
+      "sop": "Cek form pengajuan\nCatat di sheet ini\nKirim ke kepala bagian",
       "updated_at": "2026-09-29"
     }
   ],
