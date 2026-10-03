@@ -251,6 +251,11 @@
       // saja - misalnya tombol Buka gagal karena backend tidak merespons.
       if (isLocal) {
         showToast('Path sudah disalin; tombol Buka adalah cara yang lebih cepat');
+      } else {
+        // Tanpa ini, menyalin tautan web berhasil tanpa kabar apa pun dan
+        // tidak ada cara tahu itu berhasil. Ikonnya pun redup sampai baris
+        // disorot, jadi tanpa konfirmasi kliknya terasa seperti tidak terjadi.
+        showToast('Tautan disalin');
       }
     }
 

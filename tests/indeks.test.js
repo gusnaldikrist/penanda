@@ -417,7 +417,7 @@ test('Tiket 04: Tombol Buka dan Copy pada URL web vs path lokal Windows', async 
   assert.match(resultList.innerHTML, /data-local="true"/, 'Item lokal ditandai data-local="true"');
 });
 
-test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa toast pada URL web', async () => {
+test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) dipakai pada URL web', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
   const env = createTestEnvironment(exampleData);
   // detectStorageMode lalu loadData async sejak tiket 11
@@ -430,7 +430,14 @@ test('Tiket 04: Jaring pengaman Copy: Cara 1 (sinkron execCommand) sukses tanpa 
 
   assert.equal(env.getLastExecCommand(), 'copy', 'Cara 1 harus memanggil execCommand copy');
   assert.equal(env.getLastExecCommandText(), 'https://lib.fkominfo.uniga.ac.id/login', 'Teks textarea cocok');
-  assert.equal(env.toasts.length, 0, 'URL web tidak memunculkan toast notifikasi (bebas scope-creep)');
+
+  // Dulu di sini ada assertion bahwa tidak boleh ada toast, dengan alasan
+  // bebas scope-creep. Keputusan itu dibalik: menyalin tautan web adalah
+  // kasus utama produk ini, dan tanpa konfirmasi orang tidak punya cara
+  // tahu kliknya berhasil atau tidak.
+  assert.equal(env.toasts.length, 1, 'Menyalin URL web harus menampilkan konfirmasi');
+  assert.match(env.toasts[0].textContent, /disalin/i,
+    'Konfirmasi harus menyebut tautan sudah tersalin');
 });
 
 test('Tiket 04: Jaring pengaman Copy: path lokal menampilkan arahan Pro', async () => {
