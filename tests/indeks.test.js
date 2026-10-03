@@ -34,7 +34,7 @@ function createTestEnvironment(initialData = null, options = {}) {
       },
       setAttribute: () => {},
       removeAttribute: () => {},
-      closest: (sel) => null,
+      closest: (_sel) => null,
       classList: {
         contains: (cls) => className.split(' ').filter(Boolean).includes(cls),
         add: (cls) => {
@@ -636,4 +636,38 @@ test('Tiket 02 - Penyaringan per tag lewat kotak cari tetap bekerja', async () =
     'SLiMS Bulian tidak memuat magang dan tidak berbagi tag dengannya');
   assert.doesNotMatch(isi, /Repository UNIGA/,
     'Repository UNIGA tidak memuat magang dan tidak berbagi tag dengannya');
+});
+
+test('Tiket 04 - Zona Harian tidak ada lagi di markup Indeks', async () => {
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const markup = env.panelIndeks.innerHTML;
+  assert.doesNotMatch(markup, /id="zone-harian"/,
+    'Zona Harian harus hilang dari markup Indeks');
+  assert.doesNotMatch(markup, /chip-harian/,
+    'Chip harian tidak boleh ada di markup mana pun pada layar Indeks');
+  assert.doesNotMatch(markup, /HARIAN/,
+    'Penanda HARIAN tidak boleh muncul di layar Indeks');
+});
+
+test('Tiket 04 - Tag harian tetap sah dan tetap dicari seperti tag lain', async () => {
+  // Baris Harian dihapus, tapi tag "harian" tidak dilarang: ia kini hanya
+  // tag biasa. Dua hal ini dikunci supaya penghapusan tidak ikut mengubah
+  // aturan tag maupun perilaku pencarian.
+  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
+  const env = createTestEnvironment(exampleData);
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+
+  const searchInput = env.getOrCreateElement('search-input');
+  const resultList = env.getOrCreateElement('result-list');
+
+  searchInput.trigger('input', { target: { value: 'harian' } });
+
+  const isi = resultList.innerHTML;
+  assert.match(isi, /SLiMS Bulian/, 'Item bertag harian harus tetap ditemukan lewat kotak cari');
+  assert.match(isi, /Sheet Admin TA/, 'Item bertag harian kedua harus tetap ditemukan');
 });

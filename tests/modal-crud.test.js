@@ -46,7 +46,6 @@ function createTestEnvironment(initialData = null) {
         if (sel === '.btn-buka' && className.includes('btn-buka')) return el;
         if (sel === '.btn-ubah' && className.includes('btn-ubah')) return el;
         if (sel === '.result-item' && className.includes('result-item')) return el;
-        if (sel === '.chip-harian' && className.includes('chip-harian')) return el;
         if (sel === '.modal-overlay' && className.includes('modal-overlay')) return el;
         if (sel === '.modal-box' && className.includes('modal-box')) return el;
         return null;

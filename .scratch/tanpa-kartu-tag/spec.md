@@ -149,10 +149,6 @@ backend adalah gerbang yang memeriksa bentuk yang harus dipenuhi, bukan
   user bukan perubahan mayor: berkas versi lama masih diterima dan masih dibaca.
   Menaikkan versi akan menolak berkas backup milik pengguna tanpa alasan.
 
-- **Zona Harian tidak tersentuh.** Sumbernya berbeda — menyaring daftar item
-  berdasarkan tag harian pada daftar item itu sendiri, bukan dari field yang
-  dibuang. Jalur inputnya juga sudah lengkap lewat kolom tag pada modal item.
-
 - **Contoh data bersama ikut menyesuaikan** supaya tidak lagi mendeskripsikan field
   yang diabaikan aplikasi.
 
@@ -214,7 +210,6 @@ backend adalah gerbang yang memeriksa bentuk yang harus dipenuhi, bukan
 - **Daftar tag otomatis.** Tidak adaruptions dari tag yang paling sering dipakai,
   dan tidak ada CONTROL untuk menyematkan atau melepas tag. Alasannya dinyatakan di
   atas: pengguna tunggal, daftar besar, kejadian jarang.
-- **Zona Harian.** Tidak diubah, tidak ditambah, tidak dipindah letaknya.
 - **Panel inspeksi dan tabel hasil.** Keduanya hasil spec sebelumnya dan tidak
   tersentuh.
 - **Pengurutan.** Tidak ada nilai urutan baru, tidak ada urutan ketiga, tidak ada
@@ -223,7 +218,6 @@ backend adalah gerbang yang memeriksa bentuk yang harus dipenuhi, bukan
 - **Kategori item.** Sudah dihapus dan tidak dikembalikan.
 - **Pengukuran ukuran berhasil.** Mengukur jumlah klik dan waktunya adalah
   pekerjaan manusia dan tetap terbuka; spec ini tidak mengukurnya.
-- **Pengujian di layar nyata.** Verifikasi visual oleh pengguna tetap terpisah.
 - **Nomor versi skema dan migrasi data.** Tidak ada langkah pemindahan data untuk
   pengguna. Field yang dibuang hilang sendiri.
 

@@ -847,31 +847,6 @@
     return candidates.slice(0, 3).map(candidate => candidate.item);
   }
 
-  function renderHarianZone() {
-    const zoneHarianEl = document.getElementById('zone-harian');
-    if (!zoneHarianEl) return;
-
-    const items = (state.data && Array.isArray(state.data.items)) ? state.data.items : [];
-    const harianItems = items.filter(item => Array.isArray(item.tags) && item.tags.some(tag => String(tag).toLowerCase() === 'harian'));
-
-    if (harianItems.length === 0) {
-      zoneHarianEl.style.display = 'none';
-      zoneHarianEl.innerHTML = '';
-      return;
-    }
-
-    zoneHarianEl.style.display = 'flex';
-    zoneHarianEl.innerHTML = `
-      <div class="zone-label">HARIAN</div>
-      <div class="harian-scroll">
-        ${harianItems.map(item => {
-          const { url, isLocal } = getPrimaryLinkInfo(item);
-          return `<a href="${escapeHtml(url)}" class="chip-harian" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || '')}</a>`;
-        }).join('')}
-      </div>
-    `;
-  }
-
   // Konten item terkait dirender ke tepat satu tempat, tergantung mode:
   // baris di bawah tabel pada mode kartu, panel di kanan pada mode tabel.
   // Keduanya tidak boleh menampilkan isi yang sama di saat bersamaan.
@@ -1222,7 +1197,6 @@
               </select>
               <button type="button" id="btn-tambah-item" class="btn btn-primary btn-tambah">Tambah Penanda</button>
             </div>
-            <div id="zone-harian" class="zone-harian"></div>
             <div id="search-rekap" class="search-rekap" style="display: none;"></div>
             <div id="result-list" class="result-list tabel-mode"></div>
 
@@ -1260,21 +1234,6 @@
           state.sortOrder = (e.target && e.target.value === 'az') ? 'az' : 'recent';
           const input = document.getElementById('search-input');
           updateIndeksResults(input ? input.value : '');
-        });
-      }
-
-      const zoneHarianEl = document.getElementById('zone-harian');
-      if (zoneHarianEl) {
-        zoneHarianEl.addEventListener('click', (e) => {
-          const chip = e.target.closest('.chip-harian');
-          if (chip) {
-            const isLocal = chip.getAttribute('data-local') === 'true';
-            if (isLocal) {
-              e.preventDefault();
-              const url = chip.getAttribute('data-url');
-              copyToClipboard(url, true);
-            }
-          }
         });
       }
 
@@ -1362,10 +1321,8 @@
         });
       }
 
-      renderHarianZone();
       updateIndeksResults('');
     } else {
-      renderHarianZone();
       updateIndeksResults(existingInput.value);
     }
   }

@@ -276,20 +276,6 @@ function panelKosong(panel) {
 function panelBerisi(panel) {
   return !panelKosong(panel);
 }
-test('Tiket 05 - Zona 2 (Harian): memuat 2 chip dari data contoh (SLiMS Bulian, Sheet Admin TA)', async () => {
-  const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
-  const env = createTestEnvironment(exampleData);
-  // detectStorageMode lalu loadData async sejak tiket 11
-  await new Promise(resolve => setImmediate(resolve));
-  await new Promise(resolve => setImmediate(resolve));
-
-  const zoneHarian = env.getOrCreateElement('zone-harian');
-  assert.ok(zoneHarian, 'Elemen #zone-harian harus ada di layar Indeks');
-  assert.match(zoneHarian.innerHTML, /HARIAN/i, 'Label HARIAN harus ada');
-  assert.match(zoneHarian.innerHTML, /SLiMS Bulian/, 'SLiMS Bulian harus muncul di baris Harian');
-  assert.match(zoneHarian.innerHTML, /Sheet Admin TA/, 'Sheet Admin TA harus muncul di baris Harian');
-  assert.doesNotMatch(zoneHarian.innerHTML, /Repository UNIGA/, 'Repository UNIGA bukan tag harian');
-});
 
 test('Tiket 05 - Zona 5 (Terkait): klik badan baris Sheet Admin TA memunculkan item terkait tanpa dirinya sendiri', async () => {
   const exampleData = JSON.parse(fs.readFileSync(exampleJsonPath, 'utf8'));
@@ -508,10 +494,7 @@ test('Tiket 05 - Validasi CSS: batasan 768 px, scrolling independen zona hasil, 
   assert.match(css, /#result-list|\.result-list/, 'Harus ada selector untuk result-list');
   assert.match(css, /overflow-y:\s*auto/, 'Zona hasil harus overflow-y: auto');
 
-  // Zona harian dan kartu harus scrollable horizontal
-  assert.match(css, /overflow-x:\s*auto/, 'Zona harian atau kartu harus overflow-x: auto');
-
-  // Token aktif pada kartu tag
+  // Token aktif pada kontrol
   assert.match(css, /--action-soft/, 'Harus memakai token --action-soft');
   assert.match(css, /--action/, 'Harus memakai token --action');
 });
@@ -684,3 +667,17 @@ test('Tiket 05 - Tie-breaker: jika judul identik pada sortOrder az, urutkan upda
   assert.deepEqual(ids, ['item-baru', 'item-lama'], 'Item dengan updated_at lebih baru harus mendahului item lama saat judul identik');
 });
 
+
+test('Tiket 04 - Gaya zona Harian dan zona Kartu sudah tidak ada', () => {
+  const css = fs.readFileSync(styleCssPath, 'utf8');
+  // Tanpa pengujian ini, penghapusan CSS bisa tampak berhasil lalu
+  // selector yatimnya kembali diam-diam tanpa pernah dirender.
+  for (const gone of [
+    '.zone-harian', '.harian-scroll', '.chip-harian',
+    '.zone-kartu', '.kartu-scroll', '.btn-card-tag', '.view-controls'
+  ]) {
+    assert.ok(!css.includes(gone), `${gone} tidak boleh ada lagi di style.css`);
+  }
+  // Gaya pengatur urutan masih dipakai, jadi harus tetap ada.
+  assert.match(css, /\.select-sort-order\s*\{/, 'Gaya pengatur urutan harus tetap ada');
+});
