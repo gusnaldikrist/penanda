@@ -625,38 +625,9 @@ body {
 }
 
 /* Panel ikut gaya zone-terkait supaya "biasanya bareng ini" tidak berubah
-   bentuk hanya karena pindah tempat. */
-.panel-inspeksi .terkait-header {
-  font-size: var(--font-meta);
-  font-family: var(--font-family-mono);
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.panel-inspeksi .terkait-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.panel-inspeksi .terkait-sep {
-  display: none;
-}
-
-.panel-inspeksi .terkait-item {
-  font-size: var(--font-small);
-  color: var(--body);
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 6px 8px;
-}
-
-.panel-inspeksi .terkait-item:hover {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
+   bentuk hanya karena pindah tempat. DITARIK: aturan dasar di bawah sudah
+   ditulis khusus panel, jadi menimpanya di sini hanya mengantar dua set
+   aturan untuk satu komponen. */
 
 .tabel-mode {
   padding: 0 0 20px;
@@ -1116,56 +1087,43 @@ body {
   color: var(--faint);
 }
 
+/* TERKAIT "Biasanya bareng ini"
+   Dulu "biasanya bareng ini" berada di bawah tabel yang lebar, jadi chipnya
+   mendatar. Sekarang hanya panel yang memakainya, dan panel sempit: daftar
+   vertikal tanpa kotak lebih terbaca dan lebih hemat tinggi. Hierarki datang
+   dari indentasi dan jarak, bukan dari border. */
 .terkait-header {
   font-family: var(--font-family-mono);
   font-size: var(--font-meta-sm);
   font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .terkait-items {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
+  flex-direction: column;
 }
 
 .terkait-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 8px;
-  background-color: var(--band);
-  border: 1px solid var(--line);
+  display: block;
+  padding: 4px 8px 4px 10px;
   border-radius: var(--radius-sm);
-  font-size: var(--font-meta);
-  color: var(--action);
-  font-weight: 500;
+  font-size: var(--font-small);
+  line-height: 1.4;
+  color: var(--body);
   text-decoration: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.terkait-item::before {
-  content: "→ ";
-  color: var(--faint);
-}
-
+/* Judul item boleh membungkus: panel selebar 35 persen, dan memotong
+   judul dokumen membuat orang tidak tahu sedang membuka apa. */
 .terkait-item:hover {
-  background-color: var(--band-2);
+  background-color: var(--band);
   color: var(--ink);
-  border-color: var(--line-strong);
-}
-
-.terkait-sep {
-  color: var(--line-strong);
-  font-size: var(--font-meta-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* ==========================================================================

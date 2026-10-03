@@ -860,6 +860,8 @@
   // Konten item terkait dirender ke tepat satu tempat, tergantung mode:
   // baris di bawah tabel pada mode kartu, panel di kanan pada mode tabel.
   // Keduanya tidak boleh menampilkan isi yang sama di saat bersamaan.
+  // Tiap item sudah menjadi barisnya sendiri, jadi pemisah antar item tidak
+  // perlu lagi: pada bentuk daftar vertikal ia hanya menambah kotak kosong.
   function buildTerkaitHtml(related) {
     return `
       <div class="terkait-header">TERKAIT "Biasanya bareng ini":</div>
@@ -867,7 +869,7 @@
         ${related.map(item => {
           const { url, isLocal } = getPrimaryLinkInfo(item);
           return `<a href="${escapeHtml(url)}" class="terkait-item" target="_blank" rel="noopener noreferrer" data-url="${escapeHtml(url)}" data-local="${isLocal}">${escapeHtml(item.title || "")}</a>`;
-        }).join('<span class="terkait-sep"> - </span>')}
+        }).join('')}
       </div>
     `;
   }
